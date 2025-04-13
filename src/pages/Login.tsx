@@ -4,7 +4,6 @@ import { supabase } from '@/lib/supabase'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { useCompanyStore } from '@/store/useCompanyStore'
-import activeConfig from '@/config/active.json' // 仮：ログイン後これを使う
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -23,11 +22,27 @@ export default function Login() {
     })
 
     if (error) {
-      setError(error.message)
-    } else if (data.session) {
-      // 仮：ログイン成功 → アクティブ社をセット（あとで自動化）
-      setCompany(activeConfig)
-    }
+        setError(error.message)
+      } else if (data.session) {
+        // ✅ ログイン成功 → ユーザー情報取得
+        const { data: userData } = await supabase.auth.getUser()
+        const companyId = userData.user?.user_metadata?.companyId
+    
+        if (!companyId) {
+          setError('会社IDが設定されていません')
+          setLoading(false)
+          return
+        }
+    
+        // ✅ 対応する会社設定ファイルを読み込み（importではなくfetchで）
+        try {
+          const res = await fetch(`/src/config/${companyId}.json`)
+          const config = await res.json()
+          setCompany(config)
+        } catch (e) {
+          setError('会社設定の読み込みに失敗しました')
+        }
+      }
 
     setLoading(false)
   }
