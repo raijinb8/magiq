@@ -7,9 +7,10 @@
 // アプリを作るうえで一番手を入れるファイル
 
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import Home from './pages/Home'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
-import Home from './pages/Home'
+import ShiftForm from './pages/ShiftForm'
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/shiftform" element={<ShiftForm />} />
       </Routes>
     </BrowserRouter>
   )
