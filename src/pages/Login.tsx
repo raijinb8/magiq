@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { useCompanyStore } from '@/store/useCompanyStore'
+import { useNavigate } from 'react-router-dom'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -11,6 +12,7 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const setCompany = useCompanyStore((s) => s.setCompany)
+  const navigate = useNavigate()
 
   const handleLogin = async () => {
     setLoading(true)
@@ -39,6 +41,8 @@ export default function Login() {
           const res = await fetch(`/src/config/${companyId}.json`)
           const config = await res.json()
           setCompany(config)
+          navigate('/dashboard') // ✅ ここで遷移！
+          return
         } catch (e) {
           setError('会社設定の読み込みに失敗しました')
         }
