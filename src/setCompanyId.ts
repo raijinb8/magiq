@@ -23,7 +23,8 @@ async function setCompanyId(email: string, companyId: string) {
     // ユーザーIDを使用して user_metadata を更新
     const { data, error: updateError } = await supabase.auth.admin.updateUserById(user.id, {
         user_metadata: {
-        companyId: companyId
+        companyId: companyId,
+        role: "admin"
         }
     });
 
