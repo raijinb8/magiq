@@ -19,7 +19,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/shiftform" element={<ShiftForm />} />
+        <Route path="/shift" element={<ShiftForm />} />
       </Routes>
     </BrowserRouter>
   )

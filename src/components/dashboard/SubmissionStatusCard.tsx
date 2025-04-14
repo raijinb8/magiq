@@ -1,6 +1,7 @@
 // components/dashboard/SubmissionStatusCard.tsx
 import { Card, CardHeader, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { useNavigate } from 'react-router-dom'
 
 export function SubmissionStatusCard() {
   // 仮データ（複数現場の例）
@@ -13,7 +14,9 @@ export function SubmissionStatusCard() {
 
   const sekisuiProjects = todayProjects.filter(p => p.client === '積水')
   const todayHasAdvanceRequest = false
-  const hasSubmittedShift = true
+  const hasSubmittedShift = false
+
+  const navigate = useNavigate()
 
   return (
     <div className="space-y-4">
@@ -32,7 +35,13 @@ export function SubmissionStatusCard() {
               <p className="text-sm text-muted-foreground">
                 今週分のシフトが未提出です。
               </p>
-              <Button variant="outline" size="sm">シフトを提出する</Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/shift')}
+              >
+                シフトを提出する
+              </Button>
             </>
           )}
         </CardContent>
