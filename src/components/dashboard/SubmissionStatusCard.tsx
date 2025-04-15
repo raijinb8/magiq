@@ -32,14 +32,8 @@ export function SubmissionStatusCard() {
             </p>
           ) : (
             <>
-              <p className="text-sm text-muted-foreground">
-                今週分のシフトが未提出です。
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate('/shift')}
-              >
+              <p className="text-sm text-muted-foreground">今週分のシフトが未提出です。</p>
+              <Button variant="outline" size="sm" onClick={() => navigate('/shift')}>
                 シフトを提出する
               </Button>
             </>
@@ -54,9 +48,7 @@ export function SubmissionStatusCard() {
             <p className="text-sm font-medium">📸 KY画像提出が必要な現場</p>
           </CardHeader>
           <CardContent className="space-y-2">
-            <p className="text-sm text-muted-foreground">
-              以下の積水案件に対して、KY画像の提出が必要です。
-            </p>
+            <p className="text-sm text-muted-foreground">以下の積水案件に対して、KY画像の提出が必要です。</p>
             <ul className="text-sm space-y-1">
               {sekisuiProjects.map((p, i) => (
                 <li key={i} className="flex justify-between items-center">
@@ -69,7 +61,9 @@ export function SubmissionStatusCard() {
                     )}
                   </div>
                   {!p.ky_reported_by && (
-                    <Button size="sm" variant="default">提出する</Button>
+                    <Button size="sm" variant="default">
+                      提出する
+                    </Button>
                   )}
                 </li>
               ))}
@@ -85,15 +79,13 @@ export function SubmissionStatusCard() {
         </CardHeader>
         <CardContent className="space-y-2">
           {todayHasAdvanceRequest ? (
-            <p className="text-sm text-muted-foreground">
-              本日はすでに内金申請済みです。
-            </p>
+            <p className="text-sm text-muted-foreground">本日はすでに内金申請済みです。</p>
           ) : (
             <>
-              <p className="text-sm text-muted-foreground">
-                必要な場合のみ、内金申請を行ってください。
-              </p>
-              <Button size="sm" variant="outline">内金を申請する</Button>
+              <p className="text-sm text-muted-foreground">必要な場合のみ、内金申請を行ってください。</p>
+              <Button size="sm" variant="outline">
+                内金を申請する
+              </Button>
             </>
           )}
         </CardContent>
@@ -117,7 +109,9 @@ export function SubmissionStatusCard() {
                   )}
                 </div>
                 {!p.reported_by && (
-                  <Button size="sm" variant="default">報告する</Button>
+                  <Button size="sm" variant="default">
+                    報告する
+                  </Button>
                 )}
               </li>
             ))}

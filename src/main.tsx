@@ -16,7 +16,7 @@ useCompanyStore.getState().setCompany(activeConfig)
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   // Reactをどこに表示するか（index.html の <div id="root">）を指定
-  // App.tsxを呼び出す 
+  // App.tsxを呼び出す
   <React.StrictMode>
     <App />
   </React.StrictMode>

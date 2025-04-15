@@ -1,0 +1,11 @@
+semi: false # セミコロンなし
+singleQuote: true # シングルクォート
+tabWidth: 2 # インデント幅2
+useTabs: false # スペースを使う
+trailingComma: es5 # 配列/オブジェクト末尾にカンマ
+printWidth: 120 # 長さ制限（改行されにくく）
+bracketSpacing: true # { a: 1 } のスペースを入れる
+arrowParens: avoid # 引数1つのアロー関数は括弧なし
+jsxSingleQuote: false # JSXはダブルクォート
+jsxBracketSameLine: false # JSXタグの閉じカッコを改行
+embeddedLanguageFormatting: auto

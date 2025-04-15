@@ -78,13 +78,16 @@ export default function ShiftForm() {
         const selectedLabel = shiftTypes.find(s => s.value === shift.shift_type)?.label || ''
 
         return (
-          <div key={dateStr} className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 space-y-3 relative z-0">
+          <div
+            key={dateStr}
+            className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 space-y-3 relative z-0"
+          >
             <div className="font-semibold text-gray-700 text-sm">{dateStr}</div>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="w-full justify-between">
-                  {selectedLabel || "シフト種別を選択"}
+                  {selectedLabel || 'シフト種別を選択'}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-full z-50">
@@ -119,7 +122,9 @@ export default function ShiftForm() {
           </div>
         )
       })}
-      <Button onClick={handleSubmit} className="w-full text-sm mt-4">申請する</Button>
+      <Button onClick={handleSubmit} className="w-full text-sm mt-4">
+        申請する
+      </Button>
     </div>
   )
 }

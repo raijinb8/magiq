@@ -13,7 +13,7 @@ interface CompanyState {
   setCompany: (config: CompanyConfig) => void
 }
 
-export const useCompanyStore = create<CompanyState>((set) => ({
+export const useCompanyStore = create<CompanyState>(set => ({
   company: null,
-  setCompany: (config) => set({ company: config }),
+  setCompany: config => set({ company: config }),
 }))
