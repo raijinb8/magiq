@@ -7,19 +7,27 @@
 // アプリを作るうえで一番手を入れるファイル
 
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import Home from './pages/Home'
-import Login from './pages/Login'
-import Dashboard from './pages/Dashboard'
-import ShiftForm from './pages/ShiftForm'
+import Dashboard from '@/pages/Dashboard'
+import ShiftForm from '@/pages/ShiftForm'
+import Login from '@/pages/Login'
+import Layout from '@/components/layout/Layout'
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Home />} />
+        {/* その他のページは共通レイアウトに包む */}
         <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/shift" element={<ShiftForm />} />
+
+        {/* 認証必須のルート */}
+        <Route element={<ProtectedRoute />}>
+          <Route element={<Layout />}>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/shift" element={<ShiftForm />} />
+            {/* 他ページ追加可能 */}
+          </Route>
+        </Route>
       </Routes>
     </BrowserRouter>
   )

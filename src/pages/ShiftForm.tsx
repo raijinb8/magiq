@@ -37,9 +37,18 @@ export default function ShiftForm() {
 
   useEffect(() => {
     const fetchUser = async () => {
-      const { data } = await supabase.auth.getUser()
-      setUser(data.user)
+      const { data, error } = await supabase.auth.getUser()
+
+      if (error) {
+        console.error('ユーザー取得失敗', error)
+      } else if (!data.user) {
+        console.warn('ログインユーザーが存在しません')
+      } else {
+        console.log('ログイン中のユーザー:', data.user)
+        setUser(data.user)
+      }
     }
+
     fetchUser()
   }, [])
 
