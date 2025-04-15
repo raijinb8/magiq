@@ -53,15 +53,50 @@ export default function ShiftForm() {
     }))
   }
 
+  const validateShiftType = (shift: any, dateStr: string): string | null => {
+    if (!shift || !shift.shift_type) {
+      return `【${dateStr}】はシフト種別が未選択です。`
+    }
+    return null
+  }
+
+  const validateCustomEndTime = (shift: any, dateStr: string): string | null => {
+    if (shift?.shift_type === 'custom' && !shift.custom_end_time) {
+      return `【${dateStr}】は終了時間が必要です。`
+    }
+    return null
+  }
+
   const handleSubmit = async () => {
     if (!user) return
-    const entries = Object.entries(shifts).map(([dateStr, data]) => ({
-      user_id: user.id,
-      date: dateStr,
-      shift_type: data.shift_type,
-      custom_end_time: ['custom', 'pm'].includes(data.shift_type) ? data.custom_end_time : null,
-      note: data.note || null,
-    }))
+
+    const dateStrs = getNextWeekDates().map(d => d.toISOString().split('T')[0])
+    const errors: string[] = []
+
+    for (const dateStr of dateStrs) {
+      const shift = shifts[dateStr]
+      const typeError = validateShiftType(shift, dateStr)
+      const timeError = validateCustomEndTime(shift, dateStr)
+      if (typeError) errors.push(typeError)
+      if (timeError) errors.push(timeError)
+    }
+
+    if (errors.length > 0) {
+      alert(errors.join('\n'))
+      return
+    }
+
+    const entries = dateStrs.map(dateStr => {
+      const data = shifts[dateStr]
+      return {
+        user_id: user.id,
+        date: dateStr,
+        shift_type: data.shift_type,
+        custom_end_time: ['custom', 'pm'].includes(data.shift_type) ? data.custom_end_time : null,
+        note: data.note || null,
+      }
+    })
+
     const { error } = await supabase.from('shifts').insert(entries)
     if (error) alert('申請に失敗しました')
     else alert('申請完了！')
