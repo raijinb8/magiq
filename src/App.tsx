@@ -12,7 +12,7 @@ import ShiftForm from '@/pages/ShiftForm'
 import Login from '@/pages/Login'
 import Layout from '@/components/layout/Layout'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
-
+import ShiftComplete from '@/pages/ShiftComplete'
 function App() {
   return (
     <BrowserRouter>
@@ -25,6 +25,7 @@ function App() {
           <Route element={<Layout />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/shift" element={<ShiftForm />} />
+            <Route path="/shift/complete" element={<ShiftComplete />} />
             {/* 他ページ追加可能 */}
           </Route>
         </Route>

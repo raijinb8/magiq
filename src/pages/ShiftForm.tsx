@@ -11,6 +11,7 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
 } from '@/components/ui/dropdown-menu'
+import { useNavigate } from 'react-router-dom'
 
 const shiftTypes = [
   { value: 'full', label: 'フル（終日）' },
@@ -34,6 +35,8 @@ const getNextWeekDates = () => {
 export default function ShiftForm() {
   const [user, setUser] = useState<User | null>(null)
   const [shifts, setShifts] = useState<Record<string, any>>({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const navigate = useNavigate()
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -77,7 +80,9 @@ export default function ShiftForm() {
   }
 
   const handleSubmit = async () => {
-    if (!user) return
+    if (!user || isSubmitting) return
+
+    setIsSubmitting(true)
 
     const dateStrs = getNextWeekDates().map(d => d.toISOString().split('T')[0])
     const errors: string[] = []
@@ -107,8 +112,11 @@ export default function ShiftForm() {
     })
 
     const { error } = await supabase.from('shifts').insert(entries)
+
+    setIsSubmitting(false)
+
     if (error) alert('申請に失敗しました')
-    else alert('申請完了！')
+    else navigate('/shift/complete')
   }
 
   const dates = getNextWeekDates()
@@ -166,8 +174,8 @@ export default function ShiftForm() {
           </div>
         )
       })}
-      <Button onClick={handleSubmit} className="w-full text-sm mt-4">
-        申請する
+      <Button onClick={handleSubmit} disabled={isSubmitting} className="w-full text-sm mt-4">
+        {isSubmitting ? '申請中...' : '申請する'}
       </Button>
     </div>
   )
