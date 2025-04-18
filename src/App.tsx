@@ -13,13 +13,16 @@ import Login from '@/pages/Login'
 import Layout from '@/components/layout/Layout'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import ShiftComplete from '@/pages/ShiftComplete'
+import AdminDashboard from '@/pages/admin/dashboard'
+import ProjectForm from '@/pages/admin/ProjectForm'
 function App() {
   return (
     <BrowserRouter>
       <Routes>
         {/* その他のページは共通レイアウトに包む */}
         <Route path="/login" element={<Login />} />
-
+        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/admin/project" element={<ProjectForm />} />
         {/* 認証必須のルート */}
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
