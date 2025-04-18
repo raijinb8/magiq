@@ -2,6 +2,10 @@
 import { Card, CardHeader, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { getSubmittedShiftsForCurrentUser } from '@/lib/api'
+import { supabase } from '@/lib/supabase'
+import { getWeekdayLabel, getShiftTypeLabel } from '@/utils/shiftHelpers'
 
 export function SubmissionStatusCard() {
   // 仮データ（複数現場の例）
@@ -12,9 +16,28 @@ export function SubmissionStatusCard() {
     { name: '現場D', client: '積水', reported_by: null, ky_reported_by: null },
   ]
 
+  // hasSubmittedShift: 今週のシフトが提出されたか？ を表す 状態（変数）
+  // setHasSubmittedShift: その状態を 更新するための関数
+  // useState(false): 初期値は「false（＝未提出）」ってこと
+  const [hasSubmittedShift, setHasSubmittedShift] = useState(false)
+  const [submittedShifts, setSubmittedShifts] = useState<any[]>([])
+
+  useEffect(() => {
+    const fetchStatus = async () => {
+      const { data } = await supabase.auth.getUser()
+      if (!data.user) return
+
+      const shifts = await getSubmittedShiftsForCurrentUser(data.user.id)
+
+      setHasSubmittedShift(shifts.length === 6)
+      setSubmittedShifts(shifts)
+    }
+
+    fetchStatus()
+  }, [])
+
   const sekisuiProjects = todayProjects.filter(p => p.client === '積水')
   const todayHasAdvanceRequest = false
-  const hasSubmittedShift = false
 
   const navigate = useNavigate()
 
@@ -27,9 +50,24 @@ export function SubmissionStatusCard() {
         </CardHeader>
         <CardContent>
           {hasSubmittedShift ? (
-            <p className="text-sm">
-              今週分のシフトは <span className="font-bold text-green-600">提出済み</span> です。
-            </p>
+            <>
+              <p className="text-sm">
+                今週分のシフトは <span className="font-bold text-green-600">提出済み</span> です。
+              </p>
+              {submittedShifts.length > 0 && (
+                <div className="mt-2 space-y-1 text-sm">
+                  <p className="font-medium">🗓 今週提出したシフト内容</p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    {submittedShifts.map((shift, i) => (
+                      <li key={i}>
+                        {shift.date}（{getWeekdayLabel(shift.date)}）：
+                        {getShiftTypeLabel(shift.shift_type, shift.custom_end_time)}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </>
           ) : (
             <>
               <p className="text-sm text-muted-foreground">今週分のシフトが未提出です。</p>
