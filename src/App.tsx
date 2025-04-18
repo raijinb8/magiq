@@ -15,6 +15,10 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import ShiftComplete from '@/pages/ShiftComplete'
 import AdminDashboard from '@/pages/admin/dashboard'
 import ProjectForm from '@/pages/admin/ProjectForm'
+import ProjectList from '@/pages/admin/ProjectList'
+import ProjectAssign from '@/pages/admin/ProjectAssign'
+import AssignedProjectList from '@/pages/admin/AssignedProjectList'
+
 function App() {
   return (
     <BrowserRouter>
@@ -23,6 +27,10 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/admin/project" element={<ProjectForm />} />
+        <Route path="/admin/project-list" element={<ProjectList />} />
+        <Route path="/admin/project-assign" element={<ProjectAssign />} />
+        <Route path="/admin/assigned-project-list" element={<AssignedProjectList />} />
+
         {/* 認証必須のルート */}
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
