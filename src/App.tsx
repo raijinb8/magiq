@@ -18,6 +18,7 @@ import ProjectForm from '@/pages/admin/ProjectForm'
 import ProjectList from '@/pages/admin/ProjectList'
 import ProjectAssign from '@/pages/admin/ProjectAssign'
 import AssignedProjectList from '@/pages/admin/AssignedProjectList'
+import WorkOrderTool from '@/pages/admin/WorkOrderTool'
 
 function App() {
   return (
@@ -37,6 +38,8 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/shift" element={<ShiftForm />} />
             <Route path="/shift/complete" element={<ShiftComplete />} />
+            <Route path="/admin/work-order-tool" element={<WorkOrderTool />} />
+
             {/* 他ページ追加可能 */}
           </Route>
         </Route>
