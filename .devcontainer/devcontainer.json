@@ -1,0 +1,55 @@
+{
+    "name": "Magiq Dev Container",
+    "dockerComposeFile": [
+      "../docker-compose.yml" // 親ディレクトリのdocker-compose.ymlを参照
+    ],
+    // docker-compose.yml のどのサービスを開発コンテナのベースにするか指定
+    "service": "frontend",
+    // 開発コンテナ内のワークスペースのパス
+    "workspaceFolder": "/app",
+    // VS Codeで開いたときに自動的にインストールする拡張機能
+    "customizations": {
+      "vscode": {
+        "extensions": [
+          "dbaeumer.vscode-eslint", // ESLint
+          "esbenp.prettier-vscode", // Prettier
+          "bradlc.vscode-tailwindcss", // Tailwind CSS IntelliSense
+          "denoland.vscode-deno", // Deno (Supabase Edge Functions用)
+          "GitHub.copilot", // もし使っていれば
+          "GitHub.copilot-chat", // もし使っていれば
+          "Vue.volar" // Vite + React の場合に補完が効きやすくなることがある (公式はVue向け) or "msjsdiag.vscode-react-native"
+        ]
+      }
+    },
+    // コンテナ作成後に一度だけ実行されるコマンド
+    "postCreateCommand": "bash -c 'if [ ! -d \"/supabase_data\" ]; then mkdir /supabase_data && supabase init --no-backup && supabase start --no-backup; else supabase start --no-backup; fi && cd /app && npm install'",
+    // (オプション) コンテナに接続したときに実行されるコマンド
+    // "postAttachCommand": "supabase services --status",
+  
+    // (オプション) コンテナ終了時に実行されるコマンド
+    // "postStopCommand": "supabase stop --no-backup",
+  
+    // Supabase CLI のインストール (より確実な方法としてFeatureを使うことも可能)
+    // または、ベースイメージに含めるか、postCreateCommandでインストール
+    // "features": {
+    //   "ghcr.io/devcontainers/features/node:1": { // Node.js (フロントエンド用)
+    //     "version": "20"
+    //   },
+    //   "ghcr.io/supabase/supabase-cli/supabase:1": {} // Supabase CLI
+    // },
+  
+    // Dockerソケットをマウントしてコンテナ内からDockerコマンドを実行可能にする
+    // Supabase CLIがDockerを操作するために必要
+    "mounts": [
+      "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+    ],
+    // ポートフォワーディング (docker-compose.ymlでも定義しているが、こちらでも明示可能)
+    "forwardPorts": [
+      5173, // Vite
+      54321, // Supabase API Gateway
+      54322 // Supabase Studio (もし使う場合)
+      // Supabaseが使用するその他のポート (DB, Realtimeなど)
+    ],
+    // コンテナ内で実行されるユーザー (セキュリティのためroot以外を推奨)
+    "remoteUser": "node" // DockerfileのFROM nodeイメージのデフォルトユーザー
+  }

@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  # フロントエンド開発用サービス
+  frontend:
+    build:
+      context: ./frontend # Dockerfileがあるディレクトリ
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173" # ホストの5173ポートをコンテナの5173ポートにマッピング
+    volumes:
+      - ./frontend:/app # ホストのfrontendディレクトリをコンテナの/appにマウント（ソース変更の即時反映）
+      - /app/node_modules # node_modules はコンテナ内のものを使用（パフォーマンスと互換性のため）
+    environment:
+      # Supabaseローカル開発環境への接続情報を設定 (後ほどSupabase起動時に確認・設定)
+      - VITE_SUPABASE_URL=http://localhost:54321 # SupabaseローカルAPIゲートウェイのデフォルトURL
+      - VITE_SUPABASE_ANON_KEY=your_local_anon_key # Supabaseローカルのanon key
+      # Reactアプリが必要とするその他の環境変数
+    # Supabase CLIが起動するDockerネットワークに接続するために必要になることがある
+    # networks:
+    #   - supabase_network
+
+  # (オプション) Supabase CLI やその他のツールを動かすためのサービスをここに定義することも可能
+  # ですが、Dev Containerの機能でカバーできることが多いです。
+  # Supabaseのサービス (Postgres, Kongなど) は `supabase start` コマンドによって
+  # 自動的にDockerコンテナとして起動・管理されるため、ここでは明示的に定義しません。
+
+# (オプション) Supabaseのネットワークに接続する場合
+# networks:
+#   supabase_network:
+#     name: supabase_default_network # `supabase start` で作成されるネットワーク名 (通常はこれでOK)
+#     external: true
