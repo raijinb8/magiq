@@ -4,11 +4,11 @@ services:
   # フロントエンド開発用サービス
   app:
     build:
-      context: ./frontend # Dockerfileがあるディレクトリ
-      dockerfile: Dockerfile
+      context: . # ★ プロジェクトルート (magiq) をビルドコンテキストにする
+      dockerfile: ./frontend/Dockerfile # Dockerfileの場所を指定
     ports:
       - "5173:5173" # ホストの5173ポートをコンテナの5173ポートにマッピング
-    # working_dir: /app/frontend
+    # working_dir: /app
     volumes:
       - .:/app 
       - /app/frontend/node_modules # frontend内のnode_modulesを隔離
