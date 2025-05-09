@@ -2,15 +2,16 @@ version: '3.8'
 
 services:
   # フロントエンド開発用サービス
-  frontend:
+  app:
     build:
       context: ./frontend # Dockerfileがあるディレクトリ
       dockerfile: Dockerfile
     ports:
       - "5173:5173" # ホストの5173ポートをコンテナの5173ポートにマッピング
+    working_dir: /app/frontend
     volumes:
-      - ./frontend:/app # ホストのfrontendディレクトリをコンテナの/appにマウント（ソース変更の即時反映）
-      - /app/node_modules # node_modules はコンテナ内のものを使用（パフォーマンスと互換性のため）
+      - .:/app 
+      - /app/frontend/node_modules # frontend内のnode_modulesを隔離
     environment:
       # Supabaseローカル開発環境への接続情報を設定 (後ほどSupabase起動時に確認・設定)
       - VITE_SUPABASE_URL=http://localhost:54321 # SupabaseローカルAPIゲートウェイのデフォルトURL
