@@ -6,7 +6,7 @@
     // docker-compose.yml のどのサービスを開発コンテナのベースにするか指定
     "service": "app",
     // 開発コンテナ内のワークスペースのパス
-    "workspaceFolder": "/app/frontend",
+    "workspaceFolder": "/app",
     // VS Codeで開いたときに自動的にインストールする拡張機能
     "customizations": {
       "vscode": {
@@ -23,8 +23,7 @@
       }
     },
     // コンテナ作成後に一度だけ実行されるコマンド
-    // devcontainer.json の postCreateCommand
-    // "postCreateCommand": "bash -c 'echo \"Running postCreateCommand...\" && SUPABASE_DIR=\"/workspaces/magiq/supabase\" && FRONTEND_DIR=\"/workspaces/magiq/frontend\" && if ! command -v supabase &> /dev/null; then echo \"Supabase CLI not found, attempting to install...\"; deno install --allow-all --force -n supabase https://deno.land/x/supabase/supabase.ts; fi && cd \"$SUPABASE_DIR\" && if [ ! -f \".supabase/config.toml\" ]; then echo \"Supabase project not initialized. Initializing...\"; supabase init --no-backup && supabase start --no-backup; else echo \"Supabase project already initialized. Starting services...\"; supabase start --no-backup; fi && echo \"Installing frontend dependencies...\" && cd \"$FRONTEND_DIR\" && npm install && echo \"postCreateCommand finished.\"'",
+    // devcontainer.json の postCreateCommand// "postCreateCommand": "bash -c 'echo \"Running postCreateCommand...\" && SUPABASE_DIR=\"/workspaces/magiq/supabase\" && FRONTEND_DIR=\"/workspaces/magiq/frontend\" && if ! command -v supabase &> /dev/null; then echo \"Supabase CLI not found, attempting to install...\"; deno install --allow-all --force -n supabase https://deno.land/x/supabase/supabase.ts; fi && cd \"$SUPABASE_DIR\" && if [ ! -f \".supabase/config.toml\" ]; then echo \"Supabase project not initialized. Initializing...\"; supabase init --no-backup && supabase start --no-backup; else echo \"Supabase project already initialized. Starting services...\"; supabase start --no-backup; fi && echo \"Installing frontend dependencies...\" && cd \"$FRONTEND_DIR\" && npm install && echo \"postCreateCommand finished.\"'",
     // (オプション) コンテナに接続したときに実行されるコマンド
     // "postAttachCommand": "supabase services --status",
   
@@ -33,9 +32,10 @@
   
     // Supabase CLI のインストール (より確実な方法としてFeatureを使うことも可能)
     // または、ベースイメージに含めるか、postCreateCommandでインストール
-    // "features": {
-    //   "ghcr.io/devcontainers-contrib/features/supabase-cli:1": {} // Supabase CLI
-    // },
+    "features": {
+      // "ghcr.io/devcontainers-community/features/deno": {}, // Deno Dev Container Feature
+      "ghcr.io/devcontainers-contrib/features/supabase-cli:1": {} // Supabase CLI
+    },
   
     // Dockerソケットをマウントしてコンテナ内からDockerコマンドを実行可能にする
     // Supabase CLIがDockerを操作するために必要

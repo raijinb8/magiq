@@ -14,7 +14,7 @@ RUN apk update && apk add --no-cache bash curl git
 #     rm supabase.tar.gz
 
 # 作業ディレクトリを設定
-WORKDIR /app/frontend
+WORKDIR /app
 
 # package.json と package-lock.json (または yarn.lock) をコピー
 COPY package*.json ./
