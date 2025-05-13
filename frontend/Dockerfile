@@ -3,15 +3,11 @@ FROM node:20-alpine AS development
 
 # 必要なツールをインストール (bash, curl, git など)
 # Alpineではgitも別途インストールが必要な場合が多い
-RUN apk update && apk add --no-cache bash curl git openssh-client
+RUN apk update && apk add --no-cache bash curl git openssh-client sudo
 
-# Supabase CLI を手動でダウンロードしてインストール (適切なアーキテクチャを選択)
-# Alpine (x86_64) の場合、amd64バイナリを使用
-# uname -m でアーキテクチャを確認し、適切なバイナリをダウンロードするスクリプトを組むのがより堅牢
-# ここでは amd64 を仮定
-# RUN curl -L "https://github.com/supabase/cli/releases/latest/download/supabase_linux_amd64.tar.gz" -o supabase.tar.gz && \
-#     tar -xzf supabase.tar.gz -C /usr/local/bin && \
-#     rm supabase.tar.gz
+# Starshipをインストール (全ユーザー向け、または特定のユーザー向けにインストール)
+# ここでは /usr/local/bin にインストールする
+RUN curl -sS https://starship.rs/install.sh | sudo sh -s -- --yes
 
 # 作業ディレクトリを設定
 WORKDIR /app
