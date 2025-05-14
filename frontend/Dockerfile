@@ -17,7 +17,6 @@ COPY . .
 
 # package.json と package-lock.json (または yarn.lock) をコピー
 # COPY package*.json ./
-# COPY yarn.lock ./ # Yarn を使っている場合
 
 WORKDIR /app/frontend
 
