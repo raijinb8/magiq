@@ -3,7 +3,7 @@ FROM node:20-alpine AS development
 
 # 必要なツールをインストール (bash, curl, git など)
 # Alpineではgitも別途インストールが必要な場合が多い
-RUN apk update && apk add --no-cache bash curl git openssh-client sudo
+RUN apk update && apk add --no-cache bash curl git openssh-client sudo socat
 
 # Starshipをインストール (全ユーザー向け、または特定のユーザー向けにインストール)
 # ここでは /usr/local/bin にインストールする
@@ -24,7 +24,6 @@ WORKDIR /app/frontend
 # 依存関係をインストール
 RUN npm install -g npm@latest
 RUN npm install
-# RUN yarn install # Yarn を使っている場合
 
 # Vite開発サーバーがデフォルトで使用するポートを公開
 EXPOSE 5173
