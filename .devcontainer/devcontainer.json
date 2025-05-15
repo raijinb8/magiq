@@ -30,15 +30,12 @@
       "ghcr.io/devcontainers/features/common-utils:2": {
         "installZsh": "true",
         "installOhMyZsh": "true",
-        "installOhMyZshConfig": "true"
-      },
-      // common-utils を使って sudo のインストールと remoteUser への権限付与を試みる
-      "ghcr.io/devcontainers/features/common-utils": {
-          "installSudo": true,
-          "username": "node", // 固定のコンテナユーザー名 = remoteUser
-          "uid": "automatic",
-          "gid": "automatic",
-          "configureSudo": true // パスワードなしsudoを設定
+        "installOhMyZshConfig": "true",
+        "installSudo": true,
+        "username": "node", // 固定のコンテナユーザー名 = remoteUser
+        "uid": "automatic",
+        "gid": "automatic",
+        "configureSudo": true // パスワードなしsudoを設定
       }
     },
 

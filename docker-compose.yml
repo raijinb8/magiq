@@ -12,6 +12,10 @@ services:
     volumes:
       - .:/app 
       - /app/frontend/node_modules # frontend内のnode_modulesを隔離
+      # 本来はssh-agentで自動共有されるはずだが、されないため記載
+      # 下記手法のデメリットはユーザーが固定されること
+      - ~/.ssh:/home/node/.ssh:cached # ここでSSHの秘密鍵を指定する
+      - ~/.gitconfig:/home/node/.gitconfig:cached # ここでGitのグローバル設定を共有する
     environment:
       # Supabaseローカル開発環境への接続情報を設定 (後ほどSupabase起動時に確認・設定)
       - VITE_SUPABASE_URL=http://localhost:54321 # SupabaseローカルAPIゲートウェイのデフォルトURL
