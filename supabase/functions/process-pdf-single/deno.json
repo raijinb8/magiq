@@ -1,3 +1,5 @@
 {
-  "imports": {}
+  "imports": {
+    "@google/genai": "npm:@google/genai@^0.14.0"
+  }
 }
