@@ -26,11 +26,6 @@ function App() {
       <Routes>
         {/* その他のページは共通レイアウトに包む */}
         <Route path="/login" element={<Login />} />
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/admin/project" element={<ProjectForm />} />
-        <Route path="/admin/project-list" element={<ProjectList />} />
-        <Route path="/admin/project-assign" element={<ProjectAssign />} />
-        <Route path="/admin/assigned-project-list" element={<AssignedProjectList />} />
 
         {/* 認証必須のルート */}
         <Route element={<ProtectedRoute />}>
@@ -38,8 +33,12 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/shift" element={<ShiftForm />} />
             <Route path="/shift/complete" element={<ShiftComplete />} />
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/project" element={<ProjectForm />} />
+            <Route path="/admin/project-list" element={<ProjectList />} />
+            <Route path="/admin/project-assign" element={<ProjectAssign />} />
+            <Route path="/admin/assigned-project-list" element={<AssignedProjectList />} />
             <Route path="/admin/work-order-tool" element={<WorkOrderTool />} />
-
             {/* 他ページ追加可能 */}
           </Route>
         </Route>
