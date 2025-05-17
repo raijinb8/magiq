@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { toast } from 'sonner' // sonner から toast 関数を直接インポート
 // Supabase Client のインポート (Supabaseプロジェクトのセットアップ方法による)
-// import { supabase } from '@/lib/supabaseClient'; // 例: lib/supabaseClient.ts で初期化した場合 (DB保存時に必要)
+// import { supabase } from '@/lib/supabaseClient' // 例: lib/supabaseClient.ts で初期化した場合 (DB保存時に必要)
 
 const WorkOrderTool = () => {
   // 状態管理フック
@@ -24,19 +24,19 @@ const WorkOrderTool = () => {
   // バックエンドAPIを呼び出す関数
   const handleProcessFile = async (fileToProcess: File) => {
     if (!fileToProcess || isLoading) { // 処理中なら何もしない
-      if(isLoading) toast.info("現在別のファイルを処理中です。少々お待ちください。");
-      return;
+      if(isLoading) toast.info("現在別のファイルを処理中です。少々お待ちください。")
+      return
     }
 
-    setProcessingFile(fileToProcess); // どのファイルを処理しているかUIにフィードバックするため
-    setIsLoading(true);
-    setGeneratedText(""); // 前回の結果やプレースホルダーをクリア
-    toast.info(`「${fileToProcess.name}」の処理を開始します...`, { duration: 3000 });
+    setProcessingFile(fileToProcess) // どのファイルを処理しているかUIにフィードバックするため
+    setIsLoading(true)
+    setGeneratedText("") // 前回の結果やプレースホルダーをクリア
+    toast.info(`「${fileToProcess.name}」の処理を開始します...`, { duration: 3000 })
 
     try {
       // ローカル開発環境のEdge FunctionのエンドポイントURL
       // 環境変数から取得することを推奨 (例: import.meta.env.VITE_PUBLIC_PROCESS_PDF_FUNCTION_URL)
-      const functionUrl = `${import.meta.env.VITE_LOCAL_PUBLIC_PROCESS_PDF_FUNCTION_URL || 'http://localhost:54321'}/functions/v1/process-pdf-single`;
+      const functionUrl = import.meta.env.VITE_LOCAL_PUBLIC_PROCESS_PDF_FUNCTION_URL
       console.log(functionUrl)
       // バックエンドAPIに送信するデータ
       const requestBody = {
@@ -44,7 +44,7 @@ const WorkOrderTool = () => {
         // 将来的にはここにファイルの内容やその他のメタデータを追加することも検討
         // fileSize: fileToProcess.size,
         // fileType: fileToProcess.type,
-      };
+      }
 
       const response = await fetch(functionUrl, {
         method: 'POST',
@@ -56,82 +56,82 @@ const WorkOrderTool = () => {
           'apikey': import.meta.env.VITE_LOCAL_SUPABASE_ANON_KEY,
         },
         body: JSON.stringify(requestBody),
-      });
+      })
 
-      setIsLoading(false); // ローディング状態を解除
-      const responseData = await response.json();
+      setIsLoading(false) // ローディング状態を解除
+      const responseData = await response.json()
 
       if (!response.ok) {
-        console.error("Backend API Error Response:", responseData);
+        console.error("Backend API Error Response:", responseData)
         toast.error(`処理エラー: ${responseData.error || response.statusText}`, {
           description: `ファイル「${fileToProcess.name}」の処理中に問題が発生しました。(${response.status})`,
           duration: 8000,
-        });
-        setGeneratedText(`エラーが発生しました:\n${responseData.error || response.statusText}\n\n詳細は開発者コンソールを確認してください。`);
-        setProcessingFile(null); // エラー時は処理中ファイルをクリア
-        return;
+        })
+        setGeneratedText(`エラーが発生しました:\n${responseData.error || response.statusText}\n\n詳細は開発者コンソールを確認してください。`)
+        setProcessingFile(null) // エラー時は処理中ファイルをクリア
+        return
       }
 
-      toast.success(`「${fileToProcess.name}」のAI処理が完了しました！`, { duration: 5000 });
-      setGeneratedText(responseData.generatedText || "テキストが生成されませんでした。");
+      toast.success(`「${fileToProcess.name}」のAI処理が完了しました！`, { duration: 5000 })
+      setGeneratedText(responseData.generatedText || "テキストが生成されませんでした。")
       // 処理が成功したら processingFile はクリアせず、どのファイルの結果が表示されているか分かるように残す
       // (UIの要件に応じて、成功時もクリアするかどうかを決める)
 
       // --- データベースへの保存処理 (ステップ5.7で実装) ---
-      // await saveToDatabase(responseData.originalFileName, responseData.generatedText, responseData.promptUsedIdentifier);
+      // await saveToDatabase(responseData.originalFileName, responseData.generatedText, responseData.promptUsedIdentifier)
 
     } catch (error : any) {
-      setIsLoading(false);
-      setProcessingFile(null); // エラー時は処理中ファイルをクリア
-      console.error("Frontend API Call/Network Error:", error);
+      setIsLoading(false)
+      setProcessingFile(null) // エラー時は処理中ファイルをクリア
+      console.error("Frontend API Call/Network Error:", error)
       toast.error("API呼び出し中にネットワークエラーまたは予期せぬエラーが発生しました。", {
         description: error.message || "不明なクライアントサイドエラーです。",
         duration: 8000,
-      });
-      setGeneratedText(`API呼び出し中にエラーが発生しました:\n${error.message}\n\n詳細は開発者コンソールを確認してください。`);
+      })
+      setGeneratedText(`API呼び出し中にエラーが発生しました:\n${error.message}\n\n詳細は開発者コンソールを確認してください。`)
     }
     // finally ブロックはsetIsLoading(false)が二重に呼ばれる可能性があるので、各処理の最後に移動
-  };
+  }
 
   // 新しいファイルを処理する共通関数 (PDFフィルタリング、重複チェック、状態更新)
   // processNewFiles 関数内で、ファイルが追加された後に handleProcessFile を呼び出す
   const processNewFiles = useCallback((newFilesInput: File[]) => {
-    let addedFilesCount = 0;
-    const filesToAdd: File[] = [];
+    let addedFilesCount = 0
+    const filesToAdd: File[] = []
 
     newFilesInput.forEach(newFile => {
       if (newFile.type !== "application/pdf") {
         toast.error(`不正なファイル形式: 「${newFile.name}」`, {
           description: "PDFファイルではありません。スキップしました。", duration: 5000,
-        });
-        return;
+        })
+        return
       }
       const isDuplicate = uploadedFiles.some(
         (existingFile) => existingFile.name === newFile.name
-      );
+      )
       if (isDuplicate) {
         toast.warning(`ファイルが重複しています: 「${newFile.name}」`, {
           description: "このファイルは既に追加されています。", duration: 5000,
-        });
+        })
       } else {
-        filesToAdd.push(newFile);
-        addedFilesCount++;
+        filesToAdd.push(newFile)
+        addedFilesCount++
       }
-    });
+    })
 
     if (filesToAdd.length > 0) {
       setUploadedFiles((prevFiles) => {
-        const updatedFiles = [...prevFiles, ...filesToAdd];
+        const updatedFiles = [...prevFiles, ...filesToAdd]
         // 自動的に最初の新しいファイルを処理開始 (UI/UXに応じて変更可)
         // 他の処理が実行中でなければ、最初の追加ファイルを処理する
         if (filesToAdd.length > 0 && !isLoading) { // isLoading をチェック
-            handleProcessFile(filesToAdd[0]);
+            handleProcessFile(filesToAdd[0])
         }
-        return updatedFiles;
-      });
-      toast.success(`${addedFilesCount}件のPDFファイルが一覧に追加されました。`);
+        return updatedFiles
+      })
+      toast.success(`${addedFilesCount}件のPDFファイルが一覧に追加されました。`)
     }
-  }, [uploadedFiles, isLoading, handleProcessFile]); // isLoading と handleProcessFile を依存配列に追加
+  }, [uploadedFiles, isLoading, handleProcessFile]) // isLoading と handleProcessFile を依存配列に追加
 
   // --- ドラッグ＆ドロップイベントハンドラ ---
 
