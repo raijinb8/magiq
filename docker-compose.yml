@@ -18,8 +18,8 @@ services:
       - ~/.gitconfig:/home/node/.gitconfig:cached # ここでGitのグローバル設定を共有する
     environment:
       # Supabaseローカル開発環境への接続情報を設定 (後ほどSupabase起動時に確認・設定)
-      - VITE_SUPABASE_URL=http://localhost:54321 # SupabaseローカルAPIゲートウェイのデフォルトURL
-      - VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0 # Supabaseローカルのanon key
+      - VITE_LOCAL_SUPABASE_URL=http://localhost:54321 # SupabaseローカルAPIゲートウェイのデフォルトURL
+      - VITE_LOCAL_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0 # Supabaseローカルのanon key
       # Reactアプリが必要とするその他の環境変数
     # Supabase CLIが起動するDockerネットワークに接続するために必要になることがある
     # networks:
