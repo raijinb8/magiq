@@ -1,22 +1,5 @@
 {
-  "deno.enablePaths": ["supabase/functions"],
-  "deno.lint": true,
-  "deno.unstable": [
-    "bare-node-builtins",
-    "byonm",
-    "sloppy-imports",
-    "unsafe-proto",
-    "webgpu",
-    "broadcast-channel",
-    "worker-options",
-    "cron",
-    "kv",
-    "ffi",
-    "fs",
-    "http",
-    "net"
-  ],
   // Prettier をデフォルトフォーマッターにする
   "editor.defaultFormatter": "esbenp.prettier-vscode",
-  "editor.formatOnSave": true // 保存時にフォーマット
+  "editor.formatOnSave": true
 }
