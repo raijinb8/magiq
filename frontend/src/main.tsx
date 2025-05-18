@@ -3,16 +3,16 @@
 // グローバルな初期設定（グローバルCSSやZustand初期化など）を書く場所
 // 基本的に「触る頻度は少ない」
 
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import App from './App.tsx'
-import './global.css'
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App.tsx';
+import './global.css';
 
-import { useCompanyStore } from './store/useCompanyStore'
-import activeConfig from './config/active.json'
+import { useCompanyStore } from './store/useCompanyStore';
+import activeConfig from './config/active.json';
 
 // 初期化（ここで一度だけアクティブ社の設定をzustandに入れる）
-useCompanyStore.getState().setCompany(activeConfig)
+useCompanyStore.getState().setCompany(activeConfig);
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   // Reactをどこに表示するか（index.html の <div id="root">）を指定
@@ -20,4 +20,4 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />
   </React.StrictMode>
-)
+);

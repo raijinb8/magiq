@@ -1,50 +1,55 @@
 // src/pages/admin/WorkOrderTool.tsx
 
-import React, { useState, useCallback, useRef } from 'react'
-import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { toast } from 'sonner' // sonner から toast 関数を直接インポート
+import React, { useState, useCallback, useRef } from 'react';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { toast } from 'sonner'; // sonner から toast 関数を直接インポート
 // Supabase Client のインポート (Supabaseプロジェクトのセットアップ方法による)
 // import { supabase } from '@/lib/supabaseClient' // 例: lib/supabaseClient.ts で初期化した場合 (DB保存時に必要)
 
 const WorkOrderTool = () => {
   // 状態管理フック
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([])
-  const [isDragging, setIsDragging] = useState(false)
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
 
   // useRefフック
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ステップ5で追加/確認する状態変数
-    const [processingFile, setProcessingFile] = useState<File | null>(null) // 現在処理中のファイルオブジェクト
-    const [generatedText, setGeneratedText] = useState<string>("")     // Geminiが生成したテキスト
-    const [isLoading, setIsLoading] = useState(false) 
+  const [processingFile, setProcessingFile] = useState<File | null>(null); // 現在処理中のファイルオブジェクト
+  const [generatedText, setGeneratedText] = useState<string>(''); // Geminiが生成したテキスト
+  const [isLoading, setIsLoading] = useState(false);
 
   // バックエンドAPIを呼び出す関数
   const handleProcessFile = async (fileToProcess: File) => {
-    if (!fileToProcess || isLoading) { // 処理中なら何もしない
-      if(isLoading) toast.info("現在別のファイルを処理中です。少々お待ちください。")
-      return
+    if (!fileToProcess || isLoading) {
+      // 処理中なら何もしない
+      if (isLoading)
+        toast.info('現在別のファイルを処理中です。少々お待ちください。');
+      return;
     }
 
-    setProcessingFile(fileToProcess) // どのファイルを処理しているかUIにフィードバックするため
-    setIsLoading(true)
-    setGeneratedText("") // 前回の結果やプレースホルダーをクリア
-    toast.info(`「${fileToProcess.name}」の処理を開始します...`, { duration: 3000 })
+    setProcessingFile(fileToProcess); // どのファイルを処理しているかUIにフィードバックするため
+    setIsLoading(true);
+    setGeneratedText(''); // 前回の結果やプレースホルダーをクリア
+    toast.info(`「${fileToProcess.name}」の処理を開始します...`, {
+      duration: 3000,
+    });
 
     try {
       // ローカル開発環境のEdge FunctionのエンドポイントURL
       // 環境変数から取得することを推奨 (例: import.meta.env.VITE_PUBLIC_PROCESS_PDF_FUNCTION_URL)
-      const functionUrl = import.meta.env.VITE_LOCAL_PUBLIC_PROCESS_PDF_FUNCTION_URL
-      console.log(functionUrl)
+      const functionUrl = import.meta.env
+        .VITE_LOCAL_PUBLIC_PROCESS_PDF_FUNCTION_URL;
+      console.log(functionUrl);
       // バックエンドAPIに送信するデータ
       const requestBody = {
         fileName: fileToProcess.name,
         // 将来的にはここにファイルの内容やその他のメタデータを追加することも検討
         // fileSize: fileToProcess.size,
         // fileType: fileToProcess.type,
-      }
+      };
 
       const response = await fetch(functionUrl, {
         method: 'POST',
@@ -53,136 +58,163 @@ const WorkOrderTool = () => {
           // Supabaseのanon key (ローカル開発で --no-verify-jwt を使っている場合や、
           // Edge Function側でRLSやカスタム認証をまだ設定していない場合に必要になることがある)
           // 本番環境では、Edge Functionの呼び出しに認証トークン(Authorization: Bearer <token>)を使うのが一般的
-          'apikey': import.meta.env.VITE_LOCAL_SUPABASE_ANON_KEY,
+          apikey: import.meta.env.VITE_LOCAL_SUPABASE_ANON_KEY,
         },
         body: JSON.stringify(requestBody),
-      })
+      });
 
-      setIsLoading(false) // ローディング状態を解除
-      const responseData = await response.json()
+      setIsLoading(false); // ローディング状態を解除
+      const responseData = await response.json();
 
       if (!response.ok) {
-        console.error("Backend API Error Response:", responseData)
-        toast.error(`処理エラー: ${responseData.error || response.statusText}`, {
-          description: `ファイル「${fileToProcess.name}」の処理中に問題が発生しました。(${response.status})`,
-          duration: 8000,
-        })
-        setGeneratedText(`エラーが発生しました:\n${responseData.error || response.statusText}\n\n詳細は開発者コンソールを確認してください。`)
-        setProcessingFile(null) // エラー時は処理中ファイルをクリア
-        return
+        console.error('Backend API Error Response:', responseData);
+        toast.error(
+          `処理エラー: ${responseData.error || response.statusText}`,
+          {
+            description: `ファイル「${fileToProcess.name}」の処理中に問題が発生しました。(${response.status})`,
+            duration: 8000,
+          }
+        );
+        setGeneratedText(
+          `エラーが発生しました:\n${responseData.error || response.statusText}\n\n詳細は開発者コンソールを確認してください。`
+        );
+        setProcessingFile(null); // エラー時は処理中ファイルをクリア
+        return;
       }
 
-      toast.success(`「${fileToProcess.name}」のAI処理が完了しました！`, { duration: 5000 })
-      setGeneratedText(responseData.generatedText || "テキストが生成されませんでした。")
+      toast.success(`「${fileToProcess.name}」のAI処理が完了しました！`, {
+        duration: 5000,
+      });
+      setGeneratedText(
+        responseData.generatedText || 'テキストが生成されませんでした。'
+      );
       // 処理が成功したら processingFile はクリアせず、どのファイルの結果が表示されているか分かるように残す
       // (UIの要件に応じて、成功時もクリアするかどうかを決める)
 
       // --- データベースへの保存処理 (ステップ5.7で実装) ---
       // await saveToDatabase(responseData.originalFileName, responseData.generatedText, responseData.promptUsedIdentifier)
-
-    } catch (error : any) {
-      setIsLoading(false)
-      setProcessingFile(null) // エラー時は処理中ファイルをクリア
-      console.error("Frontend API Call/Network Error:", error)
-      toast.error("API呼び出し中にネットワークエラーまたは予期せぬエラーが発生しました。", {
-        description: error.message || "不明なクライアントサイドエラーです。",
-        duration: 8000,
-      })
-      setGeneratedText(`API呼び出し中にエラーが発生しました:\n${error.message}\n\n詳細は開発者コンソールを確認してください。`)
+    } catch (error: any) {
+      setIsLoading(false);
+      setProcessingFile(null); // エラー時は処理中ファイルをクリア
+      console.error('Frontend API Call/Network Error:', error);
+      toast.error(
+        'API呼び出し中にネットワークエラーまたは予期せぬエラーが発生しました。',
+        {
+          description: error.message || '不明なクライアントサイドエラーです。',
+          duration: 8000,
+        }
+      );
+      setGeneratedText(
+        `API呼び出し中にエラーが発生しました:\n${error.message}\n\n詳細は開発者コンソールを確認してください。`
+      );
     }
     // finally ブロックはsetIsLoading(false)が二重に呼ばれる可能性があるので、各処理の最後に移動
-  }
+  };
 
   // 新しいファイルを処理する共通関数 (PDFフィルタリング、重複チェック、状態更新)
   // processNewFiles 関数内で、ファイルが追加された後に handleProcessFile を呼び出す
-  const processNewFiles = useCallback((newFilesInput: File[]) => {
-    let addedFilesCount = 0
-    const filesToAdd: File[] = []
+  const processNewFiles = useCallback(
+    (newFilesInput: File[]) => {
+      let addedFilesCount = 0;
+      const filesToAdd: File[] = [];
 
-    newFilesInput.forEach(newFile => {
-      if (newFile.type !== "application/pdf") {
-        toast.error(`不正なファイル形式: 「${newFile.name}」`, {
-          description: "PDFファイルではありません。スキップしました。", duration: 5000,
-        })
-        return
-      }
-      const isDuplicate = uploadedFiles.some(
-        (existingFile) => existingFile.name === newFile.name
-      )
-      if (isDuplicate) {
-        toast.warning(`ファイルが重複しています: 「${newFile.name}」`, {
-          description: "このファイルは既に追加されています。", duration: 5000,
-        })
-      } else {
-        filesToAdd.push(newFile)
-        addedFilesCount++
-      }
-    })
-
-    if (filesToAdd.length > 0) {
-      setUploadedFiles((prevFiles) => {
-        const updatedFiles = [...prevFiles, ...filesToAdd]
-        // 自動的に最初の新しいファイルを処理開始 (UI/UXに応じて変更可)
-        // 他の処理が実行中でなければ、最初の追加ファイルを処理する
-        if (filesToAdd.length > 0 && !isLoading) { // isLoading をチェック
-            handleProcessFile(filesToAdd[0])
+      newFilesInput.forEach((newFile) => {
+        if (newFile.type !== 'application/pdf') {
+          toast.error(`不正なファイル形式: 「${newFile.name}」`, {
+            description: 'PDFファイルではありません。スキップしました。',
+            duration: 5000,
+          });
+          return;
         }
-        return updatedFiles
-      })
-      toast.success(`${addedFilesCount}件のPDFファイルが一覧に追加されました。`)
-    }
-  }, [uploadedFiles, isLoading, handleProcessFile]) // isLoading と handleProcessFile を依存配列に追加
+        const isDuplicate = uploadedFiles.some(
+          (existingFile) => existingFile.name === newFile.name
+        );
+        if (isDuplicate) {
+          toast.warning(`ファイルが重複しています: 「${newFile.name}」`, {
+            description: 'このファイルは既に追加されています。',
+            duration: 5000,
+          });
+        } else {
+          filesToAdd.push(newFile);
+          addedFilesCount++;
+        }
+      });
+
+      if (filesToAdd.length > 0) {
+        setUploadedFiles((prevFiles) => {
+          const updatedFiles = [...prevFiles, ...filesToAdd];
+          // 自動的に最初の新しいファイルを処理開始 (UI/UXに応じて変更可)
+          // 他の処理が実行中でなければ、最初の追加ファイルを処理する
+          if (filesToAdd.length > 0 && !isLoading) {
+            // isLoading をチェック
+            handleProcessFile(filesToAdd[0]);
+          }
+          return updatedFiles;
+        });
+        toast.success(
+          `${addedFilesCount}件のPDFファイルが一覧に追加されました。`
+        );
+      }
+    },
+    [uploadedFiles, isLoading, handleProcessFile]
+  ); // isLoading と handleProcessFile を依存配列に追加
 
   // --- ドラッグ＆ドロップイベントハンドラ ---
 
   const handleDrop = useCallback(
     (event: React.DragEvent<HTMLDivElement>) => {
-      event.preventDefault()
-      event.stopPropagation()
-      setIsDragging(false)
-      const files = event.dataTransfer.files
+      event.preventDefault();
+      event.stopPropagation();
+      setIsDragging(false);
+      const files = event.dataTransfer.files;
       if (files && files.length > 0) {
-        processNewFiles(Array.from(files))
+        processNewFiles(Array.from(files));
       }
     },
     [processNewFiles]
-  )
+  );
 
-  const handleDragEnter = useCallback((event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault()
-    event.stopPropagation()
-    setIsDragging(true)
-  }, [])
+  const handleDragEnter = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setIsDragging(true);
+    },
+    []
+  );
 
-  const handleDragLeave = useCallback((event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault()
-    event.stopPropagation()
-    if (event.currentTarget.contains(event.relatedTarget as Node)) {
-      return
-    }
-    setIsDragging(false)
-  }, [])
+  const handleDragLeave = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.currentTarget.contains(event.relatedTarget as Node)) {
+        return;
+      }
+      setIsDragging(false);
+    },
+    []
+  );
 
   const handleDragOver = useCallback(
     (event: React.DragEvent<HTMLDivElement>) => {
-      event.preventDefault()
-      event.stopPropagation()
-      if (!isDragging) setIsDragging(true)
+      event.preventDefault();
+      event.stopPropagation();
+      if (!isDragging) setIsDragging(true);
     },
     [isDragging]
-  )
+  );
 
   // --- ファイル選択ダイアログ関連 ---
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files
+    const files = event.target.files;
     if (files && files.length > 0) {
-      processNewFiles(Array.from(files))
+      processNewFiles(Array.from(files));
     }
     if (event.target) {
-      event.target.value = ''
+      event.target.value = '';
     }
-  }
+  };
 
   return (
     <div /* ... (ルートdivの定義) ... */
@@ -200,8 +232,14 @@ const WorkOrderTool = () => {
 
       <div className="flex flex-1 overflow-hidden">
         <aside className="w-1/4 border-r bg-background p-4 overflow-y-auto">
-          <h2 className="mb-4 text-lg font-semibold">アップロード済みPDF一覧</h2>
-          <Button className="w-full mb-4" variant="outline" onClick={() => fileInputRef.current?.click()}>
+          <h2 className="mb-4 text-lg font-semibold">
+            アップロード済みPDF一覧
+          </h2>
+          <Button
+            className="w-full mb-4"
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+          >
             PDFを選択してアップロード
           </Button>
           <input
@@ -221,16 +259,34 @@ const WorkOrderTool = () => {
                       key={`${file.name}-${file.lastModified}-${index}`}
                       className={`mb-2 cursor-pointer rounded-md p-2 text-sm transition-colors duration-150 ease-in-out
                         ${processingFile?.name === file.name && isLoading ? 'bg-blue-100 dark:bg-blue-800/30 ring-2 ring-blue-500 animate-pulse' : ''}
-                        ${processingFile?.name === file.name && !isLoading && generatedText && !generatedText.startsWith("エラー") ? 'bg-green-100 dark:bg-green-800/30 ring-1 ring-green-500' : ''}
-                        ${processingFile?.name === file.name && !isLoading && generatedText && generatedText.startsWith("エラー") ? 'bg-red-100 dark:bg-red-800/30 ring-1 ring-red-500' : ''}
-                        ${(!processingFile || processingFile?.name !== file.name) ? 'hover:bg-muted' : ''}
+                        ${processingFile?.name === file.name && !isLoading && generatedText && !generatedText.startsWith('エラー') ? 'bg-green-100 dark:bg-green-800/30 ring-1 ring-green-500' : ''}
+                        ${processingFile?.name === file.name && !isLoading && generatedText && generatedText.startsWith('エラー') ? 'bg-red-100 dark:bg-red-800/30 ring-1 ring-red-500' : ''}
+                        ${!processingFile || processingFile?.name !== file.name ? 'hover:bg-muted' : ''}
                       `}
                       onClick={() => handleProcessFile(file)} // クリックで処理開始
                     >
                       {file.name} ({(file.size / 1024).toFixed(2)} KB)
-                      {processingFile?.name === file.name && isLoading && <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">(処理中...)</span>}
-                      {processingFile?.name === file.name && !isLoading && generatedText && !generatedText.startsWith("エラー") && <span className="ml-2 text-xs text-green-600 dark:text-green-400">(処理完了)</span>}
-                      {processingFile?.name === file.name && !isLoading && generatedText && generatedText.startsWith("エラー") && <span className="ml-2 text-xs text-red-600 dark:text-red-400">(エラー)</span>}
+                      {processingFile?.name === file.name && isLoading && (
+                        <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">
+                          (処理中...)
+                        </span>
+                      )}
+                      {processingFile?.name === file.name &&
+                        !isLoading &&
+                        generatedText &&
+                        !generatedText.startsWith('エラー') && (
+                          <span className="ml-2 text-xs text-green-600 dark:text-green-400">
+                            (処理完了)
+                          </span>
+                        )}
+                      {processingFile?.name === file.name &&
+                        !isLoading &&
+                        generatedText &&
+                        generatedText.startsWith('エラー') && (
+                          <span className="ml-2 text-xs text-red-600 dark:text-red-400">
+                            (エラー)
+                          </span>
+                        )}
                     </li>
                   ))}
                 </ul>
@@ -249,12 +305,15 @@ const WorkOrderTool = () => {
           <div className="w-1/2 border-r p-4 flex flex-col overflow-hidden">
             <div className="mb-2 flex items-center justify-between">
               <h2 className="text-lg font-semibold">
-                PDFプレビュー {processingFile && !isLoading && `(${processingFile.name})`}
+                PDFプレビュー{' '}
+                {processingFile && !isLoading && `(${processingFile.name})`}
               </h2>
             </div>
             <div className="flex-1 bg-slate-100 rounded-md flex items-center justify-center overflow-auto p-2">
               <p className="text-muted-foreground">
-                {processingFile && !isLoading ? `「${processingFile.name}」のPDFプレビューは現在未実装です。` : "ここに選択されたPDFが表示されます"}
+                {processingFile && !isLoading
+                  ? `「${processingFile.name}」のPDFプレビューは現在未実装です。`
+                  : 'ここに選択されたPDFが表示されます'}
               </p>
             </div>
           </div>
@@ -262,21 +321,31 @@ const WorkOrderTool = () => {
           <div className="w-1/2 p-4 flex flex-col overflow-hidden">
             <div className="mb-2 flex items-center justify-between">
               <h2 className="text-lg font-semibold">
-                業務手配書 文言 {processingFile && !isLoading && `(${processingFile.name})`}
+                業務手配書 文言{' '}
+                {processingFile && !isLoading && `(${processingFile.name})`}
               </h2>
               <div>
-                <Button variant="outline" size="sm" className="mr-2" disabled>戻る (仮)</Button>
-                <Button variant="outline" size="sm" className="mr-2" disabled>次へ (仮)</Button>
-                <Button size="sm" disabled>保存 (仮)</Button>
+                <Button variant="outline" size="sm" className="mr-2" disabled>
+                  戻る (仮)
+                </Button>
+                <Button variant="outline" size="sm" className="mr-2" disabled>
+                  次へ (仮)
+                </Button>
+                <Button size="sm" disabled>
+                  保存 (仮)
+                </Button>
               </div>
             </div>
             <Textarea
               className="flex-1 resize-none rounded-md text-sm font-mono"
               placeholder={
-                isLoading ? `「${processingFile?.name || '選択されたファイル'}」の業務手配書をAIが生成中です...\n\n通常30秒程度かかります。しばらくお待ちください。`
-                : generatedText ? "" // generatedTextがあればプレースホルダーは不要
-                : processingFile ? `「${processingFile.name}」の処理結果がここに表示されます。クリックまたはアップロードで処理を開始してください。`
-                : "処理するPDFを左の一覧から選択するか、新しいPDFをアップロードしてください。"
+                isLoading
+                  ? `「${processingFile?.name || '選択されたファイル'}」の業務手配書をAIが生成中です...\n\n通常30秒程度かかります。しばらくお待ちください。`
+                  : generatedText
+                    ? '' // generatedTextがあればプレースホルダーは不要
+                    : processingFile
+                      ? `「${processingFile.name}」の処理結果がここに表示されます。クリックまたはアップロードで処理を開始してください。`
+                      : '処理するPDFを左の一覧から選択するか、新しいPDFをアップロードしてください。'
               }
               value={generatedText}
               readOnly // この段階ではまだ編集不可、表示専用
@@ -290,7 +359,7 @@ const WorkOrderTool = () => {
         例: <Toaster richColors position="top-right" />
       */}
     </div>
-  )
-}
+  );
+};
 
-export default WorkOrderTool
+export default WorkOrderTool;
