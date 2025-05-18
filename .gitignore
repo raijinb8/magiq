@@ -54,9 +54,12 @@ lerna-debug.log* # Lernaを使用している場合
 !.vscode/extensions.json
 !.vscode/launch.json
 !.vscode/tasks.json
-frontend/.vscode
-supabase/.vscode
-frontend/.prettier.js
+
+frontend/.vscode/*
+!frontend/.vscode/settings.json
+
+supabase/.vscode/*
+!supabase/.vscode/settings.json
 
 # JetBrains IDEs (IntelliJ, WebStorm, etc.)
 .idea/
