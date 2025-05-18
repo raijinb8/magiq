@@ -31,3 +31,14 @@ else
 fi
 
 echo "postCreateCommand finished."
+
+# Denoをインストール
+
+echo "postCreateCommand.sh を介したDenoのインストールを開始..."
+echo "PATH -> Y, shell -> zsh"
+
+curl -fsSL https://deno.land/x/install/install.sh | sh
+echo "現在のDenoバージョン:"
+deno --version
+
+echo "Deno用のpostCreateCommand.shが終了しました。"
