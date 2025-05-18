@@ -1,0 +1,16 @@
+{
+  // frontendディレクトリ内のファイルで Prettier をデフォルトフォーマッターにする
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true, // 保存時にフォーマット
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  }
+  // 必要であれば、Prettier の設定ファイル (.prettierrc.js や .prettierrc.json) を
+  // frontend ディレクトリのルートに置くことを推奨します。
+}
