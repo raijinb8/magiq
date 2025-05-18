@@ -1,7 +1,8 @@
 // supabase/functions/process-pdf-single/index.ts
 
 import { GoogleGenAI } from "@google/genai";
-
+// Supabaseクライアントをインポート (Deno用)
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 console.log("process-pdf-single function (v2 - with Gen) has been invoked!");
 
 const corsHeaders = {
@@ -60,6 +61,31 @@ MH建設　村上様：080-4888-2659
 ※現場内及び周辺(路上含む)は禁煙
 2名作業
 `; // プロンプトここまで
+
+// グローバルスコープでSupabaseクライアントを一度だけ初期化 (パフォーマンスのため)
+// 環境変数は関数の呼び出しごとにDeno.env.getで取得するのがより安全・確実な場合もある
+// ここでは起動時に一度取得する例
+let supabaseClient: SupabaseClient | null = null;
+try {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    console.error("CRITICAL: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is not set.");
+  } else {
+    supabaseClient = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        // サーバーサイドのクライアントなので、自動リフレッシュトークンは不要
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false
+      }
+    });
+    console.log("Supabase client initialized for server-side use.");
+  }
+} catch (e) {
+  console.error("Error initializing Supabase client:", e);
+}
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -193,14 +219,62 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // TODO: ステップ5.4でデータベースへの保存処理をここに追加する
+    // --- データベースへの保存処理 ---
+    let dbRecordId: string | null = null;
+    if (supabaseClient) {
+      try {
+        console.log(`[${new Date().toISOString()}] Attempting to save generated text to database for: ${fileName}`);
+        const { data: insertedData, error: dbError } = await supabaseClient
+          .from('work_orders') // 作成したテーブル名
+          .insert([
+            {
+              file_name: fileName,
+              // uploaded_at: new Date().toISOString(), // 本来はフロントからアップロード時刻をもらうか、ここで設定
+              generated_text: generatedTextByGen,
+              // edited_text: generatedTextByGen, // 初期値として同じものを入れるか、NULLのままか
+              status: 'completed_from_ai', // AI処理完了を示すステータス
+              prompt_identifier: "NOHARA_G_PROMPT_V20250515", // どのプロンプトを使ったか
+              // company_name: '野原Ｇ住環境', // 固定値または将来的に動的に設定
+              gemini_processed_at: new Date().toISOString(), // Gemini処理完了時刻
+            },
+          ])
+          .select('id') // 挿入されたレコードのIDを取得
+          .single(); // 1件のレコードが返ることを期待
+
+        if (dbError) {
+          console.error(`[${new Date().toISOString()}] Error saving to database for ${fileName}:`, dbError);
+          // DB保存エラーは致命的ではないかもしれないので、フロントには成功として返しつつログで警告する選択肢もある
+          // 今回はエラーとして扱う
+          return new Response(JSON.stringify({ error: "Failed to save generated text to database.", details: dbError.message }), {
+            status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        if (insertedData && insertedData.id) {
+          dbRecordId = insertedData.id;
+          console.log(`[${new Date().toISOString()}] Successfully saved to database for ${fileName}, record ID: ${dbRecordId}`);
+        } else {
+          console.warn(`[${new Date().toISOString()}] Saved to database for ${fileName}, but no ID returned or insert failed silently.`);
+        }
+      } catch (e) {
+        console.error(`[${new Date().toISOString()}] Exception during database save for ${fileName}:`, e);
+        // こちらもエラーとして扱う
+        return new Response(JSON.stringify({ error: "An exception occurred while saving to database.", details: e.message }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    } else {
+      console.warn(`[${new Date().toISOString()}] Supabase client not initialized. Skipping database save for ${fileName}.`);
+      // 開発中はDB接続なしでも動くようにしておくか、エラーにするか選択
+      // 今回は警告のみで進めるが、本番では client が null ならエラーにすべき
+    }
 
     // 5. フロントエンドへのレスポンス
     const responseData = {
-      message: `Successfully generated text for ${fileName} using Gemini API.`,
+      message: `Successfully generated and processed text for ${fileName}.`,
       generatedText: generatedTextByGen,
       originalFileName: fileName,
       promptUsedIdentifier: "NOHARA_G_PROMPT_V20250515", // プロンプトのバージョン管理用
+      dbRecordId: dbRecordId, // DBに保存されたレコードのIDも返す (オプション)
     };
 
     return new Response(
