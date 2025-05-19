@@ -5,8 +5,26 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner'; // sonner から toast 関数を直接インポート
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  SelectGroup,
+  SelectLabel,
+} from '@/components/ui/select';
 // Supabase Client のインポート (Supabaseプロジェクトのセットアップ方法による)
 // import { supabase } from '@/lib/supabaseClient' // 例: lib/supabaseClient.ts で初期化した場合 (DB保存時に必要)
+
+const COMPANY_OPTIONS = [
+  { value: 'NOHARA_G', label: '野原G住環境' },
+  { value: 'KATOUBENIYA_MISAWA_PROMPT', label: '加藤ベニヤ池袋ミサワホーム' },
+  { value: 'YAMADA_K', label: '山田K建設 (準備中)' }, // 仮に準備中のものも入れておく
+  // 今後対応する会社が増えたらここに追加
+];
+
+type CompanyOptionValue = (typeof COMPANY_OPTIONS)[number]['value'] | ''; // 選択肢のvalue型 + 未選択を表す空文字
 
 const WorkOrderTool = () => {
   // 状態管理フック
@@ -20,6 +38,10 @@ const WorkOrderTool = () => {
   const [processingFile, setProcessingFile] = useState<File | null>(null); // 現在処理中のファイルオブジェクト
   const [generatedText, setGeneratedText] = useState<string>(''); // Geminiが生成したテキスト
   const [isLoading, setIsLoading] = useState(false);
+
+  // 選択された会社IDを保持する状態変数
+  const [selectedCompanyIdForProcessing, setSelectedCompanyIdForProcessing] =
+    useState<CompanyOptionValue>('');
 
   // バックエンドAPIを呼び出す関数
   const handleProcessFile = async (fileToProcess: File) => {
@@ -242,6 +264,26 @@ const WorkOrderTool = () => {
           >
             PDFを選択してアップロード
           </Button>
+          <Select
+            value={selectedCompanyIdForProcessing}
+            onValueChange={(value) =>
+              setSelectedCompanyIdForProcessing(value as CompanyOptionValue)
+            }
+          >
+            <SelectTrigger className="w-[280px]">
+              <SelectValue placeholder="処理対象の会社を選択してください" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectLabel>会社一覧</SelectLabel>
+                {COMPANY_OPTIONS.map((company) => (
+                  <SelectItem key={company.value} value={company.value}>
+                    {company.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
           <input
             type="file"
             ref={fileInputRef}
