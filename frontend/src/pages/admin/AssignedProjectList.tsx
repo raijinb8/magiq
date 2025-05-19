@@ -1,13 +1,13 @@
-import { Card, CardHeader, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 
 type AssignedProject = {
-  date: string
-  siteName: string
-  leader: string
-  staff: string[]
-  status: '未報告' | '報告済'
-}
+  date: string;
+  siteName: string;
+  leader: string;
+  staff: string[];
+  status: '未報告' | '報告済';
+};
 
 const dummyData: AssignedProject[] = [
   {
@@ -31,7 +31,7 @@ const dummyData: AssignedProject[] = [
     staff: ['金谷'],
     status: '未報告',
   },
-]
+];
 
 export default function AssignedProjectList() {
   return (
@@ -48,11 +48,17 @@ export default function AssignedProjectList() {
             <div>スタッフ：{project.staff.join(', ')}</div>
             <div>
               状況：
-              <Badge variant={project.status === '報告済' ? 'default' : 'destructive'}>{project.status}</Badge>
+              <Badge
+                variant={
+                  project.status === '報告済' ? 'default' : 'destructive'
+                }
+              >
+                {project.status}
+              </Badge>
             </div>
           </CardContent>
         </Card>
       ))}
     </div>
-  )
+  );
 }

@@ -1,7 +1,7 @@
 // pages/dashboard.tsx
-import { NextShiftCard } from '@/components/dashboard/NextShiftCard'
-import { SubmissionStatusCard } from '@/components/dashboard/SubmissionStatusCard'
-import { QuickActions } from '@/components/dashboard/QuickActions'
+import { NextShiftCard } from '@/components/dashboard/NextShiftCard';
+import { SubmissionStatusCard } from '@/components/dashboard/SubmissionStatusCard';
+import { QuickActions } from '@/components/dashboard/QuickActions';
 
 export default function Dashboard() {
   return (
@@ -11,5 +11,5 @@ export default function Dashboard() {
       <SubmissionStatusCard />
       <QuickActions />
     </div>
-  )
+  );
 }

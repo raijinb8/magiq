@@ -1,5 +1,5 @@
 // components/dashboard/NextShiftCard.tsx
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card';
 
 export function NextShiftCard() {
   // 仮データ（本番はSupabaseから）
@@ -8,7 +8,7 @@ export function NextShiftCard() {
     time: '13:00〜',
     site: '江口 環 邸（住友林業）',
     address: '千葉県流山市江戸川台西2-14',
-  }
+  };
 
   return (
     <Card>
@@ -21,5 +21,5 @@ export function NextShiftCard() {
         <p className="text-xs text-gray-500">{shift.address}</p>
       </CardContent>
     </Card>
-  )
+  );
 }
