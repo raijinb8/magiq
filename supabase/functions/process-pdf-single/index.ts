@@ -39,6 +39,8 @@ try {
   console.error('Error initializing Supabase client:', e)
 }
 
+type CompanyIdentifier = 'NOHARA_G' | 'KATOUBENIYA_MISAWA_PROMPT' | 'UNKNOWN_OR_NOT_SET'
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -69,18 +71,55 @@ Deno.serve(async (req: Request) => {
       })
     }
 
-    const fileName = body.fileName // フロントエンドから送られてくるファイル名
+    const fileName = body.fileName as string // フロントエンドから送られてくるファイル名
     // 将来的にはここに実際のPDFの内容を渡す処理が入る（例: OCR結果など）
-    // 今回はダミーのPDF内容を使います
-    const pdfContentDummy = `これは ${
-      fileName || '不明なファイル'
-    } のダミーPDF内容です。実際にはここに抽出されたテキストが入ります。`
+    const companyIdFromFrontend = body.companyId as CompanyIdentifier // ★フロントエンドから会社IDを受け取る
 
     if (!fileName) {
       return new Response(JSON.stringify({ error: 'fileName is required in the request body.' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
+    }
+
+    if (!companyIdFromFrontend || companyIdFromFrontend === 'UNKNOWN_OR_NOT_SET') {
+      // companyIdが送られてこない、または未選択の場合はエラーにするか、デフォルト処理をする
+      return new Response(JSON.stringify({ error: 'companyId is required or invalid' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    console.log(
+      `[${new Date().toISOString()}] Received request for ${fileName}, Company ID from frontend: ${companyIdFromFrontend}`
+    )
+
+    // 今回はダミーのPDF内容を使います
+    const pdfContentDummy = `これは ${fileName} のダミーPDF内容です。実際にはここに抽出されたテキストが入ります。指定された会社: ${companyIdFromFrontend}`
+
+    let selectedPromptFunction: ((fileName: string, content: string) => string) | null = null
+    let promptIdentifier = `${companyIdFromFrontend}_PROMPT_V_DEFAULT` // デフォルトの識別子
+
+    // フロントエンドから受け取った companyId に基づいてプロンプトを選択
+    switch (companyIdFromFrontend) {
+      case 'NOHARA_G':
+        // NOHARA_G_PROMPT を ./prompts/noharaG.ts からインポートしている想定
+        selectedPromptFunction = NOHARA_G_PROMPT
+        promptIdentifier = 'NOHARA_G_PROMPT_V20250519' // プロンプトバージョンを更新
+        break
+      case 'KATOUBENIYA_MISAWA_PROMPT':
+        // TANAKA_S_PROMPT を ./prompts/tanakaS.ts からインポートしている想定
+        selectedPromptFunction = KATOUBENIYA_MISAWA_PROMPT
+        promptIdentifier = 'TANAKA_S_PROMPT_V20250519'
+        break
+      default:
+        console.error(
+          `[${new Date().toISOString()}] Unknown or unsupported companyId: ${companyIdFromFrontend} for file: ${fileName}`
+        )
+        return new Response(JSON.stringify({ error: `Unsupported companyId: ${companyIdFromFrontend}` }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
     }
 
     // 1. Gemini APIキーを環境変数から取得
@@ -106,7 +145,7 @@ Deno.serve(async (req: Request) => {
     // gemini-2.0-flash 次世代の機能、速度。
 
     // 3. プロンプトの組み立て
-    const prompt = NOHARA_G_PROMPT(fileName, pdfContentDummy)
+    const prompt = selectedPromptFunction(fileName, pdfContentDummy)
 
     console.log(`[${new Date().toISOString()}] Sending prompt to Gemini API for file: ${fileName}`)
     // console.debug("Full Prompt to Gen:", prompt); // デバッグ時に必要ならコメント解除 (非常に長くなる可能性)
@@ -273,10 +312,11 @@ Deno.serve(async (req: Request) => {
 
     // 5. フロントエンドへのレスポンス
     const responseData = {
-      message: `Successfully generated and processed text for ${fileName}.`,
+      message: `Successfully generated text for ${fileName} (Company: ${companyIdFromFrontend}).`,
       generatedText: generatedTextByGen,
       originalFileName: fileName,
-      promptUsedIdentifier: 'NOHARA_G_PROMPT_V20250515', // プロンプトのバージョン管理用
+      promptUsedIdentifier: promptIdentifier, // プロンプトのバージョン管理用
+      identifiedCompany: companyIdFromFrontend,
       dbRecordId: dbRecordId, // DBに保存されたレコードのIDも返す (オプション)
     }
 
