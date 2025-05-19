@@ -1,6 +1,7 @@
 {
   // supabaseディレクトリ内のファイルで Deno Formatter を有効にする
   "deno.enable": true,
+  "deno.enablePaths": ["./functions"],
   "deno.lint": true, // Denoのリンターも有効にする場合
 
   // Deno Formatter をデフォルトにする (Deno拡張機能が自動でTypeScript/JavaScriptのフォーマッターになることが多い)
