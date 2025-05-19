@@ -103,8 +103,14 @@ Deno.serve(async (req: Request) => {
     let body: any = {}
     try {
       body = await req.json()
-    } catch (e) {
-      console.error('Failed to parse JSON body:', e.message)
+    } catch (e: unknown) {
+      let errorMessage = 'Internal Server Error. Please try again later.'
+      if (e instanceof Error) {
+        errorMessage = e.message
+      } else if (typeof e === 'string') {
+        errorMessage = e
+      }
+      console.error('Failed to parse JSON body:', errorMessage)
       return new Response(JSON.stringify({ error: 'Invalid JSON body provided.' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -129,10 +135,15 @@ Deno.serve(async (req: Request) => {
     const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY')
     if (!GEMINI_API_KEY) {
       console.error('CRITICAL: GEMINI_API_KEY is not set in environment variables.')
-      return new Response(JSON.stringify({ error: 'API key for AI service is not configured on the server.' }), {
-        status: 500, // Internal Server Error
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      return new Response(
+        JSON.stringify({
+          error: 'API key for AI service is not configured on the server.',
+        }),
+        {
+          status: 500, // Internal Server Error
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      )
     }
 
     // 2. Genクライアントの初期化
@@ -149,7 +160,7 @@ Deno.serve(async (req: Request) => {
     // console.debug("Full Prompt to Gen:", prompt); // デバッグ時に必要ならコメント解除 (非常に長くなる可能性)
 
     // 4. Gemini API呼び出し
-    let generatedTextByGen = ''
+    let generatedTextByGen: string = ''
     let usageMetadata: any = null
     try {
       // API Ref https://ai.google.dev/api/generate-content?hl=ja#v1beta.GenerateContentResponse
@@ -178,7 +189,14 @@ Deno.serve(async (req: Request) => {
         // デベロッパーがシステム指示を設定
         // systemInstruction: "",
       })
-      generatedTextByGen = response.text
+      if (typeof response.text === 'string') {
+        generatedTextByGen = response.text
+      } else {
+        // response.text が undefined だった場合の処理
+        // 例えば、デフォルトの文字列を代入する、エラーを投げる、など
+        generatedTextByGen = '' // またはエラー処理
+        console.error('response.text is undefined')
+      }
       console.log(`[${new Date().toISOString()}] Successfully received response from Gemini API for: ${fileName}`)
       usageMetadata = response.usageMetadata
 
@@ -203,7 +221,7 @@ Deno.serve(async (req: Request) => {
       }
 
       // console.debug("Gen Raw Response Text:", generatedTextByGen); // デバッグ時に必要ならコメント解除
-    } catch (genError) {
+    } catch (genError: any) {
       console.error(`[${new Date().toISOString()}] Error calling Gemini API for ${fileName}:`, genError)
       let userFriendlyErrorMessage = 'AIによるテキスト生成に失敗しました。'
       // Gemini APIからのエラーレスポンスに詳細が含まれていれば、それをログに出力
@@ -214,10 +232,16 @@ Deno.serve(async (req: Request) => {
       //       userFriendlyErrorMessage += ` 理由: ${genError.response.promptFeedback.blockReason}`;
       //   }
       // }
-      return new Response(JSON.stringify({ error: userFriendlyErrorMessage, details: genError.message }), {
-        status: 502, // Bad Gateway (外部APIとの連携で問題があった場合)
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      return new Response(
+        JSON.stringify({
+          error: userFriendlyErrorMessage,
+          details: genError.message,
+        }),
+        {
+          status: 502, // Bad Gateway (外部APIとの連携で問題があった場合)
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      )
     }
 
     // --- データベースへの保存処理 ---
@@ -247,7 +271,10 @@ Deno.serve(async (req: Request) => {
           // DB保存エラーは致命的ではないかもしれないので、フロントには成功として返しつつログで警告する選択肢もある
           // 今回はエラーとして扱う
           return new Response(
-            JSON.stringify({ error: 'Failed to save generated text to database.', details: dbError.message }),
+            JSON.stringify({
+              error: 'Failed to save generated text to database.',
+              details: dbError.message,
+            }),
             {
               status: 500,
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -264,11 +291,20 @@ Deno.serve(async (req: Request) => {
             `[${new Date().toISOString()}] Saved to database for ${fileName}, but no ID returned or insert failed silently.`
           )
         }
-      } catch (e) {
+      } catch (e: unknown) {
         console.error(`[${new Date().toISOString()}] Exception during database save for ${fileName}:`, e)
         // こちらもエラーとして扱う
+        let errorMessage = 'Internal Server Error. Please try again later.'
+        if (e instanceof Error) {
+          errorMessage = e.message
+        } else if (typeof e === 'string') {
+          errorMessage = e
+        }
         return new Response(
-          JSON.stringify({ error: 'An exception occurred while saving to database.', details: e.message }),
+          JSON.stringify({
+            error: 'An exception occurred while saving to database.',
+            details: errorMessage,
+          }),
           {
             status: 500,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -296,11 +332,22 @@ Deno.serve(async (req: Request) => {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(`[${new Date().toISOString()}] Unhandled error in function:`, error)
-    return new Response(JSON.stringify({ error: error.message || 'Internal Server Error. Please try again later.' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    let errorMessage = 'Internal Server Error. Please try again later.'
+    if (error instanceof Error) {
+      errorMessage = error.message
+    } else if (typeof error === 'string') {
+      errorMessage = error
+    }
+    return new Response(
+      JSON.stringify({
+        error: errorMessage || 'Internal Server Error. Please try again later.',
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    )
   }
 })
