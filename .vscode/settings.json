@@ -1,5 +1,7 @@
 {
   // Prettier をデフォルトフォーマッターにする
   "editor.defaultFormatter": "esbenp.prettier-vscode",
-  "editor.formatOnSave": true
+  "editor.formatOnSave": true,
+  "deno.enable": true,
+  "deno.enablePaths": ["./supabase/functions"]
 }
