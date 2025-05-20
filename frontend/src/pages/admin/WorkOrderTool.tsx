@@ -14,8 +14,7 @@ import {
   SelectGroup,
   SelectLabel,
 } from '@/components/ui/select';
-// Supabase Client のインポート (Supabaseプロジェクトのセットアップ方法による)
-// import { supabase } from '@/lib/supabaseClient' // 例: lib/supabaseClient.ts で初期化した場合 (DB保存時に必要)
+import { supabase } from '@/lib/supabase.ts'; // Supabase Client のインポート
 
 const COMPANY_OPTIONS = [
   { value: 'NOHARA_G', label: '野原G住環境' },
@@ -60,10 +59,16 @@ const WorkOrderTool = () => {
     });
 
     try {
-      // ローカル開発環境のEdge FunctionのエンドポイントURL
-      // 環境変数から取得することを推奨 (例: import.meta.env.VITE_PUBLIC_PROCESS_PDF_FUNCTION_URL)
-      const functionUrl = import.meta.env
-        .VITE_LOCAL_PUBLIC_PROCESS_PDF_FUNCTION_URL;
+      const session = (await supabase.auth.getSession()).data.session; // 現在のセッションを取得
+
+      if (!session) {
+        toast.error('認証されていません。ログインしてください。');
+        setIsLoading(false);
+        return;
+      }
+
+      // Edge FunctionのエンドポイントURLを環境変数から取得
+      const functionUrl = import.meta.env.VITE_PUBLIC_PROCESS_PDF_FUNCTION_URL;
       console.log(functionUrl);
       // バックエンドAPIに送信するデータ
       const requestBody = {
@@ -77,10 +82,11 @@ const WorkOrderTool = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          // 本番環境では、Edge Functionの呼び出しに認証トークン(Authorization: Bearer <token>)を使うのが一般的
+          Authorization: `Bearer ${session.access_token}`,
           // Supabaseのanon key (ローカル開発で --no-verify-jwt を使っている場合や、
           // Edge Function側でRLSやカスタム認証をまだ設定していない場合に必要になることがある)
-          // 本番環境では、Edge Functionの呼び出しに認証トークン(Authorization: Bearer <token>)を使うのが一般的
-          apikey: import.meta.env.VITE_LOCAL_SUPABASE_ANON_KEY,
+          // apikey: import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY,
         },
         body: JSON.stringify(requestBody),
       });
