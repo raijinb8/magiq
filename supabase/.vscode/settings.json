@@ -1,0 +1,24 @@
+{
+  // supabaseディレクトリ内のファイルで Deno Formatter を有効にする
+  "deno.enable": true,
+  "deno.enablePaths": ["./functions"],
+  "deno.lint": true, // Denoのリンターも有効にする場合
+
+  // Deno Formatter をデフォルトにする (Deno拡張機能が自動でTypeScript/JavaScriptのフォーマッターになることが多い)
+  // 明示的に指定する場合：
+  "[typescript]": {
+    "editor.defaultFormatter": "denoland.vscode-deno",
+    "editor.formatOnSave": true
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "denoland.vscode-deno",
+    "editor.formatOnSave": true
+  },
+
+  // 特定のパスのみDenoを有効にする場合 (supabase/functions 以下など)
+  // "deno.enablePaths": [
+  //   "./functions" // .vscode/settings.json からの相対パス
+  // ],
+  "editor.defaultFormatter": "denoland.vscode-deno",
+  "editor.formatOnSave": true // 保存時にフォーマット
+}

@@ -1,9 +1,20 @@
-# ベースイメージとしてNode.jsの軽量版(Alpine)を指定
-FROM node:20-alpine AS development
+# ベースイメージとしてNode.jsのDebian Bullseyeスリム版を指定
+FROM node:20-bullseye-slim AS development
 
-# 必要なツールをインストール (bash, curl, git など)
-# Alpineではgitも別途インストールが必要な場合が多い
-RUN apk update && apk add --no-cache bash curl git openssh-client sudo socat
+# 必要なツールをインストール (Debian/Bullseye ベース)
+# apt-get を使用し、最後にキャッシュをクリーンアップします。
+RUN apt-get update && apt-get install -y \
+    bash \
+    curl \
+    git \
+    openssh-client \
+    sudo \
+    socat \
+    file \
+    unzip `# Denoのインストールスクリプトがzip展開に使う可能性があるため` \
+    # libc6 は bullseye-slim イメージに通常含まれていますが、念のため記載（通常は不要）
+    # libc6 \
+ && rm -rf /var/lib/apt/lists/*
 
 # 作業ディレクトリを設定
 WORKDIR /app

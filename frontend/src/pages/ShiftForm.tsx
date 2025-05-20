@@ -1,133 +1,141 @@
-import { useEffect, useState } from 'react'
-import type { User } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabase'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
+import { useEffect, useState } from 'react';
+import type { User } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
-} from '@/components/ui/dropdown-menu'
-import { useNavigate } from 'react-router-dom'
+} from '@/components/ui/dropdown-menu';
+import { useNavigate } from 'react-router-dom';
 
 const shiftTypes = [
   { value: 'full', label: 'フル（終日）' },
   { value: 'pm', label: '午後のみ' },
   { value: 'custom', label: '時間指定' },
   { value: 'off', label: '休み' },
-]
+];
 
 const getNextWeekDates = () => {
-  const today = new Date()
-  const nextMonday = new Date(today)
-  nextMonday.setDate(today.getDate() + ((8 - today.getDay()) % 7))
+  const today = new Date();
+  const nextMonday = new Date(today);
+  nextMonday.setDate(today.getDate() + ((8 - today.getDay()) % 7));
   const days = Array.from({ length: 6 }, (_, i) => {
-    const date = new Date(nextMonday)
-    date.setDate(nextMonday.getDate() + i)
-    return date
-  })
-  return days
-}
+    const date = new Date(nextMonday);
+    date.setDate(nextMonday.getDate() + i);
+    return date;
+  });
+  return days;
+};
 
 export default function ShiftForm() {
-  const [user, setUser] = useState<User | null>(null)
-  const [shifts, setShifts] = useState<Record<string, any>>({})
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const navigate = useNavigate()
+  const [user, setUser] = useState<User | null>(null);
+  const [shifts, setShifts] = useState<Record<string, any>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchUser = async () => {
-      const { data, error } = await supabase.auth.getUser()
+      const { data, error } = await supabase.auth.getUser();
 
       if (error) {
-        console.error('ユーザー取得失敗', error)
+        console.error('ユーザー取得失敗', error);
       } else if (!data.user) {
-        console.warn('ログインユーザーが存在しません')
+        console.warn('ログインユーザーが存在しません');
       } else {
-        console.log('ログイン中のユーザー:', data.user)
-        setUser(data.user)
+        console.log('ログイン中のユーザー:', data.user);
+        setUser(data.user);
       }
-    }
+    };
 
-    fetchUser()
-  }, [])
+    fetchUser();
+  }, []);
 
   const handleChange = (dateStr: string, field: string, value: string) => {
-    setShifts(prev => ({
+    setShifts((prev) => ({
       ...prev,
       [dateStr]: {
         ...prev[dateStr],
         [field]: value,
       },
-    }))
-  }
+    }));
+  };
 
   const validateShiftType = (shift: any, dateStr: string): string | null => {
     if (!shift || !shift.shift_type) {
-      return `【${dateStr}】はシフト種別が未選択です。`
+      return `【${dateStr}】はシフト種別が未選択です。`;
     }
-    return null
-  }
+    return null;
+  };
 
-  const validateCustomEndTime = (shift: any, dateStr: string): string | null => {
+  const validateCustomEndTime = (
+    shift: any,
+    dateStr: string
+  ): string | null => {
     if (shift?.shift_type === 'custom' && !shift.custom_end_time) {
-      return `【${dateStr}】は終了時間が必要です。`
+      return `【${dateStr}】は終了時間が必要です。`;
     }
-    return null
-  }
+    return null;
+  };
 
   const handleSubmit = async () => {
-    if (!user || isSubmitting) return
+    if (!user || isSubmitting) return;
 
-    setIsSubmitting(true)
+    setIsSubmitting(true);
 
-    const dateStrs = getNextWeekDates().map(d => d.toISOString().split('T')[0])
-    const errors: string[] = []
+    const dateStrs = getNextWeekDates().map(
+      (d) => d.toISOString().split('T')[0]
+    );
+    const errors: string[] = [];
 
     for (const dateStr of dateStrs) {
-      const shift = shifts[dateStr]
-      const typeError = validateShiftType(shift, dateStr)
-      const timeError = validateCustomEndTime(shift, dateStr)
-      if (typeError) errors.push(typeError)
-      if (timeError) errors.push(timeError)
+      const shift = shifts[dateStr];
+      const typeError = validateShiftType(shift, dateStr);
+      const timeError = validateCustomEndTime(shift, dateStr);
+      if (typeError) errors.push(typeError);
+      if (timeError) errors.push(timeError);
     }
 
     if (errors.length > 0) {
-      alert(errors.join('\n'))
-      return
+      alert(errors.join('\n'));
+      return;
     }
 
-    const entries = dateStrs.map(dateStr => {
-      const data = shifts[dateStr]
+    const entries = dateStrs.map((dateStr) => {
+      const data = shifts[dateStr];
       return {
         user_id: user.id,
         date: dateStr,
         shift_type: data.shift_type,
-        custom_end_time: ['custom', 'pm'].includes(data.shift_type) ? data.custom_end_time : null,
+        custom_end_time: ['custom', 'pm'].includes(data.shift_type)
+          ? data.custom_end_time
+          : null,
         note: data.note || null,
-      }
-    })
+      };
+    });
 
-    const { error } = await supabase.from('shifts').insert(entries)
+    const { error } = await supabase.from('shifts').insert(entries);
 
-    setIsSubmitting(false)
+    setIsSubmitting(false);
 
-    if (error) alert('申請に失敗しました')
-    else navigate('/shift/complete')
-  }
+    if (error) alert('申請に失敗しました');
+    else navigate('/shift/complete');
+  };
 
-  const dates = getNextWeekDates()
+  const dates = getNextWeekDates();
 
   return (
     <div className="p-4 space-y-6 max-w-md mx-auto">
       <h2 className="text-xl font-bold text-center">来週のシフト申請</h2>
-      {dates.map(date => {
-        const dateStr = date.toISOString().split('T')[0]
-        const shift = shifts[dateStr] || {}
-        const selectedLabel = shiftTypes.find(s => s.value === shift.shift_type)?.label || ''
+      {dates.map((date) => {
+        const dateStr = date.toISOString().split('T')[0];
+        const shift = shifts[dateStr] || {};
+        const selectedLabel =
+          shiftTypes.find((s) => s.value === shift.shift_type)?.label || '';
 
         return (
           <div
@@ -145,9 +153,11 @@ export default function ShiftForm() {
               <DropdownMenuContent className="w-full z-50">
                 <DropdownMenuRadioGroup
                   value={shift.shift_type}
-                  onValueChange={val => handleChange(dateStr, 'shift_type', val)}
+                  onValueChange={(val) =>
+                    handleChange(dateStr, 'shift_type', val)
+                  }
                 >
-                  {shiftTypes.map(s => (
+                  {shiftTypes.map((s) => (
                     <DropdownMenuRadioItem key={s.value} value={s.value}>
                       {s.label}
                     </DropdownMenuRadioItem>
@@ -160,7 +170,9 @@ export default function ShiftForm() {
               <Input
                 type="time"
                 value={shift.custom_end_time || ''}
-                onChange={e => handleChange(dateStr, 'custom_end_time', e.target.value)}
+                onChange={(e) =>
+                  handleChange(dateStr, 'custom_end_time', e.target.value)
+                }
                 className="w-full bg-gray-50 border border-gray-300 text-sm"
               />
             )}
@@ -168,15 +180,19 @@ export default function ShiftForm() {
             <Textarea
               placeholder="備考（任意）"
               value={shift.note || ''}
-              onChange={e => handleChange(dateStr, 'note', e.target.value)}
+              onChange={(e) => handleChange(dateStr, 'note', e.target.value)}
               className="w-full bg-gray-50 border border-gray-300 text-sm"
             />
           </div>
-        )
+        );
       })}
-      <Button onClick={handleSubmit} disabled={isSubmitting} className="w-full text-sm mt-4">
+      <Button
+        onClick={handleSubmit}
+        disabled={isSubmitting}
+        className="w-full text-sm mt-4"
+      >
         {isSubmitting ? '申請中...' : '申請する'}
       </Button>
     </div>
-  )
+  );
 }
