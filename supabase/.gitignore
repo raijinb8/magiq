@@ -8,3 +8,5 @@
 .env.*.local
 
 functions/process-pdf-single/deno.lock
+
+.src
