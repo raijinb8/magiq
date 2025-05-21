@@ -28,7 +28,7 @@ export default function Login() {
     } else if (data.session) {
       // ✅ ログイン成功 → ユーザー情報取得
       const { data: userData } = await supabase.auth.getUser();
-      const companyId = userData.user?.user_metadata?.companyId || 'active'; // 開発時のテスト
+      const companyId = userData.user?.user_metadata?.companyId;
 
       if (!companyId) {
         setError('会社IDが設定されていません');
