@@ -38,19 +38,19 @@ export default function Login() {
 
       // ✅ 対応する会社設定ファイルを読み込み（importではなくfetchで）
       try {
-        const res = await fetch(`/config/${companyId}.json`);
-        if (!res.ok) {
-          // レスポンスが正常か確認
-          throw new Error(
-            `Failed to fetch company config: ${res.status} ${res.statusText}`
-          );
-        }
+        const res = await fetch(`/src/config/${companyId}.json`);
+        // if (!res.ok) {
+        //   // レスポンスが正常か確認
+        //   throw new Error(
+        //     `Failed to fetch company config: ${res.status} ${res.statusText}`
+        //   );
+        // }
         const config = await res.json();
         setCompany(config);
         navigate('/dashboard'); // ✅ ここで遷移！
         return;
-      } catch (e) {
-        setError('会社設定の読み込みに失敗しました');
+      } catch (e: any) {
+        setError(`${e.message} : 会社設定の読み込みに失敗しました`);
       }
     }
 
