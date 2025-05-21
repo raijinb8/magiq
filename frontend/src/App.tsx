@@ -19,6 +19,7 @@ import ProjectList from '@/pages/admin/ProjectList';
 import ProjectAssign from '@/pages/admin/ProjectAssign';
 import AssignedProjectList from '@/pages/admin/AssignedProjectList';
 import WorkOrderTool from '@/pages/admin/WorkOrderTool';
+import Home from '@/pages/Home';
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
         {/* 認証必須のルート */}
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
+            <Route path="/" element={<Home />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/shift" element={<ShiftForm />} />
             <Route path="/shift/complete" element={<ShiftComplete />} />
