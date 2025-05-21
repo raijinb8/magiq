@@ -50,7 +50,8 @@ export default function Login() {
         navigate('/dashboard'); // ✅ ここで遷移！
         return;
       } catch (e: any) {
-        console.log(e.message);
+        console.error('エラーが発生しました:', e); // オブジェクト全体を出力
+        console.error('エラーメッセージ:', e.message); // メッセージのみ出力
         setError(`${e.message} : 会社設定の読み込みに失敗しました`);
       }
     }
