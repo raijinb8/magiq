@@ -38,7 +38,7 @@ export default function Login() {
 
       // ✅ 対応する会社設定ファイルを読み込み（importではなくfetchで）
       try {
-        const res = await fetch(`/src/config/${companyId}.json`);
+        const res = await fetch(`/config/${companyId}.json`);
         // if (!res.ok) {
         //   // レスポンスが正常か確認
         //   throw new Error(
