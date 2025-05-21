@@ -38,21 +38,14 @@ export default function Login() {
 
       // ✅ 対応する会社設定ファイルを読み込み（importではなくfetchで）
       try {
+        // frontend/public/config/active.jsonを読み込み
         const res = await fetch(`/config/${companyId}.json`);
-        // if (!res.ok) {
-        //   // レスポンスが正常か確認
-        //   throw new Error(
-        //     `Failed to fetch company config: ${res.status} ${res.statusText}`
-        //   );
-        // }
         const config = await res.json();
         setCompany(config);
         navigate('/dashboard'); // ✅ ここで遷移！
         return;
-      } catch (e: any) {
-        console.error('エラーが発生しました:', e); // オブジェクト全体を出力
-        console.error('エラーメッセージ:', e.message); // メッセージのみ出力
-        setError(`${e.message} : 会社設定の読み込みに失敗しました`);
+      } catch (e) {
+        setError(`会社設定の読み込みに失敗しました`);
       }
     }
 
