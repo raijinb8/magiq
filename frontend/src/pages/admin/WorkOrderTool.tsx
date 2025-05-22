@@ -438,10 +438,14 @@ const WorkOrderTool = () => {
               <h2 className="text-lg font-semibold">
                 業務手配書 文言<br></br>
                 {processedCompanyInfo.file && !isLoading && (
-                  <span className="text-sm font-normal text-muted-foreground ml-2">
-                    (ファイル: {processedCompanyInfo.file.name} / 会社:{' '}
-                    {processedCompanyInfo.companyLabel})
-                  </span>
+                  <>
+                    <span className="block text-sm font-normal text-muted-foreground ml-2">
+                      ファイル: {processedCompanyInfo.file.name}
+                    </span>
+                    <span className="block text-sm font-normal text-muted-foreground ml-2">
+                      会社: {processedCompanyInfo.companyLabel}
+                    </span>
+                  </>
                 )}
               </h2>
               <div>
