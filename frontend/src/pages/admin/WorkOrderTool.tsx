@@ -5,7 +5,26 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner'; // sonner から toast 関数を直接インポート
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  SelectGroup,
+  SelectLabel,
+} from '@/components/ui/select';
 import { supabase } from '@/lib/supabase.ts'; // Supabase Client のインポート
+
+const COMPANY_OPTIONS = [
+  { value: 'NOHARA_G', label: '野原G住環境' },
+  { value: 'KATOUBENIYA_MISAWA_PROMPT', label: '加藤ベニヤ池袋ミサワホーム' },
+  { value: 'YAMADA_K', label: '山田K建設 (準備中)' }, // 仮に準備中のものも入れておく
+  { value: 'UNKNOWN_OR_NOT_SET', label: '会社を特定できませんでした' }, // バックエンドのエラーケースも考慮
+  // 今後対応する会社が増えたらここに追加
+];
+
+type CompanyOptionValue = (typeof COMPANY_OPTIONS)[number]['value'] | ''; // 選択肢のvalue型 + 未選択を表す空文字
 
 const WorkOrderTool = () => {
   // 状態管理フック
@@ -14,14 +33,32 @@ const WorkOrderTool = () => {
 
   // useRefフック
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // ステップ5で追加/確認する状態変数
   const [processingFile, setProcessingFile] = useState<File | null>(null); // 現在処理中のファイルオブジェクト
   const [generatedText, setGeneratedText] = useState<string>(''); // Geminiが生成したテキスト
   const [isLoading, setIsLoading] = useState(false);
 
+  // 選択された会社IDの状態
+  const [selectedCompanyId, setSelectedCompanyId] =
+    useState<CompanyOptionValue>('');
+
+  // 処理結果表示用
+  const [processedCompanyInfo, setProcessedCompanyInfo] = useState<{
+    file: File | null;
+    companyLabel: string;
+  }>({ file: null, companyLabel: '' });
+
   // バックエンドAPIを呼び出す関数
   const handleProcessFile = async (fileToProcess: File) => {
+    // 会社が選択されているかチェック
+    if (!selectedCompanyId) {
+      toast.error('会社が選択されていません。', {
+        description:
+          '処理を開始する前に、ドロップダウンから会社を選択してください。',
+        duration: 5000,
+      });
+      return;
+    }
+
     if (!fileToProcess || isLoading) {
       // 処理中なら何もしない
       if (isLoading)
@@ -32,9 +69,17 @@ const WorkOrderTool = () => {
     setProcessingFile(fileToProcess); // どのファイルを処理しているかUIにフィードバックするため
     setIsLoading(true);
     setGeneratedText(''); // 前回の結果やプレースホルダーをクリア
-    toast.info(`「${fileToProcess.name}」の処理を開始します...`, {
-      duration: 3000,
-    });
+
+    const companyLabel =
+      COMPANY_OPTIONS.find((c) => c.value === selectedCompanyId)?.label ||
+      selectedCompanyId;
+
+    toast.info(
+      `「${fileToProcess.name}」の処理を開始します (会社: ${companyLabel})...`,
+      {
+        duration: 3000,
+      }
+    );
 
     try {
       const session = (await supabase.auth.getSession()).data.session; // 現在のセッションを取得
@@ -51,6 +96,7 @@ const WorkOrderTool = () => {
       // バックエンドAPIに送信するデータ
       const requestBody = {
         fileName: fileToProcess.name,
+        companyId: selectedCompanyId, // 選択された会社IDを送信
         // 将来的にはここにファイルの内容やその他のメタデータを追加することも検討
         // fileSize: fileToProcess.size,
         // fileType: fileToProcess.type,
@@ -84,16 +130,36 @@ const WorkOrderTool = () => {
         setGeneratedText(
           `エラーが発生しました:\n${responseData.error || response.statusText}\n\n詳細は開発者コンソールを確認してください。`
         );
+        setProcessedCompanyInfo({
+          file: fileToProcess,
+          companyLabel: `エラー (${companyLabel})`,
+        });
         setProcessingFile(null); // エラー時は処理中ファイルをクリア
         return;
       }
 
-      toast.success(`「${fileToProcess.name}」のAI処理が完了しました！`, {
-        duration: 5000,
-      });
+      toast.success(
+        `「${fileToProcess.name}」のAI処理が完了しました！ (会社: ${
+          COMPANY_OPTIONS.find(
+            (c) => c.value === responseData.identifiedCompany
+          )?.label || responseData.identifiedCompany
+        })`,
+        {
+          duration: 5000,
+        }
+      );
       setGeneratedText(
         responseData.generatedText || 'テキストが生成されませんでした。'
       );
+      setProcessedCompanyInfo({
+        // ★処理した会社情報を保存
+        file: fileToProcess,
+        companyLabel:
+          COMPANY_OPTIONS.find(
+            (c) => c.value === responseData.identifiedCompany
+          )?.label || responseData.identifiedCompany,
+      });
+
       // 処理が成功したら processingFile はクリアせず、どのファイルの結果が表示されているか分かるように残す
       // (UIの要件に応じて、成功時もクリアするかどうかを決める)
 
@@ -102,6 +168,13 @@ const WorkOrderTool = () => {
     } catch (error: any) {
       setIsLoading(false);
       setProcessingFile(null); // エラー時は処理中ファイルをクリア
+      setGeneratedText(
+        `API呼び出し中にエラーが発生しました:\n${error.message}\n\n詳細は開発者コンソールを確認してください。`
+      );
+      setProcessedCompanyInfo({
+        file: fileToProcess,
+        companyLabel: `エラー (${companyLabel})`,
+      });
       console.error('Frontend API Call/Network Error:', error);
       toast.error(
         'API呼び出し中にネットワークエラーまたは予期せぬエラーが発生しました。',
@@ -109,9 +182,6 @@ const WorkOrderTool = () => {
           description: error.message || '不明なクライアントサイドエラーです。',
           duration: 8000,
         }
-      );
-      setGeneratedText(
-        `API呼び出し中にエラーが発生しました:\n${error.message}\n\n詳細は開発者コンソールを確認してください。`
       );
     }
     // finally ブロックはsetIsLoading(false)が二重に呼ばれる可能性があるので、各処理の最後に移動
@@ -163,6 +233,7 @@ const WorkOrderTool = () => {
       }
     },
     [uploadedFiles, isLoading, handleProcessFile]
+    // [uploadedFiles] //最初の新しいファイルを自動的に実行しない場合
   ); // isLoading と handleProcessFile を依存配列に追加
 
   // --- ドラッグ＆ドロップイベントハンドラ ---
@@ -241,6 +312,44 @@ const WorkOrderTool = () => {
           <h2 className="mb-4 text-lg font-semibold">
             アップロード済みPDF一覧
           </h2>
+          {/* 会社選択ドロップダウン */}
+          <div className="mb-4">
+            <label
+              htmlFor="company-select"
+              className="mb-1 block text-sm font-medium text-foreground"
+            >
+              処理対象の会社:
+            </label>
+            <Select
+              value={selectedCompanyId}
+              onValueChange={(value) =>
+                setSelectedCompanyId(value as CompanyOptionValue)
+              }
+            >
+              <SelectTrigger id="company-select" className="w-full">
+                <SelectValue placeholder="会社を選択してください" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel>会社一覧</SelectLabel>
+                  {COMPANY_OPTIONS.map(
+                    (company) =>
+                      // 「準備中」のものは選択できないようにする例 (disabled)
+                      // UNKNOWN_OR_NOT_SET はユーザーが選ぶものではないのでリストから除外
+                      company.value !== 'UNKNOWN_OR_NOT_SET' && (
+                        <SelectItem
+                          key={company.value}
+                          value={company.value}
+                          disabled={company.label.includes('準備中')}
+                        >
+                          {company.label}
+                        </SelectItem>
+                      )
+                  )}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
           <Button
             className="w-full mb-4"
             variant="outline"
@@ -265,8 +374,8 @@ const WorkOrderTool = () => {
                       key={`${file.name}-${file.lastModified}-${index}`}
                       className={`mb-2 cursor-pointer rounded-md p-2 text-sm transition-colors duration-150 ease-in-out
                         ${processingFile?.name === file.name && isLoading ? 'bg-blue-100 dark:bg-blue-800/30 ring-2 ring-blue-500 animate-pulse' : ''}
-                        ${processingFile?.name === file.name && !isLoading && generatedText && !generatedText.startsWith('エラー') ? 'bg-green-100 dark:bg-green-800/30 ring-1 ring-green-500' : ''}
-                        ${processingFile?.name === file.name && !isLoading && generatedText && generatedText.startsWith('エラー') ? 'bg-red-100 dark:bg-red-800/30 ring-1 ring-red-500' : ''}
+                        ${processedCompanyInfo.file?.name === file.name && !isLoading && generatedText && !generatedText.startsWith('エラー') ? 'bg-green-100 dark:bg-green-800/30 ring-1 ring-green-500' : ''}
+                        ${processedCompanyInfo.file?.name === file.name && !isLoading && generatedText && generatedText.startsWith('エラー') ? 'bg-red-100 dark:bg-red-800/30 ring-1 ring-red-500' : ''}
                         ${!processingFile || processingFile?.name !== file.name ? 'hover:bg-muted' : ''}
                       `}
                       onClick={() => handleProcessFile(file)} // クリックで処理開始
@@ -327,8 +436,17 @@ const WorkOrderTool = () => {
           <div className="w-1/2 p-4 flex flex-col overflow-hidden">
             <div className="mb-2 flex items-center justify-between">
               <h2 className="text-lg font-semibold">
-                業務手配書 文言{' '}
-                {processingFile && !isLoading && `(${processingFile.name})`}
+                業務手配書 文言<br></br>
+                {processedCompanyInfo.file && !isLoading && (
+                  <>
+                    <span className="block text-sm font-normal text-muted-foreground ml-2">
+                      ファイル: {processedCompanyInfo.file.name}
+                    </span>
+                    <span className="block text-sm font-normal text-muted-foreground ml-2">
+                      会社: {processedCompanyInfo.companyLabel}
+                    </span>
+                  </>
+                )}
               </h2>
               <div>
                 <Button variant="outline" size="sm" className="mr-2" disabled>
