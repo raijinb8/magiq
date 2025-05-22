@@ -28,7 +28,7 @@ export default function Login() {
     } else if (data.session) {
       // ✅ ログイン成功 → ユーザー情報取得
       const { data: userData } = await supabase.auth.getUser();
-      const companyId = userData.user?.user_metadata?.companyId || 'active'; // 開発時のテスト
+      const companyId = userData.user?.user_metadata?.companyId;
 
       if (!companyId) {
         setError('会社IDが設定されていません');
@@ -38,13 +38,14 @@ export default function Login() {
 
       // ✅ 対応する会社設定ファイルを読み込み（importではなくfetchで）
       try {
-        const res = await fetch(`/src/config/${companyId}.json`);
+        // frontend/public/config/active.jsonを読み込み
+        const res = await fetch(`/config/${companyId}.json`);
         const config = await res.json();
         setCompany(config);
         navigate('/dashboard'); // ✅ ここで遷移！
         return;
       } catch (e) {
-        setError('会社設定の読み込みに失敗しました');
+        setError(`会社設定の読み込みに失敗しました`);
       }
     }
 
