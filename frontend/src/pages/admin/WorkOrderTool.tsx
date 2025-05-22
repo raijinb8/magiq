@@ -44,6 +44,16 @@ const WorkOrderTool = () => {
 
   // バックエンドAPIを呼び出す関数
   const handleProcessFile = async (fileToProcess: File) => {
+    // 会社が選択されているかチェック
+    if (!selectedCompanyIdForProcessing) {
+      toast.error('会社が選択されていません。', {
+        description:
+          '処理を開始する前に、ドロップダウンから会社を選択してください。',
+        duration: 5000,
+      });
+      return;
+    }
+
     if (!fileToProcess || isLoading) {
       // 処理中なら何もしない
       if (isLoading)
@@ -73,6 +83,7 @@ const WorkOrderTool = () => {
       // バックエンドAPIに送信するデータ
       const requestBody = {
         fileName: fileToProcess.name,
+        companyId: selectedCompanyIdForProcessing,
         // 将来的にはここにファイルの内容やその他のメタデータを追加することも検討
         // fileSize: fileToProcess.size,
         // fileType: fileToProcess.type,
