@@ -274,13 +274,6 @@ const WorkOrderTool = () => {
           <h2 className="mb-4 text-lg font-semibold">
             アップロード済みPDF一覧
           </h2>
-          <Button
-            className="w-full mb-4"
-            variant="outline"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            PDFを選択してアップロード
-          </Button>
           <Select
             value={selectedCompanyIdForProcessing}
             onValueChange={(value) =>
@@ -301,6 +294,13 @@ const WorkOrderTool = () => {
               </SelectGroup>
             </SelectContent>
           </Select>
+          <Button
+            className="w-full mb-4"
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            PDFを選択してアップロード
+          </Button>
           <input
             type="file"
             ref={fileInputRef}
