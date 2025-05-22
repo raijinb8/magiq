@@ -39,7 +39,7 @@ try {
   console.error('Error initializing Supabase client:', e)
 }
 
-type CompanyIdentifier = 'NOHARA_G' | 'KATOUBENIYA_MISAWA_PROMPT' | 'UNKNOWN_OR_NOT_SET'
+type CompanyIdentifier = 'NOHARA_G' | 'KATOUBENIYA_MISAWA' | 'UNKNOWN_OR_NOT_SET'
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -107,10 +107,10 @@ Deno.serve(async (req: Request) => {
         selectedPromptFunction = NOHARA_G_PROMPT
         promptIdentifier = 'NOHARA_G_PROMPT_V20250519' // プロンプトバージョンを更新
         break
-      case 'KATOUBENIYA_MISAWA_PROMPT':
+      case 'KATOUBENIYA_MISAWA':
         // TANAKA_S_PROMPT を ./prompts/tanakaS.ts からインポートしている想定
         selectedPromptFunction = KATOUBENIYA_MISAWA_PROMPT
-        promptIdentifier = 'TANAKA_S_PROMPT_V20250519'
+        promptIdentifier = 'KATOUBENIYA_MISAWA_PROMPT_V20250519'
         break
       default:
         console.error(

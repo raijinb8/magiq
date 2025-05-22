@@ -18,7 +18,7 @@ import { supabase } from '@/lib/supabase.ts'; // Supabase Client のインポー
 
 const COMPANY_OPTIONS = [
   { value: 'NOHARA_G', label: '野原G住環境' },
-  { value: 'KATOUBENIYA_MISAWA_PROMPT', label: '加藤ベニヤ池袋ミサワホーム' },
+  { value: 'KATOUBENIYA_MISAWA', label: '加藤ベニヤ池袋ミサワホーム' },
   { value: 'YAMADA_K', label: '山田K建設 (準備中)' }, // 仮に準備中のものも入れておく
   { value: 'UNKNOWN_OR_NOT_SET', label: '会社を特定できませんでした' }, // バックエンドのエラーケースも考慮
   // 今後対応する会社が増えたらここに追加
