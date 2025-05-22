@@ -233,7 +233,7 @@ const WorkOrderTool = () => {
       }
     },
     [uploadedFiles, isLoading, handleProcessFile]
-    // [uploadedFiles]
+    // [uploadedFiles] //最初の新しいファイルを自動的に実行しない場合
   ); // isLoading と handleProcessFile を依存配列に追加
 
   // --- ドラッグ＆ドロップイベントハンドラ ---
