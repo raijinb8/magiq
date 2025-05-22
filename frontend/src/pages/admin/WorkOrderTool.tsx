@@ -276,7 +276,7 @@ const WorkOrderTool = () => {
               setSelectedCompanyIdForProcessing(value as CompanyOptionValue)
             }
           >
-            <SelectTrigger className="w-[280px]">
+            <SelectTrigger className="w-full mb-4">
               <SelectValue placeholder="処理対象の会社を選択してください" />
             </SelectTrigger>
             <SelectContent>
