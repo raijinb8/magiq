@@ -3,8 +3,7 @@
 import { GoogleGenAI } from '@google/genai'
 // Supabaseクライアントをインポート (Deno用)
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
-import { NOHARA_G_PROMPT } from './prompts/noharaG.ts'
-import { KATOUBENIYA_MISAWA_PROMPT } from './prompts/katouBeniyaIkebukuro/misawa.ts'
+import { getPrompt, PromptFunction } from './promptRegistry.ts'
 
 console.log('process-pdf-single function (v2 - with Gen) has been invoked!')
 
@@ -72,8 +71,6 @@ Deno.serve(async (req: Request) => {
     }
 
     const fileName = body.fileName as string // フロントエンドから送られてくるファイル名
-    // 将来的にはここに実際のPDFの内容を渡す処理が入る（例: OCR結果など）
-    const companyIdFromFrontend = body.companyId as CompanyIdentifier // ★フロントエンドから会社IDを受け取る
 
     if (!fileName) {
       return new Response(JSON.stringify({ error: 'fileName is required in the request body.' }), {
@@ -81,6 +78,9 @@ Deno.serve(async (req: Request) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
+
+    // 将来的にはここに実際のPDFの内容を渡す処理が入る（例: OCR結果など）
+    const companyIdFromFrontend = body.companyId as CompanyIdentifier // ★フロントエンドから会社IDを受け取る
 
     if (!companyIdFromFrontend || companyIdFromFrontend === 'UNKNOWN_OR_NOT_SET') {
       // companyIdが送られてこない、または未選択の場合はエラーにするか、デフォルト処理をする
@@ -94,33 +94,26 @@ Deno.serve(async (req: Request) => {
       `[${new Date().toISOString()}] Received request for ${fileName}, Company ID from frontend: ${companyIdFromFrontend}`
     )
 
+    // supabase/functions/process-pdf-single/promptRegistry.ts
+    // から識別子とプロンプトのマッピング情報を取得
+    const promptEntry = getPrompt(companyIdFromFrontend)
+
+    if (!promptEntry) {
+      console.error(
+        `[${new Date().toISOString()}] No prompt entry found for companyId: ${companyIdFromFrontend} (file: ${fileName})`
+      )
+      return new Response(
+        JSON.stringify({ error: `Unsupported company or prompt configuration for: ${companyIdFromFrontend}` }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // PROMPT_FUNCTION を取得（どのプロンプトを使うか）
+    const selectedPromptFunction: PromptFunction = promptEntry.promptFunction
+    const promptIdentifier = `<span class="math-inline">\{companyIdFromFrontend\}\_</span>{promptEntry.version}`
+
     // 今回はダミーのPDF内容を使います
     const pdfContentDummy = `これは ${fileName} のダミーPDF内容です。実際にはここに抽出されたテキストが入ります。指定された会社: ${companyIdFromFrontend}`
-
-    let selectedPromptFunction: ((fileName: string, content: string) => string) | null = null
-    let promptIdentifier = `${companyIdFromFrontend}_PROMPT_V_DEFAULT` // デフォルトの識別子
-
-    // フロントエンドから受け取った companyId に基づいてプロンプトを選択
-    switch (companyIdFromFrontend) {
-      case 'NOHARA_G':
-        // NOHARA_G_PROMPT を ./prompts/noharaG.ts からインポートしている想定
-        selectedPromptFunction = NOHARA_G_PROMPT
-        promptIdentifier = 'NOHARA_G_PROMPT_V20250519' // プロンプトバージョンを更新
-        break
-      case 'KATOUBENIYA_MISAWA':
-        // TANAKA_S_PROMPT を ./prompts/tanakaS.ts からインポートしている想定
-        selectedPromptFunction = KATOUBENIYA_MISAWA_PROMPT
-        promptIdentifier = 'KATOUBENIYA_MISAWA_PROMPT_V20250519'
-        break
-      default:
-        console.error(
-          `[${new Date().toISOString()}] Unknown or unsupported companyId: ${companyIdFromFrontend} for file: ${fileName}`
-        )
-        return new Response(JSON.stringify({ error: `Unsupported companyId: ${companyIdFromFrontend}` }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        })
-    }
 
     // 1. Gemini APIキーを環境変数から取得
     const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY')
