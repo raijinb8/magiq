@@ -1,3 +1,5 @@
+// バージョン履歴:
+// V20250519: 初版作成
 export const KATOUBENIYA_MISAWA_PROMPT = (fileName: string, pdfContentDummy: string): string => `
 添付された発注書 (${fileName}) から以下の情報を抽出し、指定された形式で厳密に整理してください。
 PDFの実際の内容はまだ連携できませんが、仮の内容は「${pdfContentDummy}」です。

@@ -108,10 +108,6 @@ Deno.serve(async (req: Request) => {
       )
     }
 
-    // PROMPT_FUNCTION を取得（どのプロンプトを使うか）
-    const selectedPromptFunction: PromptFunction = promptEntry.promptFunction
-    const promptIdentifier = `<span class="math-inline">\{companyIdFromFrontend\}\_</span>{promptEntry.version}`
-
     // 今回はダミーのPDF内容を使います
     const pdfContentDummy = `これは ${fileName} のダミーPDF内容です。実際にはここに抽出されたテキストが入ります。指定された会社: ${companyIdFromFrontend}`
 
@@ -138,6 +134,10 @@ Deno.serve(async (req: Request) => {
     // gemini-2.0-flash 次世代の機能、速度。
 
     // 3. プロンプトの組み立て
+    // PROMPT_FUNCTION を取得（どのプロンプトを使うか）
+    const selectedPromptFunction: PromptFunction = promptEntry.promptFunction
+    const promptIdentifier = `${companyIdFromFrontend}_${promptEntry.version}`
+    // 組み立て
     const prompt = selectedPromptFunction(fileName, pdfContentDummy)
 
     console.log(`[${new Date().toISOString()}] Sending prompt to Gemini API for file: ${fileName}`)
@@ -229,6 +229,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // --- データベースへの保存処理 ---
+    const companyName = promptEntry.companyName
     let dbRecordId: string | null = null
     if (supabaseClient) {
       try {
@@ -242,8 +243,8 @@ Deno.serve(async (req: Request) => {
               generated_text: generatedTextByGen,
               // edited_text: generatedTextByGen, // 初期値として同じものを入れるか、NULLのままか
               status: 'completed_from_ai', // AI処理完了を示すステータス
-              prompt_identifier: 'NOHARA_G_PROMPT_V20250515', // どのプロンプトを使ったか
-              // company_name: '野原Ｇ住環境', // 固定値または将来的に動的に設定
+              prompt_identifier: promptIdentifier, // どのプロンプトを使ったか
+              company_name: companyName, // 取引先_発注元
               gemini_processed_at: new Date().toISOString(), // Gemini処理完了時刻
             },
           ])
