@@ -330,6 +330,58 @@ const WorkOrderTool = () => {
     }
   };
 
+  // パンニング機能関連
+
+  const handleMouseDownOnPdfArea = (
+    event: React.MouseEvent<HTMLDivElement>
+  ) => {
+    // 左ボタンでのみパンニングを開始
+    if (event.button !== 0) return;
+    if (pdfDisplayContainerRef.current) {
+      setIsPanning(true);
+      setPanStartCoords({ x: event.clientX, y: event.clientY });
+      scrollStartCoords.current = {
+        x: pdfDisplayContainerRef.current.scrollLeft,
+        y: pdfDisplayContainerRef.current.scrollTop,
+      };
+      pdfDisplayContainerRef.current.style.cursor = 'grabbing'; // ドラッグ中のカーソル
+      // ドラッグ中のテキスト選択を防ぐ (より広範囲に設定することも検討)
+      document.body.style.userSelect = 'none';
+    }
+  };
+
+  const handleMouseUpOnPdfArea = () => {
+    if (isPanning) {
+      setIsPanning(false);
+      if (pdfDisplayContainerRef.current) {
+        pdfDisplayContainerRef.current.style.cursor = 'grab'; // 通常時のカーソル
+      }
+      document.body.style.userSelect = ''; // テキスト選択禁止を解除
+    }
+  };
+
+  const handleMouseMoveOnPdfArea = (
+    event: React.MouseEvent<HTMLDivElement>
+  ) => {
+    if (!isPanning || !pdfDisplayContainerRef.current) return;
+    event.preventDefault(); // ドラッグ中のデフォルト動作を防ぐ
+
+    const deltaX = event.clientX - panStartCoords.x;
+    const deltaY = event.clientY - panStartCoords.y;
+
+    pdfDisplayContainerRef.current.scrollLeft =
+      scrollStartCoords.current.x - deltaX;
+    pdfDisplayContainerRef.current.scrollTop =
+      scrollStartCoords.current.y - deltaY;
+  };
+
+  // mouseleave も mouseup と同様にパンニングを終了させる
+  const handleMouseLeavePdfArea = () => {
+    if (isPanning) {
+      handleMouseUpOnPdfArea();
+    }
+  };
+
   return (
     <div /* ... (ルートdivの定義) ... */
       className={`flex h-screen flex-col bg-muted/40 ${
