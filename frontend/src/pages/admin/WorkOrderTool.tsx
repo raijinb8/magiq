@@ -18,6 +18,7 @@ import { supabase } from '@/lib/supabase.ts'; // Supabase Client のインポー
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css'; // PDFの注釈レイヤーのスタイル
 import 'react-pdf/dist/esm/Page/TextLayer.css'; // PDFのテキストレイヤーのスタイル (文字選択などに必要)
+import { Plus, Minus } from 'lucide-react'; // icon
 
 // PDFのレンダリングを効率的に行うための Web Worker を設定
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -60,6 +61,7 @@ const WorkOrderTool = () => {
   const [pdfFileToDisplay, setPdfFileToDisplay] = useState<File | null>(null); // 表示するPDFファイル (FileオブジェクトまたはURL)
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState<number>(1);
+  const [pageScale, setPageScale] = useState<number>(1.0); // 初期倍率を100% (1.0) とする
 
   // PDFが読み込まれたときにページ数を設定する関数
   function onDocumentLoadSuccess({
@@ -478,7 +480,6 @@ const WorkOrderTool = () => {
                   }
                   className="w-full h-full flex flex-col items-center" // Document自体のスタイリング
                 >
-                  {/* ページナビゲーション (手順8.1.3で詳しく) */}
                   {numPages && (
                     <div className="sticky top-0 z-10 bg-slate-200 dark:bg-slate-700 p-2 flex items-center justify-center gap-2 w-full">
                       <Button
@@ -504,20 +505,70 @@ const WorkOrderTool = () => {
                       >
                         次へ
                       </Button>
+                      {/* 拡大・縮小コントロール */}
+                      <div className="ml-auto flex items-center gap-2">
+                        {' '}
+                        {/* 縮小ボタン */}
+                        <Button
+                          variant="outline"
+                          size="icon" // アイコンボタンにする場合
+                          onClick={() =>
+                            setPageScale((prev) => Math.max(0.25, prev - 0.25))
+                          } // 最小倍率0.25、0.25ずつ減少
+                          disabled={pageScale <= 0.25}
+                          title="縮小"
+                        >
+                          {/* Lucide Minus アイコン */}
+                          <Minus className="h-4 w-4" />{' '}
+                        </Button>
+                        {/* 現在の倍率を表示 */}
+                        <span className="text-sm w-16 text-center">
+                          {(pageScale * 100).toFixed(0)}%
+                        </span>{' '}
+                        {/* 拡大ボタン */}
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() =>
+                            setPageScale((prev) => Math.min(3.0, prev + 0.25))
+                          } // 最大倍率3.0、0.25ずつ増加
+                          disabled={pageScale >= 3.0}
+                          title="拡大"
+                        >
+                          {/* Lucide Plus アイコン */}
+                          <Plus className="h-4 w-4" />{' '}
+                        </Button>
+                        {/* 100% ボタン */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          title="100%"
+                          onClick={() => setPageScale(1.0)}
+                          // onClick={fitWidth} // fitWidth関数を後で定義
+                          disabled={pageScale === 1.0}
+                        >
+                          100%
+                        </Button>
+                      </div>
                     </div>
                   )}
                   {/* PDFのページを表示 */}
-                  <div className="flex-grow overflow-auto w-full flex justify-center">
+                  <div className="flex-grow overflow-auto flex justify-center items-center">
                     {' '}
                     {/* スクロールと中央寄せ */}
                     <Page
                       pageNumber={pageNumber}
-                      width={600}
+                      scale={pageScale}
+                      // width={600}
                       // height={/* 高さを指定することも可能 */}
                       renderTextLayer={true} // テキストレイヤーを有効にする（文字選択や検索のため）
                       renderAnnotationLayer={true} // 注釈レイヤーを有効にする
-                      className="shadow-lg" // ページに影をつけるなど
+                      className="shadow-lg mx-auto" // ページに影をつけるなど
                       loading={<p>ページを読み込み中...</p>}
+                      onRenderSuccess={() => {
+                        // ページレンダリング完了時の処理 (例: fitWidthを初回実行するなど)
+                        // if (pageNumber === 1 && !initialFitDone) { fitWidth(); setInitialFitDone(true); }
+                      }}
                     />
                   </div>
                 </Document>
