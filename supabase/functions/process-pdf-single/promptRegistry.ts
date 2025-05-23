@@ -28,7 +28,7 @@ export const PROMPT_REGISTRY: Record<string, PromptRegistryEntry | undefined> = 
   KATOUBENIYA_MISAWA: {
     filePathForLogging: './prompts/katouBeniyaIkebukuro/misawa.ts',
     promptFunction: KATOUBENIYA_MISAWA_PROMPT_FUNC,
-    companyName: '加藤ベニヤ池袋ミサワホーム',
+    companyName: '加藤ベニヤ池袋_ミサワホーム',
     version: 'V20250519',
   },
   // 新しい会社・発注元のプロンプトを追加する場合、ここに追記し、関数をインポートする
