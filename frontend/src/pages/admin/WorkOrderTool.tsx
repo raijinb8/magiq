@@ -542,9 +542,9 @@ const WorkOrderTool = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          // onClick={fitWidth} // fitWidth関数を後で定義
                           title="100%"
                           onClick={() => setPageScale(1.0)}
+                          // onClick={fitWidth} // fitWidth関数を後で定義
                           disabled={pageScale === 1.0}
                         >
                           100%
@@ -558,12 +558,17 @@ const WorkOrderTool = () => {
                     {/* スクロールと中央寄せ */}
                     <Page
                       pageNumber={pageNumber}
-                      width={600}
+                      scale={pageScale}
+                      // width={600}
                       // height={/* 高さを指定することも可能 */}
                       renderTextLayer={true} // テキストレイヤーを有効にする（文字選択や検索のため）
                       renderAnnotationLayer={true} // 注釈レイヤーを有効にする
-                      className="shadow-lg" // ページに影をつけるなど
+                      className="shadow-lg mx-auto" // ページに影をつけるなど
                       loading={<p>ページを読み込み中...</p>}
+                      onRenderSuccess={() => {
+                        // ページレンダリング完了時の処理 (例: fitWidthを初回実行するなど)
+                        // if (pageNumber === 1 && !initialFitDone) { fitWidth(); setInitialFitDone(true); }
+                      }}
                     />
                   </div>
                 </Document>
