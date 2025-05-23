@@ -12,6 +12,7 @@ export type PromptFunction = (fileName: string, pdfContent: string) => string
 interface PromptRegistryEntry {
   filePathForLogging?: string // デバッグやログ出力用 (動的インポートを使わない場合は主にこれ)
   promptFunction: PromptFunction
+  companyName: string
   version: string // プロンプトのバージョン
 }
 
@@ -21,11 +22,13 @@ export const PROMPT_REGISTRY: Record<string, PromptRegistryEntry | undefined> = 
     // このキーはフロントエンドと合わせるか、フロントからの情報で生成
     filePathForLogging: './prompts/noharaG.ts', // 例
     promptFunction: NOHARA_G_PROMPT_FUNC,
+    companyName: '野原G住環境',
     version: 'V20250519',
   },
   KATOUBENIYA_MISAWA: {
     filePathForLogging: './prompts/katouBeniyaIkebukuro/misawa.ts',
     promptFunction: KATOUBENIYA_MISAWA_PROMPT_FUNC,
+    companyName: '加藤ベニヤ池袋ミサワホーム',
     version: 'V20250519',
   },
   // 新しい会社・発注元のプロンプトを追加する場合、ここに追記し、関数をインポートする

@@ -229,6 +229,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // --- データベースへの保存処理 ---
+    const companyName = promptEntry.companyName
     let dbRecordId: string | null = null
     if (supabaseClient) {
       try {
@@ -243,7 +244,7 @@ Deno.serve(async (req: Request) => {
               // edited_text: generatedTextByGen, // 初期値として同じものを入れるか、NULLのままか
               status: 'completed_from_ai', // AI処理完了を示すステータス
               prompt_identifier: promptIdentifier, // どのプロンプトを使ったか
-              // company_name: '野原Ｇ住環境', // 固定値または将来的に動的に設定
+              company_name: companyName, // 固定値または将来的に動的に設定
               gemini_processed_at: new Date().toISOString(), // Gemini処理完了時刻
             },
           ])
