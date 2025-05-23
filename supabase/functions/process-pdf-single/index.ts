@@ -242,7 +242,7 @@ Deno.serve(async (req: Request) => {
               generated_text: generatedTextByGen,
               // edited_text: generatedTextByGen, // 初期値として同じものを入れるか、NULLのままか
               status: 'completed_from_ai', // AI処理完了を示すステータス
-              prompt_identifier: 'NOHARA_G_PROMPT_V20250515', // どのプロンプトを使ったか
+              prompt_identifier: promptIdentifier, // どのプロンプトを使ったか
               // company_name: '野原Ｇ住環境', // 固定値または将来的に動的に設定
               gemini_processed_at: new Date().toISOString(), // Gemini処理完了時刻
             },
