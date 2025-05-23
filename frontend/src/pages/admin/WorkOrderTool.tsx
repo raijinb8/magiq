@@ -95,7 +95,7 @@ const WorkOrderTool = () => {
     setProcessingFile(fileToProcess); // どのファイルを処理しているかUIにフィードバックするため
     setIsLoading(true);
     setGeneratedText(''); // 前回の結果やプレースホルダーをクリア
-    setPdfFileToDisplay(processingFile); // プレビュー用のPDFをセット
+    setPdfFileToDisplay(fileToProcess); // プレビュー用のPDFをセット
 
     const companyLabel =
       COMPANY_OPTIONS.find((c) => c.value === selectedCompanyId)?.label ||
