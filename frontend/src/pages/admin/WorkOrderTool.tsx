@@ -63,6 +63,16 @@ const WorkOrderTool = () => {
   const [pageNumber, setPageNumber] = useState<number>(1);
   const [pageScale, setPageScale] = useState<number>(1.0); // 初期倍率を100% (1.0) とする
 
+  // スクロール可能なコンテナ要素を追加
+  const pdfDisplayContainerRef = useRef<HTMLDivElement>(null);
+  const [isPanning, setIsPanning] = useState(false);
+  const [panStartCoords, setPanStartCoords] = useState({ x: 0, y: 0 });
+  // scrollStartCoords は useRef で管理する方が、再レンダリングを引き起こさず、
+  // mousemove 内で常に最新の値にアクセスできるため適している場合がある。
+  // だが、ここでは簡単のため state で管理する。
+  // もしmousemoveでの値の追従に問題があればuseRefを検討。
+  const scrollStartCoords = useRef({ x: 0, y: 0 }); // ドラッグ開始時のスクロール位置
+
   // PDFが読み込まれたときにページ数を設定する関数
   function onDocumentLoadSuccess({
     numPages: nextNumPages,
