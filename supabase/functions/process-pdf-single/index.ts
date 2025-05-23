@@ -108,10 +108,6 @@ Deno.serve(async (req: Request) => {
       )
     }
 
-    // PROMPT_FUNCTION を取得（どのプロンプトを使うか）
-    const selectedPromptFunction: PromptFunction = promptEntry.promptFunction
-    const promptIdentifier = `<span class="math-inline">\{companyIdFromFrontend\}\_</span>{promptEntry.version}`
-
     // 今回はダミーのPDF内容を使います
     const pdfContentDummy = `これは ${fileName} のダミーPDF内容です。実際にはここに抽出されたテキストが入ります。指定された会社: ${companyIdFromFrontend}`
 
@@ -138,6 +134,10 @@ Deno.serve(async (req: Request) => {
     // gemini-2.0-flash 次世代の機能、速度。
 
     // 3. プロンプトの組み立て
+    // PROMPT_FUNCTION を取得（どのプロンプトを使うか）
+    const selectedPromptFunction: PromptFunction = promptEntry.promptFunction
+    const promptIdentifier = `<span class="math-inline">\{companyIdFromFrontend\}\_</span>{promptEntry.version}`
+    // 組み立て
     const prompt = selectedPromptFunction(fileName, pdfContentDummy)
 
     console.log(`[${new Date().toISOString()}] Sending prompt to Gemini API for file: ${fileName}`)
