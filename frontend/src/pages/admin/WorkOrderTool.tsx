@@ -544,6 +544,8 @@ const WorkOrderTool = () => {
                           size="sm"
                           // onClick={fitWidth} // fitWidth関数を後で定義
                           title="100%"
+                          onClick={() => setPageScale(1.0)}
+                          disabled={pageScale === 1.0}
                         >
                           100%
                         </Button>
