@@ -15,6 +15,15 @@ import {
   SelectLabel,
 } from '@/components/ui/select';
 import { supabase } from '@/lib/supabase.ts'; // Supabase Client のインポート
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/esm/Page/AnnotationLayer.css'; // PDFの注釈レイヤーのスタイル
+import 'react-pdf/dist/esm/Page/TextLayer.css'; // PDFのテキストレイヤーのスタイル (文字選択などに必要)
+
+// PDFのレンダリングを効率的に行うための Web Worker を設定
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url // または deploy.pdf.worker.min.js といった名前に変えてもOK
+).toString();
 
 const COMPANY_OPTIONS = [
   { value: 'NOHARA_G', label: '野原G住環境' },
