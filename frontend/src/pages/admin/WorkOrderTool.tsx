@@ -553,7 +553,7 @@ const WorkOrderTool = () => {
                     </div>
                   )}
                   {/* PDFのページを表示 */}
-                  <div className="flex-grow overflow-auto w-full flex justify-center">
+                  <div className="flex-grow overflow-auto flex justify-center items-center">
                     {' '}
                     {/* スクロールと中央寄せ */}
                     <Page
