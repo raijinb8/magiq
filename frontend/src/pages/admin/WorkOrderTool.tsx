@@ -21,7 +21,7 @@ import 'react-pdf/dist/esm/Page/TextLayer.css'; // PDFのテキストレイヤ�
 
 // PDFのレンダリングを効率的に行うための Web Worker を設定
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.mjs',
+  'pdfjs-dist/build/pdf.worker.min.mjs', // frontend/node_modules/pdfjs-dist/build/pdf.worker.min.mjs から手動コピー
   import.meta.url // または deploy.pdf.worker.min.js といった名前に変えてもOK
 ).toString();
 
