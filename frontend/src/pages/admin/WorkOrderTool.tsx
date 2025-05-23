@@ -60,6 +60,7 @@ const WorkOrderTool = () => {
   const [pdfFileToDisplay, setPdfFileToDisplay] = useState<File | null>(null); // 表示するPDFファイル (FileオブジェクトまたはURL)
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState<number>(1);
+  const [pageScale, setPageScale] = useState<number>(1.0); // 初期倍率を100% (1.0) とする
 
   // PDFが読み込まれたときにページ数を設定する関数
   function onDocumentLoadSuccess({
