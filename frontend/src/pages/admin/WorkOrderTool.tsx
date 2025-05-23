@@ -15,6 +15,15 @@ import {
   SelectLabel,
 } from '@/components/ui/select';
 import { supabase } from '@/lib/supabase.ts'; // Supabase Client のインポート
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/esm/Page/AnnotationLayer.css'; // PDFの注釈レイヤーのスタイル
+import 'react-pdf/dist/esm/Page/TextLayer.css'; // PDFのテキストレイヤーのスタイル (文字選択などに必要)
+
+// PDFのレンダリングを効率的に行うための Web Worker を設定
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs', // frontend/node_modules/pdfjs-dist/build/pdf.worker.min.mjs から手動コピー
+  import.meta.url // または deploy.pdf.worker.min.js といった名前に変えてもOK
+).toString();
 
 const COMPANY_OPTIONS = [
   { value: 'NOHARA_G', label: '野原G住環境' },
@@ -47,6 +56,21 @@ const WorkOrderTool = () => {
     companyLabel: string;
   }>({ file: null, companyLabel: '' });
 
+  // WorkOrderTool コンポーネント内
+  const [pdfFileToDisplay, setPdfFileToDisplay] = useState<File | null>(null); // 表示するPDFファイル (FileオブジェクトまたはURL)
+  const [numPages, setNumPages] = useState<number | null>(null);
+  const [pageNumber, setPageNumber] = useState<number>(1);
+
+  // PDFが読み込まれたときにページ数を設定する関数
+  function onDocumentLoadSuccess({
+    numPages: nextNumPages,
+  }: {
+    numPages: number;
+  }) {
+    setNumPages(nextNumPages);
+    setPageNumber(1); // 最初のページを表示
+  }
+
   // バックエンドAPIを呼び出す関数
   const handleProcessFile = async (fileToProcess: File) => {
     // 会社が選択されているかチェック
@@ -69,6 +93,7 @@ const WorkOrderTool = () => {
     setProcessingFile(fileToProcess); // どのファイルを処理しているかUIにフィードバックするため
     setIsLoading(true);
     setGeneratedText(''); // 前回の結果やプレースホルダーをクリア
+    setPdfFileToDisplay(fileToProcess); // プレビュー用のPDFをセット
 
     const companyLabel =
       COMPANY_OPTIONS.find((c) => c.value === selectedCompanyId)?.label ||
@@ -421,15 +446,90 @@ const WorkOrderTool = () => {
             <div className="mb-2 flex items-center justify-between">
               <h2 className="text-lg font-semibold">
                 PDFプレビュー{' '}
-                {processingFile && !isLoading && `(${processingFile.name})`}
+                {processingFile &&
+                  !isLoading &&
+                  pdfFileToDisplay &&
+                  `(${processingFile.name})`}
               </h2>
             </div>
-            <div className="flex-1 bg-slate-100 rounded-md flex items-center justify-center overflow-auto p-2">
-              <p className="text-muted-foreground">
-                {processingFile && !isLoading
-                  ? `「${processingFile.name}」のPDFプレビューは現在未実装です。`
-                  : 'ここに選択されたPDFが表示されます'}
-              </p>
+            <div className="flex-1 bg-slate-100 dark:bg-slate-700 rounded-md flex flex-col items-center justify-start overflow-auto p-2 relative">
+              {processingFile && !isLoading ? ( // 処理が完了したファイル（または処理中でない選択ファイル）を表示
+                <Document
+                  file={processingFile} // FileオブジェクトまたはURL
+                  onLoadSuccess={onDocumentLoadSuccess}
+                  onLoadError={(error) => {
+                    toast.error('PDFの読み込みに失敗しました。', {
+                      description: error.message,
+                    });
+                    console.error('Error while loading PDF:', error);
+                  }}
+                  loading={
+                    <p className="text-muted-foreground p-4">
+                      PDFを読み込み中...
+                    </p>
+                  }
+                  noData={
+                    <p className="text-muted-foreground p-4">
+                      表示するPDFが選択されていません。
+                    </p>
+                  }
+                  error={
+                    <p className="text-red-500 p-4">PDFの読み込みエラー。</p>
+                  }
+                  className="w-full h-full flex flex-col items-center" // Document自体のスタイリング
+                >
+                  {/* ページナビゲーション (手順8.1.3で詳しく) */}
+                  {numPages && (
+                    <div className="sticky top-0 z-10 bg-slate-200 dark:bg-slate-700 p-2 flex items-center justify-center gap-2 w-full">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={pageNumber <= 1}
+                        onClick={() =>
+                          setPageNumber((prev) => Math.max(prev - 1, 1))
+                        }
+                      >
+                        前へ
+                      </Button>
+                      <span>
+                        ページ {pageNumber} / {numPages}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={pageNumber >= numPages}
+                        onClick={() =>
+                          setPageNumber((prev) => Math.min(prev + 1, numPages))
+                        }
+                      >
+                        次へ
+                      </Button>
+                    </div>
+                  )}
+                  {/* PDFのページを表示 */}
+                  <div className="flex-grow overflow-auto w-full flex justify-center">
+                    {' '}
+                    {/* スクロールと中央寄せ */}
+                    <Page
+                      pageNumber={pageNumber}
+                      width={600}
+                      // height={/* 高さを指定することも可能 */}
+                      renderTextLayer={true} // テキストレイヤーを有効にする（文字選択や検索のため）
+                      renderAnnotationLayer={true} // 注釈レイヤーを有効にする
+                      className="shadow-lg" // ページに影をつけるなど
+                      loading={<p>ページを読み込み中...</p>}
+                    />
+                  </div>
+                </Document>
+              ) : isLoading ? (
+                <p className="text-muted-foreground p-4">
+                  AI処理中です。完了後にPDFが表示されます...
+                </p>
+              ) : (
+                <p className="text-muted-foreground p-4">
+                  左のリストからファイルを選択するか、新しいPDFをアップロードして処理を開始してください。
+                </p>
+              )}
             </div>
           </div>
 
