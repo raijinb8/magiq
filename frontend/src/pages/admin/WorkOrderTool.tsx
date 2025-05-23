@@ -56,6 +56,23 @@ const WorkOrderTool = () => {
     companyLabel: string;
   }>({ file: null, companyLabel: '' });
 
+  // WorkOrderTool コンポーネント内
+  const [pdfFileToDisplay, setPdfFileToDisplay] = useState<
+    File | string | null
+  >(null); // 表示するPDFファイル (FileオブジェクトまたはURL)
+  const [numPages, setNumPages] = useState<number | null>(null);
+  const [pageNumber, setPageNumber] = useState<number>(1);
+
+  // PDFが読み込まれたときにページ数を設定する関数
+  function onDocumentLoadSuccess({
+    numPages: nextNumPages,
+  }: {
+    numPages: number;
+  }) {
+    setNumPages(nextNumPages);
+    setPageNumber(1); // 最初のページを表示
+  }
+
   // バックエンドAPIを呼び出す関数
   const handleProcessFile = async (fileToProcess: File) => {
     // 会社が選択されているかチェック
