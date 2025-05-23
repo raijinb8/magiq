@@ -446,7 +446,10 @@ const WorkOrderTool = () => {
             <div className="mb-2 flex items-center justify-between">
               <h2 className="text-lg font-semibold">
                 PDFプレビュー{' '}
-                {processingFile && !isLoading && `(${processingFile.name})`}
+                {processingFile &&
+                  !isLoading &&
+                  pdfFileToDisplay &&
+                  `(${processingFile.name})`}
               </h2>
             </div>
             <div className="flex-1 bg-slate-100 dark:bg-slate-700 rounded-md flex flex-col items-center justify-start overflow-auto p-2 relative">
