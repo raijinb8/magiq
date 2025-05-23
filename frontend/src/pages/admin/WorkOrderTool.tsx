@@ -18,6 +18,7 @@ import { supabase } from '@/lib/supabase.ts'; // Supabase Client のインポー
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css'; // PDFの注釈レイヤーのスタイル
 import 'react-pdf/dist/esm/Page/TextLayer.css'; // PDFのテキストレイヤーのスタイル (文字選択などに必要)
+import { Plus, Minus } from 'lucide-react'; // icon
 
 // PDFのレンダリングを効率的に行うための Web Worker を設定
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -479,7 +480,6 @@ const WorkOrderTool = () => {
                   }
                   className="w-full h-full flex flex-col items-center" // Document自体のスタイリング
                 >
-                  {/* ページナビゲーション (手順8.1.3で詳しく) */}
                   {numPages && (
                     <div className="sticky top-0 z-10 bg-slate-200 dark:bg-slate-700 p-2 flex items-center justify-center gap-2 w-full">
                       <Button
@@ -505,6 +505,49 @@ const WorkOrderTool = () => {
                       >
                         次へ
                       </Button>
+                      {/* 拡大・縮小コントロール */}
+                      <div className="ml-auto flex items-center gap-2">
+                        {' '}
+                        {/* 縮小ボタン */}
+                        <Button
+                          variant="outline"
+                          size="icon" // アイコンボタンにする場合
+                          onClick={() =>
+                            setPageScale((prev) => Math.max(0.25, prev - 0.25))
+                          } // 最小倍率0.25、0.25ずつ減少
+                          disabled={pageScale <= 0.25}
+                          title="縮小"
+                        >
+                          {/* Lucide Minus アイコン */}
+                          <Minus className="h-4 w-4" />{' '}
+                        </Button>
+                        {/* 現在の倍率を表示 */}
+                        <span className="text-sm w-16 text-center">
+                          {(pageScale * 100).toFixed(0)}%
+                        </span>{' '}
+                        {/* 拡大ボタン */}
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() =>
+                            setPageScale((prev) => Math.min(3.0, prev + 0.25))
+                          } // 最大倍率3.0、0.25ずつ増加
+                          disabled={pageScale >= 3.0}
+                          title="拡大"
+                        >
+                          {/* Lucide Plus アイコン */}
+                          <Plus className="h-4 w-4" />{' '}
+                        </Button>
+                        {/* 100% ボタン */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          // onClick={fitWidth} // fitWidth関数を後で定義
+                          title="100%"
+                        >
+                          100%
+                        </Button>
+                      </div>
                     </div>
                   )}
                   {/* PDFのページを表示 */}
