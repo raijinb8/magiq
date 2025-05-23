@@ -136,7 +136,7 @@ Deno.serve(async (req: Request) => {
     // 3. プロンプトの組み立て
     // PROMPT_FUNCTION を取得（どのプロンプトを使うか）
     const selectedPromptFunction: PromptFunction = promptEntry.promptFunction
-    const promptIdentifier = `<span class="math-inline">\{companyIdFromFrontend\}\_</span>{promptEntry.version}`
+    const promptIdentifier = `${companyIdFromFrontend}_${promptEntry.version}`
     // 組み立て
     const prompt = selectedPromptFunction(fileName, pdfContentDummy)
 
