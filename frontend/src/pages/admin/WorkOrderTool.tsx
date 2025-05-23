@@ -57,9 +57,7 @@ const WorkOrderTool = () => {
   }>({ file: null, companyLabel: '' });
 
   // WorkOrderTool コンポーネント内
-  const [pdfFileToDisplay, setPdfFileToDisplay] = useState<
-    File | string | null
-  >(null); // 表示するPDFファイル (FileオブジェクトまたはURL)
+  const [pdfFileToDisplay, setPdfFileToDisplay] = useState<File | null>(null); // 表示するPDFファイル (FileオブジェクトまたはURL)
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState<number>(1);
 
