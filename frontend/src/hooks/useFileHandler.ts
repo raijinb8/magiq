@@ -10,8 +10,8 @@ export interface UseFileHandlerReturn {
   setProcessingFile: React.Dispatch<React.SetStateAction<PdfFile | null>>;
   pdfFileToDisplay: PdfFile | null; // string (URL) も許容する場合は PdfFile | string | null
   setPdfFileToDisplay: React.Dispatch<React.SetStateAction<PdfFile | null>>; // 同上
-  addFilesToList: (newFilesInput: File[]) => File | null; // 処理対象として最初の有効なファイルを返す
-  handleFileSelect: (event: React.ChangeEvent<HTMLInputElement>) => File | null; // 同上
+  addFilesToList: (newFilesInput: File[]) => void;
+  handleFileSelect: (event: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 export const useFileHandler = (): UseFileHandlerReturn => {
@@ -24,10 +24,9 @@ export const useFileHandler = (): UseFileHandlerReturn => {
   /**
    * 新しいファイルの配列を受け取り、PDF形式チェックと重複チェックを行った上でリストに追加します。
    * @param newFilesInput Fileオブジェクトの配列
-   * @returns 追加されたファイルのうち、最初に処理対象となりうるファイル (File | null)
    */
   const addFilesToList = useCallback(
-    (newFilesInput: File[]): File | null => {
+    (newFilesInput: File[]): void => {
       let firstValidFileForProcessing: File | null = null;
       const filesToAdd: PdfFile[] = [];
 
@@ -63,7 +62,6 @@ export const useFileHandler = (): UseFileHandlerReturn => {
           `${filesToAdd.length}件のPDFファイルが一覧に追加されました。`
         );
       }
-      return firstValidFileForProcessing;
     },
     [uploadedFiles]
   ); // uploadedFiles を依存配列に追加
@@ -71,20 +69,17 @@ export const useFileHandler = (): UseFileHandlerReturn => {
   /**
    * ファイル選択ダイアログの変更イベントを処理します。
    * @param event HTMLInputElement の ChangeEvent
-   * @returns 処理対象として最初の有効なファイルを返す (File | null)
    */
   const handleFileSelect = (
     event: React.ChangeEvent<HTMLInputElement>
-  ): File | null => {
+  ): void => {
     const files = event.target.files;
-    let firstFile: File | null = null;
     if (files && files.length > 0) {
-      firstFile = addFilesToList(Array.from(files));
+      addFilesToList(Array.from(files));
     }
     if (event.target) {
-      event.target.value = ''; // 同じファイルを選択できるように値をリセット
+      event.target.value = '';
     }
-    return firstFile;
   };
 
   return {
