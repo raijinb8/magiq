@@ -1,746 +1,263 @@
-// src/pages/admin/WorkOrderTool.tsx
-
+// src/pages/admin/WorkOrderTool/WorkOrderTool.tsx
 import React, { useState, useCallback, useRef } from 'react';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { toast } from 'sonner'; // sonner から toast 関数を直接インポート
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  SelectGroup,
-  SelectLabel,
-} from '@/components/ui/select';
-import { supabase } from '@/lib/supabase.ts'; // Supabase Client のインポート
-import { Document, Page, pdfjs } from 'react-pdf';
-import 'react-pdf/dist/esm/Page/AnnotationLayer.css'; // PDFの注釈レイヤーのスタイル
-import 'react-pdf/dist/esm/Page/TextLayer.css'; // PDFのテキストレイヤーのスタイル (文字選択などに必要)
-import { Plus, Minus, RotateCw } from 'lucide-react'; // icon
+import { toast } from 'sonner';
+import { pdfjs } from 'react-pdf';
+import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
+import 'react-pdf/dist/esm/Page/TextLayer.css';
+
+// 型定義と定数
+import type {
+  CompanyOptionValue,
+  ProcessedCompanyInfo,
+  PdfFile,
+  PdfProcessSuccessResponse,
+} from '@/types';
+import { ALL_COMPANY_OPTIONS } from '@/constants/company'; // すべての会社情報 (ラベル取得用)
+
+// カスタムフック
+import { useFileHandler } from '@/hooks/useFileHandler';
+import { usePdfDocument } from '@/hooks/usePdfDocument';
+import { usePdfControls } from '@/hooks/usePdfControls';
+import { usePdfProcessor } from '@/hooks/usePdfProcessor';
+import { useDragAndDrop } from '@/hooks/useDragAndDrop';
+
+// 子コンポーネント
+import { FileManagementPanel } from '@/components/workOrderTool/FileManagementPanel';
+import { PdfPreviewPanel } from '@/components/workOrderTool/PdfPreviewPanel';
+import { GeneratedTextPanel } from '@/components/workOrderTool/GeneratedTextPanel';
 
 // PDFのレンダリングを効率的に行うための Web Worker を設定
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.mjs', // frontend/node_modules/pdfjs-dist/build/pdf.worker.min.mjs から手動コピー
-  import.meta.url // または deploy.pdf.worker.min.js といった名前に変えてもOK
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url
 ).toString();
 
-const COMPANY_OPTIONS = [
-  { value: 'NOHARA_G', label: '野原G住環境' },
-  { value: 'KATOUBENIYA_MISAWA', label: '加藤ベニヤ池袋_ミサワホーム' },
-  { value: 'YAMADA_K', label: '山田K建設 (準備中)' }, // 仮に準備中のものも入れておく
-  { value: 'UNKNOWN_OR_NOT_SET', label: '会社を特定できませんでした' }, // バックエンドのエラーケースも考慮
-  // 今後対応する会社が増えたらここに追加
-];
-
-type CompanyOptionValue = (typeof COMPANY_OPTIONS)[number]['value'] | ''; // 選択肢のvalue型 + 未選択を表す空文字
-
-const WorkOrderTool = () => {
-  // 状態管理フック
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
-  const [isDragging, setIsDragging] = useState(false);
-
-  // useRefフック
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [processingFile, setProcessingFile] = useState<File | null>(null); // 現在処理中のファイルオブジェクト
-  const [generatedText, setGeneratedText] = useState<string>(''); // Geminiが生成したテキスト
-  const [isLoading, setIsLoading] = useState(false);
-
-  // 選択された会社IDの状態
+const WorkOrderTool: React.FC = () => {
+  // --- 状態管理 ---
+  // 会社選択の状態
   const [selectedCompanyId, setSelectedCompanyId] =
     useState<CompanyOptionValue>('');
+  // 生成されたテキストの状態
+  const [generatedText, setGeneratedText] = useState<string>('');
+  // AI処理結果に関する情報 (ファイル名、会社ラベル)
+  const [processedCompanyInfo, setProcessedCompanyInfo] =
+    useState<ProcessedCompanyInfo>({ file: null, companyLabel: '' });
 
-  // 処理結果表示用
-  const [processedCompanyInfo, setProcessedCompanyInfo] = useState<{
-    file: File | null;
-    companyLabel: string;
-  }>({ file: null, companyLabel: '' });
+  // --- カスタムフックの利用 ---
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // WorkOrderTool コンポーネント内
-  const [pdfFileToDisplay, setPdfFileToDisplay] = useState<File | null>(null); // 表示するPDFファイル (FileオブジェクトまたはURL)
-  const [numPages, setNumPages] = useState<number | null>(null);
-  const [pageNumber, setPageNumber] = useState<number>(1);
-  const [pageScale, setPageScale] = useState<number>(1.0); // 初期倍率を100% (1.0) とする
-  const [pageRotation, setPageRotation] = useState<number>(0); // PDF回転角度のstate (0, 90, 180, 270)
+  const {
+    uploadedFiles,
+    // setUploadedFiles, // 直接は使わないが、useFileHandler内で使われる
+    processingFile,
+    setProcessingFile,
+    pdfFileToDisplay,
+    setPdfFileToDisplay,
+    addFilesToList, // ファイルをリストに追加する関数
+    handleFileSelect, // input要素のonChange用
+  } = useFileHandler();
 
-  // スクロール可能なコンテナ要素を追加
-  const pdfDisplayContainerRef = useRef<HTMLDivElement>(null);
-  const [isPanning, setIsPanning] = useState<boolean>(false);
-  const [panStart, setPanStart] = useState<{ x: number; y: number }>({
-    x: 0,
-    y: 0,
-  });
-  const [scrollStart, setScrollStart] = useState<{ left: number; top: number }>(
-    { left: 0, top: 0 }
-  );
+  const {
+    resetPdfControls, // PDFコントロールリセット用関数
+    pageNumber,
+    setPageNumber,
+    pageScale,
+    setPageScale,
+    pageRotation,
+    // setPageRotation, // handleRotatePdf で管理
+    handleRotatePdf,
+    pdfDisplayContainerRef,
+    isPanning,
+    handleMouseDownOnPdfArea,
+    handleMouseMoveOnPdfArea,
+    handleMouseUpOrLeaveArea,
+  } = usePdfControls();
 
-  // PDFを回転させる関数
-  const handleRotatePdf = () => {
-    setPageRotation((prevRotation) => (prevRotation + 90) % 360);
-  };
+  const {
+    numPages,
+    // setNumPages, // 直接は使わない
+    onDocumentLoadSuccess: baseOnDocumentLoadSuccess, // フックからの基本処理
+  } = usePdfDocument();
 
-  // PDFが読み込まれたときにページ数を設定する関数
-  function onDocumentLoadSuccess({
-    numPages: nextNumPages,
-  }: {
-    numPages: number;
-  }) {
-    setNumPages(nextNumPages);
-    setPageNumber(1); // 最初のページを表示
-    setPageRotation(0); // 新しいドキュメントがロードされたら回転角度をリセット
-  }
-
-  // バックエンドAPIを呼び出す関数
-  const handleProcessFile = async (fileToProcess: File) => {
-    // 会社が選択されているかチェック
-    if (!selectedCompanyId) {
-      toast.error('会社が選択されていません。', {
-        description:
-          '処理を開始する前に、ドロップダウンから会社を選択してください。',
-        duration: 5000,
-      });
-      return;
-    }
-
-    if (!fileToProcess || isLoading) {
-      // 処理中なら何もしない
-      if (isLoading)
-        toast.info('現在別のファイルを処理中です。少々お待ちください。');
-      return;
-    }
-
-    setProcessingFile(fileToProcess); // どのファイルを処理しているかUIにフィードバックするため
-    setIsLoading(true);
-    setGeneratedText(''); // 前回の結果やプレースホルダーをクリア
-    setPdfFileToDisplay(fileToProcess); // プレビュー用のPDFをセット
-
-    const companyLabel =
-      COMPANY_OPTIONS.find((c) => c.value === selectedCompanyId)?.label ||
-      selectedCompanyId;
-
-    toast.info(
-      `「${fileToProcess.name}」の処理を開始します (会社: ${companyLabel})...`,
-      {
-        duration: 3000,
-      }
-    );
-
-    try {
-      const session = (await supabase.auth.getSession()).data.session; // 現在のセッションを取得
-
-      if (!session) {
-        toast.error('認証されていません。ログインしてください。');
-        setIsLoading(false);
-        return;
-      }
-
-      // Edge FunctionのエンドポイントURLを環境変数から取得
-      const functionUrl = import.meta.env.VITE_PUBLIC_PROCESS_PDF_FUNCTION_URL;
-      console.log(functionUrl);
-      // バックエンドAPIに送信するデータ
-      const requestBody = {
-        fileName: fileToProcess.name,
-        companyId: selectedCompanyId, // 選択された会社IDを送信
-        // 将来的にはここにファイルの内容やその他のメタデータを追加することも検討
-        // fileSize: fileToProcess.size,
-        // fileType: fileToProcess.type,
-      };
-
-      const response = await fetch(functionUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // 本番環境では、Edge Functionの呼び出しに認証トークン(Authorization: Bearer <token>)を使うのが一般的
-          Authorization: `Bearer ${session.access_token}`,
-          // Supabaseのanon key (ローカル開発で --no-verify-jwt を使っている場合や、
-          // Edge Function側でRLSやカスタム認証をまだ設定していない場合に必要になることがある)
-          // apikey: import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY,
-        },
-        body: JSON.stringify(requestBody),
-      });
-
-      // テスト用
-      // const jsonData = [
-      //   {
-      //     message:
-      //       'Successfully generated text for my_test_document.pdf (Company: NOHARA_G).',
-      //     generatedText:
-      //       '添付されたPDFファイル (my_test_document.pdf) から情報を抽出するようご指示いただきありがとうございます。\n\nしかしながら、誠に申し訳ございませんが、現在、指定されたPDFファイルは添付されておらず、内容を読み取ることができません。また、提供されたダミーの内容（「これは my_test_document.pdf のダミーPDF内容です。実際にはここに抽出されたテキストが入ります。指定された会社: NOHARA_G」）は、発注書の構造を持たない説明文のため、要求された開始時間、現場名、住所、資材明細などの具体的な情報を抽出することは技術的に不可能です。\n\nつきましては、PDFファイルが利用可能になり次第、改めてご提示いただけますでしょうか。\n\nご指示いただいた抽出項目リスト、特に**文字幅（全角・半角の使い分け）**、**スペース（全角スペース）**、**特定の記号や数字の半角指定**といった**厳密なフォーマット指示**については、詳細に確認し、完全に理解いたしました。\n\nPDFファイルが提供され次第、この理解に基づき、指定された形式（開始時間、担当会社・担当者、現場名、得意先名、現場住所、現場連絡先、資材明細、合計枚数、備考、作業人数）で正確に情報を抽出・整理し、出力させていただきます。\n\nお手数をおかけしますが、PDFファイルをご用意いただけますようお願い申し上げます。',
-      //     originalFileName: 'my_test_document.pdf',
-      //     promptUsedIdentifier: 'NOHARA_G_PROMPT_V20250519',
-      //     identifiedCompany: 'NOHARA_G',
-      //     dbRecordId: '9529113e-9821-4b2a-9cc3-0492ef77e300',
-      //   },
-      // ];
-
-      // // ハードコードされた Response オブジェクト
-      // const response = new Response(JSON.stringify(jsonData), {
-      //   status: 200, // HTTPステータスコード (成功を想定)
-      //   statusText: 'OK', // HTTPステータスメッセージ
-      //   headers: {
-      //     'Content-Type': 'application/json', // レスポンスのコンテントタイプ
-      //   },
-      // });
-
-      setIsLoading(false); // ローディング状態を解除
-      const responseData = await response.json();
-
-      if (!response.ok) {
-        console.error('Backend API Error Response:', responseData);
-        toast.error(
-          `処理エラー: ${responseData.error || response.statusText}`,
-          {
-            description: `ファイル「${fileToProcess.name}」の処理中に問題が発生しました。(${response.status})`,
-            duration: 8000,
-          }
-        );
-        setGeneratedText(
-          `エラーが発生しました:\n${responseData.error || response.statusText}\n\n詳細は開発者コンソールを確認してください。`
-        );
-        setProcessedCompanyInfo({
-          file: fileToProcess,
-          companyLabel: `エラー (${companyLabel})`,
-        });
-        setProcessingFile(null); // エラー時は処理中ファイルをクリア
-        return;
-      }
-
+  // API処理とローディング状態の管理
+  const { isLoading, processFile } = usePdfProcessor({
+    onSuccess: (data: PdfProcessSuccessResponse, file: File) => {
+      setGeneratedText(
+        data.generatedText || 'テキストが生成されませんでした。'
+      );
+      const companyLabel =
+        ALL_COMPANY_OPTIONS.find((opt) => opt.value === data.identifiedCompany)
+          ?.label || (data.identifiedCompany as string);
+      setProcessedCompanyInfo({ file, companyLabel });
       toast.success(
-        `「${fileToProcess.name}」のAI処理が完了しました！ (会社: ${
-          COMPANY_OPTIONS.find(
-            (c) => c.value === responseData.identifiedCompany
-          )?.label || responseData.identifiedCompany
-        })`,
-        {
-          duration: 5000,
-        }
+        `「${file.name}」のAI処理が完了しました！ (会社: ${companyLabel})`
       );
+      // processingFile はAI処理が完了しても維持 (どのファイルの結果かを示すため)
+    },
+    onError: (
+      errorMessage: string,
+      file: File,
+      companyLabelForError: string
+    ) => {
       setGeneratedText(
-        responseData.generatedText || 'テキストが生成されませんでした。'
+        `エラーが発生しました:\n${errorMessage}\n\n詳細は開発者コンソールを確認してください。`
       );
       setProcessedCompanyInfo({
-        // ★処理した会社情報を保存
-        file: fileToProcess,
-        companyLabel:
-          COMPANY_OPTIONS.find(
-            (c) => c.value === responseData.identifiedCompany
-          )?.label || responseData.identifiedCompany,
+        file,
+        companyLabel: `エラー (${companyLabelForError})`,
       });
-
-      // 処理が成功したら processingFile はクリアせず、どのファイルの結果が表示されているか分かるように残す
-      // (UIの要件に応じて、成功時もクリアするかどうかを決める)
-
-      // --- データベースへの保存処理 (ステップ5.7で実装) ---
-      // await saveToDatabase(responseData.originalFileName, responseData.generatedText, responseData.promptUsedIdentifier)
-    } catch (error: any) {
-      setIsLoading(false);
-      setProcessingFile(null); // エラー時は処理中ファイルをクリア
-      setGeneratedText(
-        `API呼び出し中にエラーが発生しました:\n${error.message}\n\n詳細は開発者コンソールを確認してください。`
-      );
-      setProcessedCompanyInfo({
-        file: fileToProcess,
-        companyLabel: `エラー (${companyLabel})`,
+      // setProcessingFile(null); // エラー時も、どのファイルでエラーか示すために維持しても良い
+      toast.error(`処理エラー: ${errorMessage}`, {
+        description: `ファイル「${file.name}」の処理中に問題が発生しました。`,
       });
-      console.error('Frontend API Call/Network Error:', error);
-      toast.error(
-        'API呼び出し中にネットワークエラーまたは予期せぬエラーが発生しました。',
-        {
-          description: error.message || '不明なクライアントサイドエラーです。',
-          duration: 8000,
-        }
-      );
-    }
-    // finally ブロックはsetIsLoading(false)が二重に呼ばれる可能性があるので、各処理の最後に移動
-  };
-
-  // 新しいファイルを処理する共通関数 (PDFフィルタリング、重複チェック、状態更新)
-  // processNewFiles 関数内で、ファイルが追加された後に handleProcessFile を呼び出す
-  const processNewFiles = useCallback(
-    (newFilesInput: File[]) => {
-      let addedFilesCount = 0;
-      const filesToAdd: File[] = [];
-
-      newFilesInput.forEach((newFile) => {
-        if (newFile.type !== 'application/pdf') {
-          toast.error(`不正なファイル形式: 「${newFile.name}」`, {
-            description: 'PDFファイルではありません。スキップしました。',
-            duration: 5000,
-          });
-          return;
-        }
-        const isDuplicate = uploadedFiles.some(
-          (existingFile) => existingFile.name === newFile.name
-        );
-        if (isDuplicate) {
-          toast.warning(`ファイルが重複しています: 「${newFile.name}」`, {
-            description: 'このファイルは既に追加されています。',
-            duration: 5000,
-          });
-        } else {
-          filesToAdd.push(newFile);
-          addedFilesCount++;
-        }
-      });
-
-      if (filesToAdd.length > 0) {
-        setUploadedFiles((prevFiles) => {
-          const updatedFiles = [...prevFiles, ...filesToAdd];
-          // 自動的に最初の新しいファイルを処理開始 (UI/UXに応じて変更可)
-          // 他の処理が実行中でなければ、最初の追加ファイルを処理する
-          if (filesToAdd.length > 0 && !isLoading) {
-            // isLoading をチェック
-            handleProcessFile(filesToAdd[0]);
-          }
-          return updatedFiles;
-        });
-        toast.success(
-          `${addedFilesCount}件のPDFファイルが一覧に追加されました。`
-        );
-      }
     },
-    [uploadedFiles, isLoading, handleProcessFile]
-    // [uploadedFiles] //最初の新しいファイルを自動的に実行しない場合
-  ); // isLoading と handleProcessFile を依存配列に追加
+  });
 
-  // --- ドラッグ＆ドロップイベントハンドラ ---
+  // --- 連携ロジックとコールバック関数 ---
 
-  const handleDrop = useCallback(
-    (event: React.DragEvent<HTMLDivElement>) => {
-      event.preventDefault();
-      event.stopPropagation();
-      setIsDragging(false);
-      const files = event.dataTransfer.files;
-      if (files && files.length > 0) {
-        processNewFiles(Array.from(files));
-      }
+  /**
+   * PDFドキュメントの読み込みが成功した際のコールバック。
+   * ページ数を設定し、PDFビューアのコントロール（ページ番号、スケール、回転）をリセットします。
+   */
+  const handleDocumentLoadSuccess = useCallback(
+    (params: { numPages: number }) => {
+      baseOnDocumentLoadSuccess(params); // usePdfDocumentの基本処理を呼び出す
+      resetPdfControls(); // PDFコントロールをリセット
     },
-    [processNewFiles]
+    [baseOnDocumentLoadSuccess, resetPdfControls]
   );
 
-  const handleDragEnter = useCallback(
-    (event: React.DragEvent<HTMLDivElement>) => {
-      event.preventDefault();
-      event.stopPropagation();
-      setIsDragging(true);
-    },
-    []
-  );
-
-  const handleDragLeave = useCallback(
-    (event: React.DragEvent<HTMLDivElement>) => {
-      event.preventDefault();
-      event.stopPropagation();
-      if (event.currentTarget.contains(event.relatedTarget as Node)) {
+  /**
+   * ファイルリスト内のファイルがクリックされたときの処理。
+   * 会社が選択されていればAI処理を開始し、されていなければプレビューのみ更新します。
+   */
+  const handleFileProcessRequest = useCallback(
+    async (file: PdfFile) => {
+      if (isLoading) {
+        toast.info('現在別のファイルを処理中です。少々お待ちください。');
         return;
       }
-      setIsDragging(false);
+      if (selectedCompanyId) {
+        setProcessingFile(file); // これから処理するファイルとしてマーク
+        setGeneratedText(''); // 前回の結果をクリア
+        setPdfFileToDisplay(file); // プレビュー対象も更新
+        // processedCompanyInfo は processFile の成功/エラーコールバックで更新される
+        const companyLabel =
+          ALL_COMPANY_OPTIONS.find((c) => c.value === selectedCompanyId)
+            ?.label || selectedCompanyId;
+        toast.info(
+          `「${file.name}」の処理を開始します (会社: ${companyLabel})...`
+        );
+        await processFile(file, selectedCompanyId, companyLabel);
+      } else {
+        // 会社未選択時はプレビューのみ更新
+        setPdfFileToDisplay(file);
+        setProcessingFile(file); // プレビュー対象としてマーク（処理はしない）
+        setGeneratedText(''); // テキストエリアクリア
+        setProcessedCompanyInfo({ file: null, companyLabel: '' }); // 処理結果情報クリア
+        // numPages, pageNumber, pageRotation は onDocumentLoadSuccess でリセットされる
+        toast.info('会社を選択すると、このファイルのAI処理を開始できます。', {
+          description: `ファイル「${file.name}」をプレビュー中です。`,
+        });
+      }
     },
-    []
+    [
+      isLoading,
+      selectedCompanyId,
+      processFile,
+      setProcessingFile,
+      setPdfFileToDisplay,
+      setGeneratedText,
+      setProcessedCompanyInfo,
+    ]
   );
 
-  const handleDragOver = useCallback(
-    (event: React.DragEvent<HTMLDivElement>) => {
-      event.preventDefault();
-      event.stopPropagation();
-      if (!isDragging) setIsDragging(true);
+  /**
+   * ファイルがアップロードまたはドラッグアンドドロップで追加されたときの処理。
+   * 最初の有効なファイルを自動的に処理対象にするか、プレビュー対象にします。
+   */
+  const handleNewFilesAdded = useCallback(
+    (files: File[]) => {
+      const firstValidFile = addFilesToList(files);
+      if (firstValidFile && !isLoading) {
+        // 新しいファイルが追加されたら、それを処理/プレビュー対象にする
+        handleFileProcessRequest(firstValidFile as PdfFile);
+      }
     },
-    [isDragging]
+    [addFilesToList, isLoading, handleFileProcessRequest]
   );
 
-  // --- ファイル選択ダイアログ関連 ---
+  const { isDragging, dragEventHandlers } = useDragAndDrop(handleNewFilesAdded);
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (files && files.length > 0) {
-      processNewFiles(Array.from(files));
-    }
-    if (event.target) {
-      event.target.value = '';
-    }
-  };
-
-  // パンニング機能関連
-
-  const handleMouseDownOnPdfArea = (
-    event: React.MouseEvent<HTMLDivElement>
-  ): void => {
-    if (pdfDisplayContainerRef.current) {
-      // event.preventDefault(); // テキスト選択を妨げる可能性があるため、必要に応じて有効化
-      setIsPanning(true);
-      setPanStart({ x: event.clientX, y: event.clientY });
-      setScrollStart({
-        left: pdfDisplayContainerRef.current.scrollLeft,
-        top: pdfDisplayContainerRef.current.scrollTop,
-      });
-      // cursor-grabbing はclassNameで制御
+  const handleFileInputChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const firstValidFile = handleFileSelect(event); // handleFileSelect は addFilesToList を内部で呼ぶ
+    if (firstValidFile && !isLoading) {
+      handleFileProcessRequest(firstValidFile as PdfFile);
     }
   };
 
-  const handleMouseMoveOnPdfArea = (
-    event: React.MouseEvent<HTMLDivElement>
-  ): void => {
-    if (isPanning && pdfDisplayContainerRef.current) {
-      const deltaX = event.clientX - panStart.x;
-      const deltaY = event.clientY - panStart.y;
-      pdfDisplayContainerRef.current.scrollLeft = scrollStart.left - deltaX;
-      pdfDisplayContainerRef.current.scrollTop = scrollStart.top - deltaY;
-    }
-  };
-
-  const handleMouseUpOrLeaveArea = (): void => {
-    if (isPanning) {
-      setIsPanning(false);
-    }
-  };
-
+  // --- JSXレンダリング ---
   return (
-    <div /* ... (ルートdivの定義) ... */
+    <div
       className={`flex flex-col h-full pt-4 ${
         isDragging ? 'border-4 border-dashed border-primary bg-primary/10' : ''
       }`}
-      onDrop={handleDrop}
-      onDragEnter={handleDragEnter}
-      onDragLeave={handleDragLeave}
-      onDragOver={handleDragOver}
+      {...dragEventHandlers}
     >
+      {/* ツールヘッダー */}
       <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent">
         <h1 className="text-xl font-semibold">業務手配書 作成ツール</h1>
       </header>
 
-      {/* メインコンテンツエリア */}
+      {/* メインコンテンツエリア (3ペイン) */}
       <div className="flex flex-1 overflow-hidden">
-        {/* 左ペイン */}
-        <aside className="w-1/4 border-r bg-background p-4 flex flex-col overflow-hidden">
-          <h2 className="mb-4 text-lg font-semibold">
-            アップロード済みPDF一覧
-          </h2>
-          {/* 会社選択ドロップダウン */}
-          <div className="mb-4">
-            <label
-              htmlFor="company-select"
-              className="mb-1 block text-sm font-medium text-foreground"
-            >
-              処理対象の会社:
-            </label>
-            <Select
-              value={selectedCompanyId}
-              onValueChange={(value) =>
-                setSelectedCompanyId(value as CompanyOptionValue)
-              }
-            >
-              <SelectTrigger id="company-select" className="w-full">
-                <SelectValue placeholder="会社を選択してください" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectLabel>会社一覧</SelectLabel>
-                  {COMPANY_OPTIONS.map(
-                    (company) =>
-                      // 「準備中」のものは選択できないようにする例 (disabled)
-                      // UNKNOWN_OR_NOT_SET はユーザーが選ぶものではないのでリストから除外
-                      company.value !== 'UNKNOWN_OR_NOT_SET' && (
-                        <SelectItem
-                          key={company.value}
-                          value={company.value}
-                          disabled={company.label.includes('準備中')}
-                        >
-                          {company.label}
-                        </SelectItem>
-                      )
-                  )}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </div>
-          <Button
-            className="w-full mb-4"
-            variant="outline"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            PDFを選択してアップロード
-          </Button>
-          <input
-            type="file"
-            ref={fileInputRef}
-            multiple
-            accept="application/pdf"
-            onChange={handleFileSelect}
-            className="hidden"
-          />
-          <ScrollArea className="flex-1 rounded-md border">
-            {' '}
-            {/* flex-1 を適用 */}
-            <div className="p-4">
-              {uploadedFiles.length > 0 ? (
-                <ul>
-                  {uploadedFiles.map((file, index) => (
-                    <li
-                      key={`${file.name}-${file.lastModified}-${index}`}
-                      className={`mb-2 cursor-pointer rounded-md p-2 text-sm transition-colors duration-150 ease-in-out
-                        ${processingFile?.name === file.name && isLoading ? 'bg-blue-100 dark:bg-blue-800/30 ring-2 ring-blue-500 animate-pulse' : ''}
-                        ${processedCompanyInfo.file?.name === file.name && !isLoading && generatedText && !generatedText.startsWith('エラー') ? 'bg-green-100 dark:bg-green-800/30 ring-1 ring-green-500' : ''}
-                        ${processedCompanyInfo.file?.name === file.name && !isLoading && generatedText && generatedText.startsWith('エラー') ? 'bg-red-100 dark:bg-red-800/30 ring-1 ring-red-500' : ''}
-                        ${!processingFile || processingFile?.name !== file.name ? 'hover:bg-muted' : ''}
-                      `}
-                      onClick={() => handleProcessFile(file)} // クリックで処理開始
-                    >
-                      {file.name} ({(file.size / 1024).toFixed(2)} KB)
-                      {processingFile?.name === file.name && isLoading && (
-                        <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">
-                          (処理中...)
-                        </span>
-                      )}
-                      {processingFile?.name === file.name &&
-                        !isLoading &&
-                        generatedText &&
-                        !generatedText.startsWith('エラー') && (
-                          <span className="ml-2 text-xs text-green-600 dark:text-green-400">
-                            (処理完了)
-                          </span>
-                        )}
-                      {processingFile?.name === file.name &&
-                        !isLoading &&
-                        generatedText &&
-                        generatedText.startsWith('エラー') && (
-                          <span className="ml-2 text-xs text-red-600 dark:text-red-400">
-                            (エラー)
-                          </span>
-                        )}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  ここにPDFファイルをドラッグ＆ドロップするか、
-                  <br />
-                  上のボタンからファイルを選択してください。
-                </p>
-              )}
-            </div>
-          </ScrollArea>
-        </aside>
+        <FileManagementPanel
+          uploadedFiles={uploadedFiles}
+          processingFile={processingFile}
+          pdfFileToDisplay={pdfFileToDisplay}
+          generatedText={generatedText}
+          isLoading={isLoading}
+          selectedCompanyId={selectedCompanyId}
+          onCompanyChange={setSelectedCompanyId}
+          onFileUploadClick={() => fileInputRef.current?.click()}
+          fileInputRef={fileInputRef}
+          onFileSelect={handleFileInputChange} // input[type=file] の onChange
+          onFileProcessRequest={handleFileProcessRequest} // リストアイテムクリック時
+          processedCompanyInfo={processedCompanyInfo}
+        />
 
-        {/* 中央・右ペインコンテナ */}
         <main className="flex-1 flex flex-row overflow-hidden">
-          <div className="w-1/2 border-r p-4 flex flex-col overflow-hidden">
-            <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">
-                PDFプレビュー{' '}
-                {processingFile &&
-                  !isLoading &&
-                  pdfFileToDisplay &&
-                  `(${processingFile.name})`}
-              </h2>
-            </div>
-            {/* <div className="flex-1 bg-slate-100 dark:bg-slate-700 rounded-md flex flex-col items-center justify-start overflow-auto p-2 relative"> */}
-            {/* {pdfFileToDisplay && numPages && ( // テスト用*/}
-            {processingFile &&
-              !isLoading &&
-              numPages && ( // 処理が完了したファイル（または処理中でない選択ファイル）を表示
-                <div className="sticky top-0 z-10 bg-slate-200 dark:bg-slate-700 p-2 flex items-center justify-center gap-2 w-full">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={pageNumber <= 1}
-                    onClick={() =>
-                      setPageNumber((prev) => Math.max(prev - 1, 1))
-                    }
-                  >
-                    前へ
-                  </Button>
-                  <span>
-                    ページ {pageNumber} / {numPages}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={pageNumber >= numPages}
-                    onClick={() =>
-                      setPageNumber((prev) => Math.min(prev + 1, numPages))
-                    }
-                  >
-                    次へ
-                  </Button>
-                  {/* 拡大・縮小コントロール */}
-                  <div className="ml-auto flex items-center gap-2">
-                    {' '}
-                    {/* 縮小ボタン */}
-                    <Button
-                      variant="outline"
-                      size="icon" // アイコンボタンにする場合
-                      onClick={() =>
-                        setPageScale((prev) => Math.max(0.25, prev - 0.25))
-                      } // 最小倍率0.25、0.25ずつ減少
-                      disabled={pageScale <= 0.25}
-                      title="縮小"
-                    >
-                      {/* Lucide Minus アイコン */}
-                      <Minus className="h-4 w-4" />{' '}
-                    </Button>
-                    {/* 現在の倍率を表示 */}
-                    <span className="text-sm w-16 text-center">
-                      {(pageScale * 100).toFixed(0)}%
-                    </span>{' '}
-                    {/* 拡大ボタン */}
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() =>
-                        setPageScale((prev) => Math.min(3.0, prev + 0.25))
-                      } // 最大倍率3.0、0.25ずつ増加
-                      disabled={pageScale >= 3.0}
-                      title="拡大"
-                    >
-                      {/* Lucide Plus アイコン */}
-                      <Plus className="h-4 w-4" />{' '}
-                    </Button>
-                    {/* 100% ボタン */}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      title="100%"
-                      onClick={() => setPageScale(1.0)}
-                      // onClick={fitWidth} // fitWidth関数を後で定義
-                      disabled={pageScale === 1.0}
-                    >
-                      100%
-                    </Button>
-                    {/* 回転ボタン */}
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={handleRotatePdf}
-                      title="回転"
-                    >
-                      <RotateCw className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
-            <div
-              ref={pdfDisplayContainerRef}
-              className={`flex-grow overflow-auto w-full relative ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}`}
-              onMouseDown={handleMouseDownOnPdfArea}
-              onMouseMove={handleMouseMoveOnPdfArea}
-              onMouseUp={handleMouseUpOrLeaveArea} // MouseUpとMouseLeaveで同じ処理を呼ぶ
-              onMouseLeave={handleMouseUpOrLeaveArea} // コンテナからマウスが離れた場合
-            >
-              {pdfFileToDisplay ? ( // 処理が完了したファイル（または処理中でない選択ファイル）を表示
-                <div
-                  style={{
-                    width: 'max-content',
-                    minWidth: '100%',
-                    margin: '0 auto',
-                    display: 'flex',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Document
-                    file={processingFile} // FileオブジェクトまたはURL
-                    onLoadSuccess={onDocumentLoadSuccess}
-                    onLoadError={(error: Error) => {
-                      toast.error('PDFの読み込みに失敗しました。', {
-                        description: error.message,
-                      });
-                      console.error('Error while loading PDF:', error);
-                    }}
-                    loading={
-                      <p className="text-muted-foreground p-4">
-                        PDFを読み込み中...
-                      </p>
-                    }
-                    noData={
-                      <p className="text-muted-foreground p-4">
-                        表示するPDFが選択されていません。
-                      </p>
-                    }
-                    error={
-                      <p className="text-red-500 p-4">PDFの読み込みエラー。</p>
-                    }
-                    className="flex flex-col items-center" // Document自体のスタイリング
-                  >
-                    {/* PDFのページを表示 */}
-                    {numPages && ( // numPagesがセットされてからPageをレンダリング
-                      <Page
-                        pageNumber={pageNumber}
-                        scale={pageScale}
-                        rotate={pageRotation} // 回転角度を適用
-                        renderTextLayer={true} // テキストレイヤーを有効にする（文字選択や検索のため）
-                        renderAnnotationLayer={true} // 注釈レイヤーを有効にする
-                        className="shadow-lg mx-auto" // ページに影をつけるなど
-                        loading={<p>ページを読み込み中...</p>}
-                        onRenderSuccess={() => {
-                          // ページレンダリング完了時の処理 (例: fitWidthを初回実行するなど)
-                          // if (pageNumber === 1 && !initialFitDone) { fitWidth(); setInitialFitDone(true); }
-                        }}
-                      />
-                    )}
-                  </Document>
-                </div>
-              ) : isLoading ? (
-                <p className="text-muted-foreground p-4">
-                  AI処理中です。完了後にPDFが表示されます...
-                </p>
-              ) : (
-                <p className="text-muted-foreground p-4">
-                  左のリストからファイルを選択するか、新しいPDFをアップロードして処理を開始してください。
-                </p>
-              )}
-            </div>
-          </div>
+          <PdfPreviewPanel
+            pdfFileToDisplay={pdfFileToDisplay}
+            numPages={numPages}
+            pageNumber={pageNumber}
+            setPageNumber={setPageNumber}
+            pageScale={pageScale}
+            setPageScale={setPageScale}
+            pageRotation={pageRotation}
+            onRotatePdf={handleRotatePdf}
+            onDocumentLoadSuccess={handleDocumentLoadSuccess}
+            pdfDisplayContainerRef={pdfDisplayContainerRef}
+            isPanning={isPanning}
+            onMouseDownOnPdfArea={handleMouseDownOnPdfArea}
+            onMouseMoveOnPdfArea={handleMouseMoveOnPdfArea}
+            onMouseUpOrLeaveArea={handleMouseUpOrLeaveArea}
+            isLoading={isLoading && !!processingFile} // AI処理中かつ対象ファイルがある場合
+            processingFileForHeader={pdfFileToDisplay} // ヘッダー表示用 (プレビュー中のファイル)
+          />
 
-          {/* 業務手配書文言ペイン */}
-          <div className="w-1/2 p-4 flex flex-col overflow-hidden">
-            <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">
-                業務手配書 文言<br></br>
-                {processedCompanyInfo.file && !isLoading && (
-                  <>
-                    <span className="block text-sm font-normal text-muted-foreground ml-2">
-                      ファイル: {processedCompanyInfo.file.name}
-                    </span>
-                    <span className="block text-sm font-normal text-muted-foreground ml-2">
-                      会社: {processedCompanyInfo.companyLabel}
-                    </span>
-                  </>
-                )}
-              </h2>
-              <div>
-                <Button variant="outline" size="sm" className="mr-2" disabled>
-                  戻る (仮)
-                </Button>
-                <Button variant="outline" size="sm" className="mr-2" disabled>
-                  次へ (仮)
-                </Button>
-                <Button size="sm" disabled>
-                  保存 (仮)
-                </Button>
-              </div>
-            </div>
-            <Textarea
-              className="flex-1 resize-none rounded-md text-sm font-mono"
-              placeholder={
-                isLoading
-                  ? `「${processingFile?.name || '選択されたファイル'}」の業務手配書をAIが生成中です...\n\n通常30秒程度かかります。しばらくお待ちください。`
-                  : generatedText
-                    ? '' // generatedTextがあればプレースホルダーは不要
-                    : processingFile
-                      ? `「${processingFile.name}」の処理結果がここに表示されます。クリックまたはアップロードで処理を開始してください。`
-                      : '処理するPDFを左の一覧から選択するか、新しいPDFをアップロードしてください。'
-              }
-              value={generatedText}
-              readOnly // この段階ではまだ編集不可、表示専用
-            />
-          </div>
+          <GeneratedTextPanel
+            generatedText={generatedText}
+            isLoading={isLoading && !!processingFile} // AI処理中かつ対象ファイルがある場合
+            processingFile={processingFile} // プレースホルダー用 (AI処理中のファイル)
+            pdfFileToDisplayForPlaceholder={pdfFileToDisplay} // プレースホルダー用 (プレビュー中のファイル)
+            selectedCompanyIdForPlaceholder={selectedCompanyId} // プレースホルダー用
+            processedCompanyInfo={processedCompanyInfo}
+          />
         </main>
       </div>
-      {/* sonner の Toaster コンポーネントは、通常 App.tsx やレイアウトコンポーネントなど、
-        アプリケーションのルートに近い場所に一度だけ配置します。
-        この WorkOrderTool.tsx の中には配置しません。
-        例: <Toaster richColors position="top-right" />
-      */}
     </div>
   );
 };
