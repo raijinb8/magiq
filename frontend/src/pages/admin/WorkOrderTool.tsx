@@ -139,17 +139,39 @@ const WorkOrderTool = () => {
         // fileType: fileToProcess.type,
       };
 
-      const response = await fetch(functionUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // 本番環境では、Edge Functionの呼び出しに認証トークン(Authorization: Bearer <token>)を使うのが一般的
-          Authorization: `Bearer ${session.access_token}`,
-          // Supabaseのanon key (ローカル開発で --no-verify-jwt を使っている場合や、
-          // Edge Function側でRLSやカスタム認証をまだ設定していない場合に必要になることがある)
-          // apikey: import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY,
+      // const response = await fetch(functionUrl, {
+      //   method: 'POST',
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //     // 本番環境では、Edge Functionの呼び出しに認証トークン(Authorization: Bearer <token>)を使うのが一般的
+      //     Authorization: `Bearer ${session.access_token}`,
+      //     // Supabaseのanon key (ローカル開発で --no-verify-jwt を使っている場合や、
+      //     // Edge Function側でRLSやカスタム認証をまだ設定していない場合に必要になることがある)
+      //     // apikey: import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY,
+      //   },
+      //   body: JSON.stringify(requestBody),
+      // });
+
+      const jsonData = [
+        {
+          message:
+            'Successfully generated text for my_test_document.pdf (Company: NOHARA_G).',
+          generatedText:
+            '添付されたPDFファイル (my_test_document.pdf) から情報を抽出するようご指示いただきありがとうございます。\n\nしかしながら、誠に申し訳ございませんが、現在、指定されたPDFファイルは添付されておらず、内容を読み取ることができません。また、提供されたダミーの内容（「これは my_test_document.pdf のダミーPDF内容です。実際にはここに抽出されたテキストが入ります。指定された会社: NOHARA_G」）は、発注書の構造を持たない説明文のため、要求された開始時間、現場名、住所、資材明細などの具体的な情報を抽出することは技術的に不可能です。\n\nつきましては、PDFファイルが利用可能になり次第、改めてご提示いただけますでしょうか。\n\nご指示いただいた抽出項目リスト、特に**文字幅（全角・半角の使い分け）**、**スペース（全角スペース）**、**特定の記号や数字の半角指定**といった**厳密なフォーマット指示**については、詳細に確認し、完全に理解いたしました。\n\nPDFファイルが提供され次第、この理解に基づき、指定された形式（開始時間、担当会社・担当者、現場名、得意先名、現場住所、現場連絡先、資材明細、合計枚数、備考、作業人数）で正確に情報を抽出・整理し、出力させていただきます。\n\nお手数をおかけしますが、PDFファイルをご用意いただけますようお願い申し上げます。',
+          originalFileName: 'my_test_document.pdf',
+          promptUsedIdentifier: 'NOHARA_G_PROMPT_V20250519',
+          identifiedCompany: 'NOHARA_G',
+          dbRecordId: '9529113e-9821-4b2a-9cc3-0492ef77e300',
         },
-        body: JSON.stringify(requestBody),
+      ];
+
+      // ハードコードされた Response オブジェクト
+      const response = new Response(JSON.stringify(jsonData), {
+        status: 200, // HTTPステータスコード (成功を想定)
+        statusText: 'OK', // HTTPステータスメッセージ
+        headers: {
+          'Content-Type': 'application/json', // レスポンスのコンテントタイプ
+        },
       });
 
       setIsLoading(false); // ローディング状態を解除
@@ -517,7 +539,7 @@ const WorkOrderTool = () => {
               </h2>
             </div>
             <div className="flex-1 bg-slate-100 dark:bg-slate-700 rounded-md flex flex-col items-center justify-start overflow-auto p-2 relative">
-              {processingFile && !isLoading ? ( // 処理が完了したファイル（または処理中でない選択ファイル）を表示
+              {pdfFileToDisplay ? ( // 処理が完了したファイル（または処理中でない選択ファイル）を表示
                 <Document
                   file={processingFile} // FileオブジェクトまたはURL
                   onLoadSuccess={onDocumentLoadSuccess}
