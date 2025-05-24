@@ -397,7 +397,7 @@ const WorkOrderTool = () => {
 
   return (
     <div /* ... (ルートdivの定義) ... */
-      className={`flex h-screen flex-col bg-muted/40 ${
+      className={`flex flex-col h-full pt-4 ${
         isDragging ? 'border-4 border-dashed border-primary bg-primary/10' : ''
       }`}
       onDrop={handleDrop}
@@ -405,12 +405,14 @@ const WorkOrderTool = () => {
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}
     >
-      <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
+      <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent">
         <h1 className="text-xl font-semibold">業務手配書 作成ツール</h1>
       </header>
 
+      {/* メインコンテンツエリア */}
       <div className="flex flex-1 overflow-hidden">
-        <aside className="w-1/4 border-r bg-background p-4 overflow-y-auto">
+        {/* 左ペイン */}
+        <aside className="w-1/4 border-r bg-background p-4 flex flex-col overflow-hidden">
           <h2 className="mb-4 text-lg font-semibold">
             アップロード済みPDF一覧
           </h2>
@@ -467,7 +469,9 @@ const WorkOrderTool = () => {
             onChange={handleFileSelect}
             className="hidden"
           />
-          <ScrollArea className="h-[calc(100vh-220px)] rounded-md border">
+          <ScrollArea className="flex-1 rounded-md border">
+            {' '}
+            {/* flex-1 を適用 */}
             <div className="p-4">
               {uploadedFiles.length > 0 ? (
                 <ul>
@@ -518,6 +522,7 @@ const WorkOrderTool = () => {
           </ScrollArea>
         </aside>
 
+        {/* 中央・右ペインコンテナ */}
         <main className="flex-1 flex flex-row overflow-hidden">
           <div className="w-1/2 border-r p-4 flex flex-col overflow-hidden">
             <div className="mb-2 flex items-center justify-between">
@@ -686,6 +691,7 @@ const WorkOrderTool = () => {
             </div>
           </div>
 
+          {/* 業務手配書文言ペイン */}
           <div className="w-1/2 p-4 flex flex-col overflow-hidden">
             <div className="mb-2 flex items-center justify-between">
               <h2 className="text-lg font-semibold">
