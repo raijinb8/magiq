@@ -80,7 +80,7 @@ const WorkOrderTool: React.FC = () => {
   } = usePdfDocument();
 
   // API処理とローディング状態の管理
-  const { isLoading, processFile } = usePdfProcessor({
+  const { isLoading } = usePdfProcessor({
     onSuccess: (data: PdfProcessSuccessResponse, file: File) => {
       setGeneratedText(
         data.generatedText || 'テキストが生成されませんでした。'
@@ -129,44 +129,29 @@ const WorkOrderTool: React.FC = () => {
 
   /**
    * ファイルリスト内のファイルがクリックされたときの処理。
-   * 会社が選択されていればAI処理を開始し、されていなければプレビューのみ更新します。
+   * 該当ファイルのPDFプレビューのみを行います。
    */
-  const handleFileProcessRequest = useCallback(
-    async (file: PdfFile) => {
+  const handleFilePreviewRequest = useCallback(
+    (file: PdfFile) => {
       if (isLoading) {
-        toast.info('現在別のファイルを処理中です。少々お待ちください。');
+        // AI処理中は何もしない（またはトースト表示）
+        toast.info(
+          '現在AI処理中です。完了後に別のファイルをプレビューできます。'
+        );
         return;
       }
-      if (selectedCompanyId) {
-        setProcessingFile(file); // これから処理するファイルとしてマーク
-        setGeneratedText(''); // 前回の結果をクリア
-        setPdfFileToDisplay(file); // プレビュー対象も更新
-        // processedCompanyInfo は processFile の成功/エラーコールバックで更新される
-        const companyLabel =
-          ALL_COMPANY_OPTIONS.find((c) => c.value === selectedCompanyId)
-            ?.label || selectedCompanyId;
-        toast.info(
-          `「${file.name}」の処理を開始します (会社: ${companyLabel})...`
-        );
-        await processFile(file, selectedCompanyId, companyLabel);
-      } else {
-        // 会社未選択時はプレビューのみ更新
-        setPdfFileToDisplay(file);
-        setProcessingFile(file); // プレビュー対象としてマーク（処理はしない）
-        setGeneratedText(''); // テキストエリアクリア
-        setProcessedCompanyInfo({ file: null, companyLabel: '' }); // 処理結果情報クリア
-        // numPages, pageNumber, pageRotation は onDocumentLoadSuccess でリセットされる
-        toast.info('会社を選択すると、このファイルのAI処理を開始できます。', {
-          description: `ファイル「${file.name}」をプレビュー中です。`,
-        });
-      }
+      setPdfFileToDisplay(file);
+      setProcessingFile(file); // ★ プレビュー中のファイルを「次にAI実行する対象」としてマーク
+      setGeneratedText(''); // プレビュー変更時は生成テキストをクリア
+      setProcessedCompanyInfo({ file: null, companyLabel: '' }); // 処理情報もクリア
+      // ページ数などは Document の onLoadSuccess でリセットされる (handleDocumentLoadSuccess経由)
+      toast.dismiss(); // 既存の通知があれば消す
+      toast.info(`「${file.name}」をプレビュー中です。`);
     },
     [
       isLoading,
-      selectedCompanyId,
-      processFile,
-      setProcessingFile,
       setPdfFileToDisplay,
+      setProcessingFile,
       setGeneratedText,
       setProcessedCompanyInfo,
     ]
@@ -221,7 +206,7 @@ const WorkOrderTool: React.FC = () => {
           onFileUploadClick={() => fileInputRef.current?.click()}
           fileInputRef={fileInputRef}
           onFileSelect={handleFileInputChange} // input[type=file] の onChange
-          onFileProcessRequest={handleFileProcessRequest} // リストアイテムクリック時
+          onFilePreviewRequest={handleFilePreviewRequest} // リストアイテムクリック時
           processedCompanyInfo={processedCompanyInfo}
         />
 
