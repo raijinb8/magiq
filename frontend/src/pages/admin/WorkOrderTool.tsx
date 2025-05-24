@@ -632,7 +632,7 @@ const WorkOrderTool = () => {
                     error={
                       <p className="text-red-500 p-4">PDFの読み込みエラー。</p>
                     }
-                    className="w-full h-full flex flex-col items-center" // Document自体のスタイリング
+                    className="flex flex-col items-center" // Document自体のスタイリング
                   >
                     {/* PDFのページを表示 */}
                     <div className="flex-grow overflow-auto flex justify-center items-center">
