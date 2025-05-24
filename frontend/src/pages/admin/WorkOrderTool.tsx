@@ -62,6 +62,7 @@ const WorkOrderTool = () => {
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState<number>(1);
   const [pageScale, setPageScale] = useState<number>(1.0); // 初期倍率を100% (1.0) とする
+  const [pageRotation, setPageRotation] = useState<number>(0); // PDF回転角度のstate (0, 90, 180, 270)
 
   // スクロール可能なコンテナ要素を追加
   const pdfDisplayContainerRef = useRef<HTMLDivElement>(null);
