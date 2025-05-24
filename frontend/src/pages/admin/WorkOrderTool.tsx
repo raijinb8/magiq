@@ -521,7 +521,85 @@ const WorkOrderTool = () => {
                   `(${processingFile.name})`}
               </h2>
             </div>
-            <div className="flex-1 bg-slate-100 dark:bg-slate-700 rounded-md flex flex-col items-center justify-start overflow-auto p-2 relative">
+            {/* <div className="flex-1 bg-slate-100 dark:bg-slate-700 rounded-md flex flex-col items-center justify-start overflow-auto p-2 relative"> */}
+            {pdfFileToDisplay && numPages && (
+              <div className="sticky top-0 z-10 bg-slate-200 dark:bg-slate-700 p-2 flex items-center justify-center gap-2 w-full">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={pageNumber <= 1}
+                  onClick={() => setPageNumber((prev) => Math.max(prev - 1, 1))}
+                >
+                  前へ
+                </Button>
+                <span>
+                  ページ {pageNumber} / {numPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={pageNumber >= numPages}
+                  onClick={() =>
+                    setPageNumber((prev) => Math.min(prev + 1, numPages))
+                  }
+                >
+                  次へ
+                </Button>
+                {/* 拡大・縮小コントロール */}
+                <div className="ml-auto flex items-center gap-2">
+                  {' '}
+                  {/* 縮小ボタン */}
+                  <Button
+                    variant="outline"
+                    size="icon" // アイコンボタンにする場合
+                    onClick={() =>
+                      setPageScale((prev) => Math.max(0.25, prev - 0.25))
+                    } // 最小倍率0.25、0.25ずつ減少
+                    disabled={pageScale <= 0.25}
+                    title="縮小"
+                  >
+                    {/* Lucide Minus アイコン */}
+                    <Minus className="h-4 w-4" />{' '}
+                  </Button>
+                  {/* 現在の倍率を表示 */}
+                  <span className="text-sm w-16 text-center">
+                    {(pageScale * 100).toFixed(0)}%
+                  </span>{' '}
+                  {/* 拡大ボタン */}
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() =>
+                      setPageScale((prev) => Math.min(3.0, prev + 0.25))
+                    } // 最大倍率3.0、0.25ずつ増加
+                    disabled={pageScale >= 3.0}
+                    title="拡大"
+                  >
+                    {/* Lucide Plus アイコン */}
+                    <Plus className="h-4 w-4" />{' '}
+                  </Button>
+                  {/* 100% ボタン */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    title="100%"
+                    onClick={() => setPageScale(1.0)}
+                    // onClick={fitWidth} // fitWidth関数を後で定義
+                    disabled={pageScale === 1.0}
+                  >
+                    100%
+                  </Button>
+                </div>
+              </div>
+            )}
+            <div
+              ref={pdfDisplayContainerRef}
+              className={`flex-grow overflow-auto w-full flex justify-center relative ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}`}
+              onMouseDown={handleMouseDownOnPdfArea}
+              onMouseMove={handleMouseMoveOnPdfArea}
+              onMouseUp={handleMouseUpOrLeaveArea} // MouseUpとMouseLeaveで同じ処理を呼ぶ
+              onMouseLeave={handleMouseUpOrLeaveArea} // コンテナからマウスが離れた場合
+            >
               {pdfFileToDisplay ? ( // 処理が完了したファイル（または処理中でない選択ファイル）を表示
                 <Document
                   file={processingFile} // FileオブジェクトまたはURL
@@ -547,78 +625,6 @@ const WorkOrderTool = () => {
                   }
                   className="w-full h-full flex flex-col items-center" // Document自体のスタイリング
                 >
-                  {numPages && (
-                    <div className="sticky top-0 z-10 bg-slate-200 dark:bg-slate-700 p-2 flex items-center justify-center gap-2 w-full">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={pageNumber <= 1}
-                        onClick={() =>
-                          setPageNumber((prev) => Math.max(prev - 1, 1))
-                        }
-                      >
-                        前へ
-                      </Button>
-                      <span>
-                        ページ {pageNumber} / {numPages}
-                      </span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={pageNumber >= numPages}
-                        onClick={() =>
-                          setPageNumber((prev) => Math.min(prev + 1, numPages))
-                        }
-                      >
-                        次へ
-                      </Button>
-                      {/* 拡大・縮小コントロール */}
-                      <div className="ml-auto flex items-center gap-2">
-                        {' '}
-                        {/* 縮小ボタン */}
-                        <Button
-                          variant="outline"
-                          size="icon" // アイコンボタンにする場合
-                          onClick={() =>
-                            setPageScale((prev) => Math.max(0.25, prev - 0.25))
-                          } // 最小倍率0.25、0.25ずつ減少
-                          disabled={pageScale <= 0.25}
-                          title="縮小"
-                        >
-                          {/* Lucide Minus アイコン */}
-                          <Minus className="h-4 w-4" />{' '}
-                        </Button>
-                        {/* 現在の倍率を表示 */}
-                        <span className="text-sm w-16 text-center">
-                          {(pageScale * 100).toFixed(0)}%
-                        </span>{' '}
-                        {/* 拡大ボタン */}
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() =>
-                            setPageScale((prev) => Math.min(3.0, prev + 0.25))
-                          } // 最大倍率3.0、0.25ずつ増加
-                          disabled={pageScale >= 3.0}
-                          title="拡大"
-                        >
-                          {/* Lucide Plus アイコン */}
-                          <Plus className="h-4 w-4" />{' '}
-                        </Button>
-                        {/* 100% ボタン */}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          title="100%"
-                          onClick={() => setPageScale(1.0)}
-                          // onClick={fitWidth} // fitWidth関数を後で定義
-                          disabled={pageScale === 1.0}
-                        >
-                          100%
-                        </Button>
-                      </div>
-                    </div>
-                  )}
                   {/* PDFのページを表示 */}
                   <div className="flex-grow overflow-auto flex justify-center items-center">
                     {' '}
