@@ -80,7 +80,7 @@ const WorkOrderTool: React.FC = () => {
   } = usePdfDocument();
 
   // API処理とローディング状態の管理
-  const { isLoading } = usePdfProcessor({
+  const { isLoading, processFile } = usePdfProcessor({
     onSuccess: (data: PdfProcessSuccessResponse, file: File) => {
       setGeneratedText(
         data.generatedText || 'テキストが生成されませんでした。'
@@ -112,6 +112,50 @@ const WorkOrderTool: React.FC = () => {
       });
     },
   });
+
+  /**
+   * 「AI実行」ボタンが押されたときの処理。
+   * 現在 processingFile としてマークされているファイルに対してAI処理を開始します。
+   */
+  const handleAiExecution = useCallback(async () => {
+    if (!processingFile) {
+      toast.error('処理対象のファイルが選択されていません。', {
+        description:
+          'リストからファイルをクリックしてプレビューし、処理対象を選択してください。',
+      });
+      return;
+    }
+    if (!selectedCompanyId) {
+      toast.error('会社が選択されていません。', {
+        description:
+          '処理を開始する前に、ドロップダウンから会社を選択してください。',
+      });
+      return;
+    }
+    if (isLoading) {
+      toast.info('現在別のファイルを処理中です。少々お待ちください。');
+      return;
+    }
+
+    // setGeneratedText(''); // AI処理開始時にクリアするかはUX次第 (processFileのコールバックで設定される)
+    // setProcessedCompanyInfo({ file: null, companyLabel: '' }); // 同上
+
+    const companyLabelForToast =
+      ALL_COMPANY_OPTIONS.find((c) => c.value === selectedCompanyId)?.label ||
+      selectedCompanyId;
+
+    toast.info(
+      `「${processingFile.name}」のAI処理を開始します (会社: ${companyLabelForToast})...`
+    );
+    await processFile(processingFile, selectedCompanyId, companyLabelForToast);
+  }, [
+    processingFile,
+    selectedCompanyId,
+    isLoading,
+    processFile,
+    // setGeneratedText, // 実際には不要 (processFileのコールバックで設定)
+    // setProcessedCompanyInfo, // 実際には不要 (processFileのコールバックで設定)
+  ]);
 
   // --- 連携ロジックとコールバック関数 ---
 
