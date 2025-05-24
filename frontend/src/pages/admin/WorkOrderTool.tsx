@@ -601,6 +601,15 @@ const WorkOrderTool = () => {
               onMouseLeave={handleMouseUpOrLeaveArea} // コンテナからマウスが離れた場合
             >
               {pdfFileToDisplay ? ( // 処理が完了したファイル（または処理中でない選択ファイル）を表示
+                <div
+                  style={{
+                    width: 'max-content',
+                    minWidth: '100%',
+                    margin: '0 auto',
+                    display: 'flex',
+                    justifyContent: 'center',
+                  }}
+                >
                 <Document
                   file={processingFile} // FileオブジェクトまたはURL
                   onLoadSuccess={onDocumentLoadSuccess}
@@ -645,6 +654,7 @@ const WorkOrderTool = () => {
                     />
                   </div>
                 </Document>
+                </div>
               ) : isLoading ? (
                 <p className="text-muted-foreground p-4">
                   AI処理中です。完了後にPDFが表示されます...
