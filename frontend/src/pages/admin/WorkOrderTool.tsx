@@ -602,6 +602,15 @@ const WorkOrderTool = () => {
                     >
                       100%
                     </Button>
+                    {/* 回転ボタン */}
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={handleRotatePdf}
+                      title="回転"
+                    >
+                      <RotateCw className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               )}
