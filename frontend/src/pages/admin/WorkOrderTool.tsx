@@ -635,9 +635,7 @@ const WorkOrderTool = () => {
                     className="flex flex-col items-center" // Document自体のスタイリング
                   >
                     {/* PDFのページを表示 */}
-                    <div className="flex-grow overflow-auto flex justify-center items-center">
-                      {' '}
-                      {/* スクロールと中央寄せ */}
+                    {numPages && ( // numPagesがセットされてからPageをレンダリング
                       <Page
                         pageNumber={pageNumber}
                         scale={pageScale}
@@ -652,7 +650,7 @@ const WorkOrderTool = () => {
                           // if (pageNumber === 1 && !initialFitDone) { fitWidth(); setInitialFitDone(true); }
                         }}
                       />
-                    </div>
+                    )}
                   </Document>
                 </div>
               ) : isLoading ? (
