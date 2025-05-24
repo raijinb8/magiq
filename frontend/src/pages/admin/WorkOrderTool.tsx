@@ -18,7 +18,7 @@ import { supabase } from '@/lib/supabase.ts'; // Supabase Client のインポー
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css'; // PDFの注釈レイヤーのスタイル
 import 'react-pdf/dist/esm/Page/TextLayer.css'; // PDFのテキストレイヤーのスタイル (文字選択などに必要)
-import { Plus, Minus } from 'lucide-react'; // icon
+import { Plus, Minus, RotateCw } from 'lucide-react'; // icon
 
 // PDFのレンダリングを効率的に行うための Web Worker を設定
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -62,6 +62,7 @@ const WorkOrderTool = () => {
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState<number>(1);
   const [pageScale, setPageScale] = useState<number>(1.0); // 初期倍率を100% (1.0) とする
+  const [pageRotation, setPageRotation] = useState<number>(0); // PDF回転角度のstate (0, 90, 180, 270)
 
   // スクロール可能なコンテナ要素を追加
   const pdfDisplayContainerRef = useRef<HTMLDivElement>(null);
@@ -74,6 +75,11 @@ const WorkOrderTool = () => {
     { left: 0, top: 0 }
   );
 
+  // PDFを回転させる関数
+  const handleRotatePdf = () => {
+    setPageRotation((prevRotation) => (prevRotation + 90) % 360);
+  };
+
   // PDFが読み込まれたときにページ数を設定する関数
   function onDocumentLoadSuccess({
     numPages: nextNumPages,
@@ -82,6 +88,7 @@ const WorkOrderTool = () => {
   }) {
     setNumPages(nextNumPages);
     setPageNumber(1); // 最初のページを表示
+    setPageRotation(0); // 新しいドキュメントがロードされたら回転角度をリセット
   }
 
   // バックエンドAPIを呼び出す関数
@@ -595,6 +602,15 @@ const WorkOrderTool = () => {
                     >
                       100%
                     </Button>
+                    {/* 回転ボタン */}
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={handleRotatePdf}
+                      title="回転"
+                    >
+                      <RotateCw className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               )}
@@ -645,8 +661,7 @@ const WorkOrderTool = () => {
                       <Page
                         pageNumber={pageNumber}
                         scale={pageScale}
-                        // width={600}
-                        // height={/* 高さを指定することも可能 */}
+                        rotate={pageRotation} // 回転角度を適用
                         renderTextLayer={true} // テキストレイヤーを有効にする（文字選択や検索のため）
                         renderAnnotationLayer={true} // 注釈レイヤーを有効にする
                         className="shadow-lg mx-auto" // ページに影をつけるなど
