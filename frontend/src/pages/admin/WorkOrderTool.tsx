@@ -63,6 +63,17 @@ const WorkOrderTool = () => {
   const [pageNumber, setPageNumber] = useState<number>(1);
   const [pageScale, setPageScale] = useState<number>(1.0); // 初期倍率を100% (1.0) とする
 
+  // スクロール可能なコンテナ要素を追加
+  const pdfDisplayContainerRef = useRef<HTMLDivElement>(null);
+  const [isPanning, setIsPanning] = useState<boolean>(false);
+  const [panStart, setPanStart] = useState<{ x: number; y: number }>({
+    x: 0,
+    y: 0,
+  });
+  const [scrollStart, setScrollStart] = useState<{ left: number; top: number }>(
+    { left: 0, top: 0 }
+  );
+
   // PDFが読み込まれたときにページ数を設定する関数
   function onDocumentLoadSuccess({
     numPages: nextNumPages,
@@ -141,6 +152,29 @@ const WorkOrderTool = () => {
         },
         body: JSON.stringify(requestBody),
       });
+
+      // テスト用
+      // const jsonData = [
+      //   {
+      //     message:
+      //       'Successfully generated text for my_test_document.pdf (Company: NOHARA_G).',
+      //     generatedText:
+      //       '添付されたPDFファイル (my_test_document.pdf) から情報を抽出するようご指示いただきありがとうございます。\n\nしかしながら、誠に申し訳ございませんが、現在、指定されたPDFファイルは添付されておらず、内容を読み取ることができません。また、提供されたダミーの内容（「これは my_test_document.pdf のダミーPDF内容です。実際にはここに抽出されたテキストが入ります。指定された会社: NOHARA_G」）は、発注書の構造を持たない説明文のため、要求された開始時間、現場名、住所、資材明細などの具体的な情報を抽出することは技術的に不可能です。\n\nつきましては、PDFファイルが利用可能になり次第、改めてご提示いただけますでしょうか。\n\nご指示いただいた抽出項目リスト、特に**文字幅（全角・半角の使い分け）**、**スペース（全角スペース）**、**特定の記号や数字の半角指定**といった**厳密なフォーマット指示**については、詳細に確認し、完全に理解いたしました。\n\nPDFファイルが提供され次第、この理解に基づき、指定された形式（開始時間、担当会社・担当者、現場名、得意先名、現場住所、現場連絡先、資材明細、合計枚数、備考、作業人数）で正確に情報を抽出・整理し、出力させていただきます。\n\nお手数をおかけしますが、PDFファイルをご用意いただけますようお願い申し上げます。',
+      //     originalFileName: 'my_test_document.pdf',
+      //     promptUsedIdentifier: 'NOHARA_G_PROMPT_V20250519',
+      //     identifiedCompany: 'NOHARA_G',
+      //     dbRecordId: '9529113e-9821-4b2a-9cc3-0492ef77e300',
+      //   },
+      // ];
+
+      // // ハードコードされた Response オブジェクト
+      // const response = new Response(JSON.stringify(jsonData), {
+      //   status: 200, // HTTPステータスコード (成功を想定)
+      //   statusText: 'OK', // HTTPステータスメッセージ
+      //   headers: {
+      //     'Content-Type': 'application/json', // レスポンスのコンテントタイプ
+      //   },
+      // });
 
       setIsLoading(false); // ローディング状態を解除
       const responseData = await response.json();
@@ -320,6 +354,40 @@ const WorkOrderTool = () => {
     }
   };
 
+  // パンニング機能関連
+
+  const handleMouseDownOnPdfArea = (
+    event: React.MouseEvent<HTMLDivElement>
+  ): void => {
+    if (pdfDisplayContainerRef.current) {
+      // event.preventDefault(); // テキスト選択を妨げる可能性があるため、必要に応じて有効化
+      setIsPanning(true);
+      setPanStart({ x: event.clientX, y: event.clientY });
+      setScrollStart({
+        left: pdfDisplayContainerRef.current.scrollLeft,
+        top: pdfDisplayContainerRef.current.scrollTop,
+      });
+      // cursor-grabbing はclassNameで制御
+    }
+  };
+
+  const handleMouseMoveOnPdfArea = (
+    event: React.MouseEvent<HTMLDivElement>
+  ): void => {
+    if (isPanning && pdfDisplayContainerRef.current) {
+      const deltaX = event.clientX - panStart.x;
+      const deltaY = event.clientY - panStart.y;
+      pdfDisplayContainerRef.current.scrollLeft = scrollStart.left - deltaX;
+      pdfDisplayContainerRef.current.scrollTop = scrollStart.top - deltaY;
+    }
+  };
+
+  const handleMouseUpOrLeaveArea = (): void => {
+    if (isPanning) {
+      setIsPanning(false);
+    }
+  };
+
   return (
     <div /* ... (ルートdivの定義) ... */
       className={`flex h-screen flex-col bg-muted/40 ${
@@ -454,124 +522,143 @@ const WorkOrderTool = () => {
                   `(${processingFile.name})`}
               </h2>
             </div>
-            <div className="flex-1 bg-slate-100 dark:bg-slate-700 rounded-md flex flex-col items-center justify-start overflow-auto p-2 relative">
-              {processingFile && !isLoading ? ( // 処理が完了したファイル（または処理中でない選択ファイル）を表示
-                <Document
-                  file={processingFile} // FileオブジェクトまたはURL
-                  onLoadSuccess={onDocumentLoadSuccess}
-                  onLoadError={(error) => {
-                    toast.error('PDFの読み込みに失敗しました。', {
-                      description: error.message,
-                    });
-                    console.error('Error while loading PDF:', error);
-                  }}
-                  loading={
-                    <p className="text-muted-foreground p-4">
-                      PDFを読み込み中...
-                    </p>
-                  }
-                  noData={
-                    <p className="text-muted-foreground p-4">
-                      表示するPDFが選択されていません。
-                    </p>
-                  }
-                  error={
-                    <p className="text-red-500 p-4">PDFの読み込みエラー。</p>
-                  }
-                  className="w-full h-full flex flex-col items-center" // Document自体のスタイリング
-                >
-                  {numPages && (
-                    <div className="sticky top-0 z-10 bg-slate-200 dark:bg-slate-700 p-2 flex items-center justify-center gap-2 w-full">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={pageNumber <= 1}
-                        onClick={() =>
-                          setPageNumber((prev) => Math.max(prev - 1, 1))
-                        }
-                      >
-                        前へ
-                      </Button>
-                      <span>
-                        ページ {pageNumber} / {numPages}
-                      </span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={pageNumber >= numPages}
-                        onClick={() =>
-                          setPageNumber((prev) => Math.min(prev + 1, numPages))
-                        }
-                      >
-                        次へ
-                      </Button>
-                      {/* 拡大・縮小コントロール */}
-                      <div className="ml-auto flex items-center gap-2">
-                        {' '}
-                        {/* 縮小ボタン */}
-                        <Button
-                          variant="outline"
-                          size="icon" // アイコンボタンにする場合
-                          onClick={() =>
-                            setPageScale((prev) => Math.max(0.25, prev - 0.25))
-                          } // 最小倍率0.25、0.25ずつ減少
-                          disabled={pageScale <= 0.25}
-                          title="縮小"
-                        >
-                          {/* Lucide Minus アイコン */}
-                          <Minus className="h-4 w-4" />{' '}
-                        </Button>
-                        {/* 現在の倍率を表示 */}
-                        <span className="text-sm w-16 text-center">
-                          {(pageScale * 100).toFixed(0)}%
-                        </span>{' '}
-                        {/* 拡大ボタン */}
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() =>
-                            setPageScale((prev) => Math.min(3.0, prev + 0.25))
-                          } // 最大倍率3.0、0.25ずつ増加
-                          disabled={pageScale >= 3.0}
-                          title="拡大"
-                        >
-                          {/* Lucide Plus アイコン */}
-                          <Plus className="h-4 w-4" />{' '}
-                        </Button>
-                        {/* 100% ボタン */}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          title="100%"
-                          onClick={() => setPageScale(1.0)}
-                          // onClick={fitWidth} // fitWidth関数を後で定義
-                          disabled={pageScale === 1.0}
-                        >
-                          100%
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                  {/* PDFのページを表示 */}
-                  <div className="flex-grow overflow-auto flex justify-center items-center">
+            {/* <div className="flex-1 bg-slate-100 dark:bg-slate-700 rounded-md flex flex-col items-center justify-start overflow-auto p-2 relative"> */}
+            {/* {pdfFileToDisplay && numPages && ( // テスト用*/}
+            {processingFile &&
+              !isLoading &&
+              numPages && ( // 処理が完了したファイル（または処理中でない選択ファイル）を表示
+                <div className="sticky top-0 z-10 bg-slate-200 dark:bg-slate-700 p-2 flex items-center justify-center gap-2 w-full">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={pageNumber <= 1}
+                    onClick={() =>
+                      setPageNumber((prev) => Math.max(prev - 1, 1))
+                    }
+                  >
+                    前へ
+                  </Button>
+                  <span>
+                    ページ {pageNumber} / {numPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={pageNumber >= numPages}
+                    onClick={() =>
+                      setPageNumber((prev) => Math.min(prev + 1, numPages))
+                    }
+                  >
+                    次へ
+                  </Button>
+                  {/* 拡大・縮小コントロール */}
+                  <div className="ml-auto flex items-center gap-2">
                     {' '}
-                    {/* スクロールと中央寄せ */}
-                    <Page
-                      pageNumber={pageNumber}
-                      scale={pageScale}
-                      // width={600}
-                      // height={/* 高さを指定することも可能 */}
-                      renderTextLayer={true} // テキストレイヤーを有効にする（文字選択や検索のため）
-                      renderAnnotationLayer={true} // 注釈レイヤーを有効にする
-                      className="shadow-lg mx-auto" // ページに影をつけるなど
-                      loading={<p>ページを読み込み中...</p>}
-                      onRenderSuccess={() => {
-                        // ページレンダリング完了時の処理 (例: fitWidthを初回実行するなど)
-                        // if (pageNumber === 1 && !initialFitDone) { fitWidth(); setInitialFitDone(true); }
-                      }}
-                    />
+                    {/* 縮小ボタン */}
+                    <Button
+                      variant="outline"
+                      size="icon" // アイコンボタンにする場合
+                      onClick={() =>
+                        setPageScale((prev) => Math.max(0.25, prev - 0.25))
+                      } // 最小倍率0.25、0.25ずつ減少
+                      disabled={pageScale <= 0.25}
+                      title="縮小"
+                    >
+                      {/* Lucide Minus アイコン */}
+                      <Minus className="h-4 w-4" />{' '}
+                    </Button>
+                    {/* 現在の倍率を表示 */}
+                    <span className="text-sm w-16 text-center">
+                      {(pageScale * 100).toFixed(0)}%
+                    </span>{' '}
+                    {/* 拡大ボタン */}
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() =>
+                        setPageScale((prev) => Math.min(3.0, prev + 0.25))
+                      } // 最大倍率3.0、0.25ずつ増加
+                      disabled={pageScale >= 3.0}
+                      title="拡大"
+                    >
+                      {/* Lucide Plus アイコン */}
+                      <Plus className="h-4 w-4" />{' '}
+                    </Button>
+                    {/* 100% ボタン */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      title="100%"
+                      onClick={() => setPageScale(1.0)}
+                      // onClick={fitWidth} // fitWidth関数を後で定義
+                      disabled={pageScale === 1.0}
+                    >
+                      100%
+                    </Button>
                   </div>
-                </Document>
+                </div>
+              )}
+            <div
+              ref={pdfDisplayContainerRef}
+              className={`flex-grow overflow-auto w-full relative ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}`}
+              onMouseDown={handleMouseDownOnPdfArea}
+              onMouseMove={handleMouseMoveOnPdfArea}
+              onMouseUp={handleMouseUpOrLeaveArea} // MouseUpとMouseLeaveで同じ処理を呼ぶ
+              onMouseLeave={handleMouseUpOrLeaveArea} // コンテナからマウスが離れた場合
+            >
+              {pdfFileToDisplay ? ( // 処理が完了したファイル（または処理中でない選択ファイル）を表示
+                <div
+                  style={{
+                    width: 'max-content',
+                    minWidth: '100%',
+                    margin: '0 auto',
+                    display: 'flex',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Document
+                    file={processingFile} // FileオブジェクトまたはURL
+                    onLoadSuccess={onDocumentLoadSuccess}
+                    onLoadError={(error: Error) => {
+                      toast.error('PDFの読み込みに失敗しました。', {
+                        description: error.message,
+                      });
+                      console.error('Error while loading PDF:', error);
+                    }}
+                    loading={
+                      <p className="text-muted-foreground p-4">
+                        PDFを読み込み中...
+                      </p>
+                    }
+                    noData={
+                      <p className="text-muted-foreground p-4">
+                        表示するPDFが選択されていません。
+                      </p>
+                    }
+                    error={
+                      <p className="text-red-500 p-4">PDFの読み込みエラー。</p>
+                    }
+                    className="flex flex-col items-center" // Document自体のスタイリング
+                  >
+                    {/* PDFのページを表示 */}
+                    {numPages && ( // numPagesがセットされてからPageをレンダリング
+                      <Page
+                        pageNumber={pageNumber}
+                        scale={pageScale}
+                        // width={600}
+                        // height={/* 高さを指定することも可能 */}
+                        renderTextLayer={true} // テキストレイヤーを有効にする（文字選択や検索のため）
+                        renderAnnotationLayer={true} // 注釈レイヤーを有効にする
+                        className="shadow-lg mx-auto" // ページに影をつけるなど
+                        loading={<p>ページを読み込み中...</p>}
+                        onRenderSuccess={() => {
+                          // ページレンダリング完了時の処理 (例: fitWidthを初回実行するなど)
+                          // if (pageNumber === 1 && !initialFitDone) { fitWidth(); setInitialFitDone(true); }
+                        }}
+                      />
+                    )}
+                  </Document>
+                </div>
               ) : isLoading ? (
                 <p className="text-muted-foreground p-4">
                   AI処理中です。完了後にPDFが表示されます...
