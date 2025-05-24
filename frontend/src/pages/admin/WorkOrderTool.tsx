@@ -54,7 +54,7 @@ const WorkOrderTool: React.FC = () => {
     pdfFileToDisplay,
     setPdfFileToDisplay,
     addFilesToList, // ファイルをリストに追加する関数
-    handleFileSelect, // input要素のonChange用
+    handleFileSelect: handleFileSelectFromHook, // フックからの関数名を変更
   } = useFileHandler();
 
   const {
@@ -174,17 +174,16 @@ const WorkOrderTool: React.FC = () => {
 
   /**
    * ファイルがアップロードまたはドラッグアンドドロップで追加されたときの処理。
-   * 最初の有効なファイルを自動的に処理対象にするか、プレビュー対象にします。
+   * ファイルをリストに追加するだけ。
    */
   const handleNewFilesAdded = useCallback(
     (files: File[]) => {
-      const firstValidFile = addFilesToList(files);
-      if (firstValidFile && !isLoading) {
-        // 新しいファイルが追加されたら、それを処理/プレビュー対象にする
-        handleFileProcessRequest(firstValidFile as PdfFile);
-      }
+      addFilesToList(files);
+      // ★ ここでは自動プレビューや自動処理は行わない
+      //   もしリスト追加後、最初のファイルをデフォルトでプレビューしたい場合は、
+      //   ここで setPdfFileToDisplay(files[0] as PdfFile) などを行う
     },
-    [addFilesToList, isLoading, handleFileProcessRequest]
+    [addFilesToList]
   );
 
   const { isDragging, dragEventHandlers } = useDragAndDrop(handleNewFilesAdded);
@@ -192,10 +191,8 @@ const WorkOrderTool: React.FC = () => {
   const handleFileInputChange = (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
-    const firstValidFile = handleFileSelect(event); // handleFileSelect は addFilesToList を内部で呼ぶ
-    if (firstValidFile && !isLoading) {
-      handleFileProcessRequest(firstValidFile as PdfFile);
-    }
+    handleFileSelectFromHook(event); // useFileHandler の関数を呼び出すだけ
+    // ★ ここでは自動プレビューや自動処理は行わない
   };
 
   // --- JSXレンダリング ---
