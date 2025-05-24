@@ -594,7 +594,7 @@ const WorkOrderTool = () => {
             )}
             <div
               ref={pdfDisplayContainerRef}
-              className={`flex-grow overflow-auto w-full flex justify-center relative ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}`}
+              className={`flex-grow overflow-auto w-full relative ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}`}
               onMouseDown={handleMouseDownOnPdfArea}
               onMouseMove={handleMouseMoveOnPdfArea}
               onMouseUp={handleMouseUpOrLeaveArea} // MouseUpとMouseLeaveで同じ処理を呼ぶ
