@@ -397,7 +397,7 @@ const WorkOrderTool = () => {
 
   return (
     <div /* ... (ルートdivの定義) ... */
-      className={`flex flex-col h-full ${
+      className={`flex flex-col h-full pt-4 ${
         isDragging ? 'border-4 border-dashed border-primary bg-primary/10' : ''
       }`}
       onDrop={handleDrop}
