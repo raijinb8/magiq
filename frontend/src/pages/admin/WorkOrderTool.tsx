@@ -75,6 +75,11 @@ const WorkOrderTool = () => {
     { left: 0, top: 0 }
   );
 
+  // PDFを回転させる関数
+  const handleRotatePdf = () => {
+    setPageRotation((prevRotation) => (prevRotation + 90) % 360);
+  };
+
   // PDFが読み込まれたときにページ数を設定する関数
   function onDocumentLoadSuccess({
     numPages: nextNumPages,
