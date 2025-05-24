@@ -24,6 +24,8 @@ interface PdfPreviewPanelProps {
   onMouseUpOrLeaveArea: () => void;
   isLoading: boolean; // AI処理中かどうかのローディング状態
   processingFileForHeader: PdfFile | null; // ヘッダーに表示するファイル名 (AI処理中のファイルなど)
+  onExecuteAi: () => void; // AI実行ボタンのコールバック
+  canExecuteAi: boolean; // AI実行ボタンの有効/無効を親から受け取る
 }
 
 export const PdfPreviewPanel: React.FC<PdfPreviewPanelProps> = ({
@@ -44,6 +46,8 @@ export const PdfPreviewPanel: React.FC<PdfPreviewPanelProps> = ({
   isLoading, // このisLoadingはAI処理中を示すもの
   processingFileForHeader, // ヘッダー表示用のファイル名
   pageRotation, // Pageコンポーネントに渡すために必要
+  onExecuteAi,
+  canExecuteAi,
 }) => {
   const handlePreviousPage = () => {
     setPageNumber((prev) => Math.max(prev - 1, 1));
@@ -142,6 +146,20 @@ export const PdfPreviewPanel: React.FC<PdfPreviewPanelProps> = ({
               title="回転"
             >
               <RotateCw className="h-4 w-4" />
+            </Button>
+            {/* AI実行ボタン (既存コントロールの隣など、適切な位置に) */}
+            <Button
+              onClick={onExecuteAi}
+              disabled={!canExecuteAi || isLoading} // isLoadingもここで考慮
+              size="sm"
+              className="ml-4 bg-green-500 hover:bg-green-600 text-white dark:bg-green-600 dark:hover:bg-green-700" // スタイル例
+              title={
+                !canExecuteAi
+                  ? 'ファイルと会社を選択してください'
+                  : '選択中のPDFでAI処理を実行'
+              }
+            >
+              手配書作成
             </Button>
           </div>
         </div>

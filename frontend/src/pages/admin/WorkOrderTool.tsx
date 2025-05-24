@@ -272,6 +272,8 @@ const WorkOrderTool: React.FC = () => {
             onMouseUpOrLeaveArea={handleMouseUpOrLeaveArea}
             isLoading={isLoading && !!processingFile} // AI処理中かつ対象ファイルがある場合
             processingFileForHeader={pdfFileToDisplay} // ヘッダー表示用 (プレビュー中のファイル)
+            onExecuteAi={handleAiExecution} // AI実行関数を渡す
+            canExecuteAi={!!processingFile && !!selectedCompanyId} // 実行可能条件を渡す (isLoadingはPanel内で考慮も可)
           />
 
           <GeneratedTextPanel
