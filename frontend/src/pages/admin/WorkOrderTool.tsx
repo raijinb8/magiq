@@ -652,8 +652,7 @@ const WorkOrderTool = () => {
                       <Page
                         pageNumber={pageNumber}
                         scale={pageScale}
-                        // width={600}
-                        // height={/* 高さを指定することも可能 */}
+                        rotate={pageRotation} // 回転角度を適用
                         renderTextLayer={true} // テキストレイヤーを有効にする（文字選択や検索のため）
                         renderAnnotationLayer={true} // 注釈レイヤーを有効にする
                         className="shadow-lg mx-auto" // ページに影をつけるなど
