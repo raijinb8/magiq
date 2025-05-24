@@ -18,7 +18,7 @@ import { supabase } from '@/lib/supabase.ts'; // Supabase Client のインポー
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css'; // PDFの注釈レイヤーのスタイル
 import 'react-pdf/dist/esm/Page/TextLayer.css'; // PDFのテキストレイヤーのスタイル (文字選択などに必要)
-import { Plus, Minus } from 'lucide-react'; // icon
+import { Plus, Minus, RotateCw } from 'lucide-react'; // icon
 
 // PDFのレンダリングを効率的に行うための Web Worker を設定
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
