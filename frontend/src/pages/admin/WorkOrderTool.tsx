@@ -54,7 +54,7 @@ const WorkOrderTool: React.FC = () => {
     pdfFileToDisplay,
     setPdfFileToDisplay,
     addFilesToList, // ファイルをリストに追加する関数
-    handleFileSelect, // input要素のonChange用
+    handleFileSelect: handleFileSelectFromHook, // フックからの関数名を変更
   } = useFileHandler();
 
   const {
@@ -113,6 +113,50 @@ const WorkOrderTool: React.FC = () => {
     },
   });
 
+  /**
+   * 「AI実行」ボタンが押されたときの処理。
+   * 現在 processingFile としてマークされているファイルに対してAI処理を開始します。
+   */
+  const handleAiExecution = useCallback(async () => {
+    if (!processingFile) {
+      toast.error('処理対象のファイルが選択されていません。', {
+        description:
+          'リストからファイルをクリックしてプレビューし、処理対象を選択してください。',
+      });
+      return;
+    }
+    if (!selectedCompanyId) {
+      toast.error('会社が選択されていません。', {
+        description:
+          '処理を開始する前に、ドロップダウンから会社を選択してください。',
+      });
+      return;
+    }
+    if (isLoading) {
+      toast.info('現在別のファイルを処理中です。少々お待ちください。');
+      return;
+    }
+
+    // setGeneratedText(''); // AI処理開始時にクリアするかはUX次第 (processFileのコールバックで設定される)
+    // setProcessedCompanyInfo({ file: null, companyLabel: '' }); // 同上
+
+    const companyLabelForToast =
+      ALL_COMPANY_OPTIONS.find((c) => c.value === selectedCompanyId)?.label ||
+      selectedCompanyId;
+
+    toast.info(
+      `「${processingFile.name}」のAI処理を開始します (会社: ${companyLabelForToast})...`
+    );
+    await processFile(processingFile, selectedCompanyId, companyLabelForToast);
+  }, [
+    processingFile,
+    selectedCompanyId,
+    isLoading,
+    processFile,
+    // setGeneratedText, // 実際には不要 (processFileのコールバックで設定)
+    // setProcessedCompanyInfo, // 実際には不要 (processFileのコールバックで設定)
+  ]);
+
   // --- 連携ロジックとコールバック関数 ---
 
   /**
@@ -129,44 +173,29 @@ const WorkOrderTool: React.FC = () => {
 
   /**
    * ファイルリスト内のファイルがクリックされたときの処理。
-   * 会社が選択されていればAI処理を開始し、されていなければプレビューのみ更新します。
+   * 該当ファイルのPDFプレビューのみを行います。
    */
-  const handleFileProcessRequest = useCallback(
-    async (file: PdfFile) => {
+  const handleFilePreviewRequest = useCallback(
+    (file: PdfFile) => {
       if (isLoading) {
-        toast.info('現在別のファイルを処理中です。少々お待ちください。');
+        // AI処理中は何もしない（またはトースト表示）
+        toast.info(
+          '現在AI処理中です。完了後に別のファイルをプレビューできます。'
+        );
         return;
       }
-      if (selectedCompanyId) {
-        setProcessingFile(file); // これから処理するファイルとしてマーク
-        setGeneratedText(''); // 前回の結果をクリア
-        setPdfFileToDisplay(file); // プレビュー対象も更新
-        // processedCompanyInfo は processFile の成功/エラーコールバックで更新される
-        const companyLabel =
-          ALL_COMPANY_OPTIONS.find((c) => c.value === selectedCompanyId)
-            ?.label || selectedCompanyId;
-        toast.info(
-          `「${file.name}」の処理を開始します (会社: ${companyLabel})...`
-        );
-        await processFile(file, selectedCompanyId, companyLabel);
-      } else {
-        // 会社未選択時はプレビューのみ更新
-        setPdfFileToDisplay(file);
-        setProcessingFile(file); // プレビュー対象としてマーク（処理はしない）
-        setGeneratedText(''); // テキストエリアクリア
-        setProcessedCompanyInfo({ file: null, companyLabel: '' }); // 処理結果情報クリア
-        // numPages, pageNumber, pageRotation は onDocumentLoadSuccess でリセットされる
-        toast.info('会社を選択すると、このファイルのAI処理を開始できます。', {
-          description: `ファイル「${file.name}」をプレビュー中です。`,
-        });
-      }
+      setPdfFileToDisplay(file);
+      setProcessingFile(file); // ★ プレビュー中のファイルを「次にAI実行する対象」としてマーク
+      setGeneratedText(''); // プレビュー変更時は生成テキストをクリア
+      setProcessedCompanyInfo({ file: null, companyLabel: '' }); // 処理情報もクリア
+      // ページ数などは Document の onLoadSuccess でリセットされる (handleDocumentLoadSuccess経由)
+      toast.dismiss(); // 既存の通知があれば消す
+      toast.info(`「${file.name}」をプレビュー中です。`);
     },
     [
       isLoading,
-      selectedCompanyId,
-      processFile,
-      setProcessingFile,
       setPdfFileToDisplay,
+      setProcessingFile,
       setGeneratedText,
       setProcessedCompanyInfo,
     ]
@@ -174,17 +203,16 @@ const WorkOrderTool: React.FC = () => {
 
   /**
    * ファイルがアップロードまたはドラッグアンドドロップで追加されたときの処理。
-   * 最初の有効なファイルを自動的に処理対象にするか、プレビュー対象にします。
+   * ファイルをリストに追加するだけ。
    */
   const handleNewFilesAdded = useCallback(
     (files: File[]) => {
-      const firstValidFile = addFilesToList(files);
-      if (firstValidFile && !isLoading) {
-        // 新しいファイルが追加されたら、それを処理/プレビュー対象にする
-        handleFileProcessRequest(firstValidFile as PdfFile);
-      }
+      addFilesToList(files);
+      // ★ ここでは自動プレビューや自動処理は行わない
+      //   もしリスト追加後、最初のファイルをデフォルトでプレビューしたい場合は、
+      //   ここで setPdfFileToDisplay(files[0] as PdfFile) などを行う
     },
-    [addFilesToList, isLoading, handleFileProcessRequest]
+    [addFilesToList]
   );
 
   const { isDragging, dragEventHandlers } = useDragAndDrop(handleNewFilesAdded);
@@ -192,10 +220,8 @@ const WorkOrderTool: React.FC = () => {
   const handleFileInputChange = (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
-    const firstValidFile = handleFileSelect(event); // handleFileSelect は addFilesToList を内部で呼ぶ
-    if (firstValidFile && !isLoading) {
-      handleFileProcessRequest(firstValidFile as PdfFile);
-    }
+    handleFileSelectFromHook(event); // useFileHandler の関数を呼び出すだけ
+    // ★ ここでは自動プレビューや自動処理は行わない
   };
 
   // --- JSXレンダリング ---
@@ -224,7 +250,7 @@ const WorkOrderTool: React.FC = () => {
           onFileUploadClick={() => fileInputRef.current?.click()}
           fileInputRef={fileInputRef}
           onFileSelect={handleFileInputChange} // input[type=file] の onChange
-          onFileProcessRequest={handleFileProcessRequest} // リストアイテムクリック時
+          onFilePreviewRequest={handleFilePreviewRequest} // リストアイテムクリック時
           processedCompanyInfo={processedCompanyInfo}
         />
 
@@ -246,6 +272,8 @@ const WorkOrderTool: React.FC = () => {
             onMouseUpOrLeaveArea={handleMouseUpOrLeaveArea}
             isLoading={isLoading && !!processingFile} // AI処理中かつ対象ファイルがある場合
             processingFileForHeader={pdfFileToDisplay} // ヘッダー表示用 (プレビュー中のファイル)
+            onExecuteAi={handleAiExecution} // AI実行関数を渡す
+            canExecuteAi={!!processingFile && !!selectedCompanyId} // 実行可能条件を渡す (isLoadingはPanel内で考慮も可)
           />
 
           <GeneratedTextPanel

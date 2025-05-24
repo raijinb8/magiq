@@ -29,7 +29,7 @@ interface FileManagementPanelProps {
   onFileUploadClick: () => void; // 「PDFを選択してアップロード」ボタンのクリックハンドラ
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   onFileSelect: (event: React.ChangeEvent<HTMLInputElement>) => void; // input[type=file] の onChange ハンドラ
-  onFileProcessRequest: (file: PdfFile) => void; // リスト内のファイルクリック時の処理要求
+  onFilePreviewRequest: (file: PdfFile) => void; // リスト内のファイルクリック時のプレビュー要求
   processedCompanyInfo: ProcessedCompanyInfo; // リストアイテムのスタイル用
 }
 
@@ -44,7 +44,7 @@ export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
   onFileUploadClick,
   fileInputRef,
   onFileSelect,
-  onFileProcessRequest,
+  onFilePreviewRequest,
   processedCompanyInfo,
 }) => {
   // リストアイテムのスタイルを決定するヘルパー関数 (元のclassNameロジックを参考に)
@@ -144,7 +144,7 @@ export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
                 <li
                   key={`${file.name}-${file.lastModified}-${index}`} // lastModified をキーに含めることで同名別ファイルに対応
                   className={getListItemClasses(file)}
-                  onClick={() => onFileProcessRequest(file)}
+                  onClick={() => onFilePreviewRequest(file)}
                 >
                   {file.name} ({(file.size / 1024).toFixed(2)} KB)
                   {/* ステータス表示 (元のロジックを参考に) */}
