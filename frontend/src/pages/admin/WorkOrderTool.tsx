@@ -83,6 +83,7 @@ const WorkOrderTool = () => {
   }) {
     setNumPages(nextNumPages);
     setPageNumber(1); // 最初のページを表示
+    setPageRotation(0); // 新しいドキュメントがロードされたら回転角度をリセット
   }
 
   // バックエンドAPIを呼び出す関数
