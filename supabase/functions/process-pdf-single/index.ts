@@ -86,6 +86,17 @@ Deno.serve(async (req: Request) => {
       })
     }
 
+    // 将来的にはここに実際のPDFの内容を渡す処理が入る（例: OCR結果など）
+    const companyIdFromFrontend = formData.get('companyId') as CompanyIdentifier // フロントエンドから会社IDを受け取る
+
+    if (!companyIdFromFrontend || companyIdFromFrontend === 'UNKNOWN_OR_NOT_SET') {
+      // companyIdが送られてこない、または未選択の場合はエラーにするか、デフォルト処理をする
+      return new Response(JSON.stringify({ error: '会社IDが提供されていません。' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
     const pdfFile = formData.get('pdfFile') // フロントエンドで append したキー名
     // バリデーション
     if (!(pdfFile instanceof File)) {
@@ -98,17 +109,6 @@ Deno.serve(async (req: Request) => {
     const fileName = pdfFile.name // フロントエンドから送られてくるファイル名
     if (!fileName) {
       return new Response(JSON.stringify({ error: 'fileName is required in the request body.' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-
-    // 将来的にはここに実際のPDFの内容を渡す処理が入る（例: OCR結果など）
-    const companyIdFromFrontend = formData.get('companyId') as CompanyIdentifier // フロントエンドから会社IDを受け取る
-
-    if (!companyIdFromFrontend || companyIdFromFrontend === 'UNKNOWN_OR_NOT_SET') {
-      // companyIdが送られてこない、または未選択の場合はエラーにするか、デフォルト処理をする
-      return new Response(JSON.stringify({ error: '会社IDが提供されていません。' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
