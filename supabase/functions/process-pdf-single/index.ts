@@ -53,25 +53,49 @@ Deno.serve(async (req: Request) => {
       })
     }
 
-    let body: any = {}
+    // Content-Typeのチェック (multipart/form-data を期待)
+    const contentType = req.headers.get('content-type')
+    if (!contentType || !contentType.toLowerCase().includes('multipart/form-data')) {
+      console.warn(`Invalid Content-Type: "${contentType}". Expected multipart/form-data.`)
+      return new Response(
+        JSON.stringify({
+          error: '不正なリクエスト形式です。Content-Type は multipart/form-data である必要があります。',
+        }),
+        {
+          status: 415, // Unsupported Media Type
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      )
+    }
+
+    let formData: FormData
     try {
-      body = await req.json()
+      // リクエストボディを FormData としてパース
+      formData = await req.formData()
     } catch (e: unknown) {
-      let errorMessage = 'Internal Server Error. Please try again later.'
+      let errorMessage = 'リクエストボディの解析に失敗しました。multipart/form-data 形式が正しいか確認してください。'
       if (e instanceof Error) {
-        errorMessage = e.message
+        errorMessage = e.message // Deno の formData() が投げるエラーのメッセージを利用
       } else if (typeof e === 'string') {
         errorMessage = e
       }
-      console.error('Failed to parse JSON body:', errorMessage)
-      return new Response(JSON.stringify({ error: 'Invalid JSON body provided.' }), {
+      console.error('Failed to parse FormData body:', errorMessage, e) // 元のエラーオブジェクトもログに出力
+      return new Response(JSON.stringify({ error: '不正なリクエストボディです。' }), {
+        status: 400, // Bad Request
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const pdfFile = formData.get('pdfFile') // フロントエンドで append したキー名
+    // バリデーション
+    if (!(pdfFile instanceof File)) {
+      return new Response(JSON.stringify({ error: 'PDFファイルが提供されていないか、形式が無効です。' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    const fileName = body.fileName as string // フロントエンドから送られてくるファイル名
-
+    const fileName = pdfFile.name // フロントエンドから送られてくるファイル名
     if (!fileName) {
       return new Response(JSON.stringify({ error: 'fileName is required in the request body.' }), {
         status: 400,
@@ -80,11 +104,11 @@ Deno.serve(async (req: Request) => {
     }
 
     // 将来的にはここに実際のPDFの内容を渡す処理が入る（例: OCR結果など）
-    const companyIdFromFrontend = body.companyId as CompanyIdentifier // ★フロントエンドから会社IDを受け取る
+    const companyIdFromFrontend = formData.get('companyId') as CompanyIdentifier // フロントエンドから会社IDを受け取る
 
     if (!companyIdFromFrontend || companyIdFromFrontend === 'UNKNOWN_OR_NOT_SET') {
       // companyIdが送られてこない、または未選択の場合はエラーにするか、デフォルト処理をする
-      return new Response(JSON.stringify({ error: 'companyId is required or invalid' }), {
+      return new Response(JSON.stringify({ error: '会社IDが提供されていません。' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
