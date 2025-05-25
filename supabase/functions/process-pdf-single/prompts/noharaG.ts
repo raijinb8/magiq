@@ -1,8 +1,7 @@
 // バージョン履歴:
 // V20250519: 初版作成
-export const NOHARA_G_PROMPT = (fileName: string, pdfContentDummy: string): string => `
+export const NOHARA_G_PROMPT = (fileName: string): string => `
 添付された発注書 (${fileName}) から以下の情報を抽出し、指定された形式で厳密に整理してください。
-PDFの実際の内容はまだ連携できませんが、仮の内容は「${pdfContentDummy}」です。
 
 **最重要フォーマット指示:**
 * **文字幅:** 日本語（漢字、ひらがな、カタカナ、括弧などの全角記号）は**全角**を使用します。**アラビア数字（0-9）、ハイフン（-）、ピリオド（.）、コロン（:）、アルファベット（例: F, x）は必ず半角**を使用してください。**【重要】絶対に数字、ハイフン、ピリオドを全角で出力しないでください。**
