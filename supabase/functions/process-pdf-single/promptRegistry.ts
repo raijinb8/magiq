@@ -7,7 +7,7 @@ import { KATOUBENIYA_MISAWA_PROMPT as KATOUBENIYA_MISAWA_PROMPT_FUNC } from './p
 // ... 他のプロンプト関数をインポート
 
 // プロンプト関数の型定義 (一貫性を保つため)
-export type PromptFunction = (fileName: string, pdfContent: string) => string
+export type PromptFunction = (fileName: string) => string
 
 interface PromptRegistryEntry {
   filePathForLogging?: string // デバッグやログ出力用 (動的インポートを使わない場合は主にこれ)

@@ -160,9 +160,9 @@ Deno.serve(async (req: Request) => {
     // 3. プロンプトの組み立て
     // PROMPT_FUNCTION を取得（どのプロンプトを使うか）
     const selectedPromptFunction: PromptFunction = promptEntry.promptFunction
-    const promptIdentifier = `${companyIdFromFrontend}_${promptEntry.version}`
     // 組み立て
-    const prompt = selectedPromptFunction(fileName, pdfContentDummy)
+    const prompt = selectedPromptFunction(fileName)
+    const promptIdentifier = `${companyIdFromFrontend}_${promptEntry.version}`
 
     console.log(`[${new Date().toISOString()}] Sending prompt to Gemini API for file: ${fileName}`)
     // console.debug("Full Prompt to Gen:", prompt); // デバッグ時に必要ならコメント解除 (非常に長くなる可能性)
