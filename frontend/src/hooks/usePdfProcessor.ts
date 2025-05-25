@@ -68,18 +68,21 @@ export const usePdfProcessor = ({
           return;
         }
 
-        const requestBody = {
-          fileName: fileToProcess.name,
-          companyId: companyId,
-        };
+        // FormDataオブジェクトを作成してファイルと他のデータを格納
+        const formData = new FormData();
+        formData.append('pdfFile', fileToProcess, fileToProcess.name); // 第3引数でファイル名を指定
+        formData.append('companyId', companyId);
+        // 必要に応じて他のデータも formData.append() で追加できます
+        // 例: formData.append('originalFileName', fileToProcess.name);
 
         const response = await fetch(functionUrl, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
+            // 'Content-Type': 'multipart/form-data', // FormData を使用する場合、ブラウザが適切なContent-Type（boundaryを含む）を自動設定するため、明示的に指定しない
             Authorization: `Bearer ${session.access_token}`,
+            // 'apikey': import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY, // Edge Functionの認証設定によっては必要
           },
-          body: JSON.stringify(requestBody),
+          body: formData, // FormDataオブジェクトをbodyに設定
         });
 
         // response.json() の前に response.ok をチェックする方が一般的
