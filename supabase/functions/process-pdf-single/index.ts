@@ -4,6 +4,7 @@ import { GoogleGenAI } from '@google/genai'
 // Supabaseクライアントをインポート (Deno用)
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { getPrompt, PromptFunction } from './promptRegistry.ts'
+import { encodeBase64 } from 'https://deno.land/std@0.224.0/encoding/base64.ts' // Base64エンコード用
 
 console.log('process-pdf-single function (v2 - with Gen) has been invoked!')
 
@@ -118,6 +119,23 @@ Deno.serve(async (req: Request) => {
       `[${new Date().toISOString()}] Received request for ${fileName}, Company ID from frontend: ${companyIdFromFrontend}`
     )
 
+    // PDFファイルの内容をBase64エンコード
+    // ステップ1: PDFファイルの内容を ArrayBuffer として読み込む
+    let fileArrayBuffer: ArrayBuffer
+    try {
+      fileArrayBuffer = await pdfFile.arrayBuffer()
+      console.log(`[PDF Processing] Successfully read file into ArrayBuffer, size: ${fileArrayBuffer.byteLength} bytes`)
+    } catch (bufferError) {
+      console.error(`[PDF Processing] Failed to read PDF file content for ${fileName}:`, bufferError)
+      return new Response(JSON.stringify({ error: 'PDFファイル内容の読み取りに失敗しました。' }), {
+        status: 500, // Internal Server Error
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+    // ステップ2: ArrayBuffer を Base64 文字列にエンコードする
+    const pdfBase64Data = encodeBase64(fileArrayBuffer)
+    console.log(`[PDF Processing] Successfully Base64 encoded PDF content for ${fileName}.`)
+
     // supabase/functions/process-pdf-single/promptRegistry.ts
     // から識別子とプロンプトのマッピング情報を取得
     const promptEntry = getPrompt(companyIdFromFrontend)
@@ -131,9 +149,6 @@ Deno.serve(async (req: Request) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
-
-    // 今回はダミーのPDF内容を使います
-    const pdfContentDummy = `これは ${fileName} のダミーPDF内容です。実際にはここに抽出されたテキストが入ります。指定された会社: ${companyIdFromFrontend}`
 
     // 1. Gemini APIキーを環境変数から取得
     const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY')
@@ -163,8 +178,18 @@ Deno.serve(async (req: Request) => {
     // 組み立て
     const prompt = selectedPromptFunction(fileName)
     const promptIdentifier = `${companyIdFromFrontend}_${promptEntry.version}`
+    // Gemini APIに渡すパーツを作成
+    const requestParts: Part[] = [
+      { text: prompt }, // テキストによる指示
+      {
+        inlineData: {
+          mimeType: pdfFile.type, // 'application/pdf' など、Fileオブジェクトから取得
+          data: pdfBase64Data, // Base64エンコードされたファイルデータ
+        },
+      },
+    ]
 
-    console.log(`[${new Date().toISOString()}] Sending prompt to Gemini API for file: ${fileName}`)
+    console.log(`[${new Date().toISOString()}] Sending prompt with PDF data to Gemini API for file: ${fileName}`)
     // console.debug("Full Prompt to Gen:", prompt); // デバッグ時に必要ならコメント解除 (非常に長くなる可能性)
 
     // 4. Gemini API呼び出し
@@ -174,7 +199,8 @@ Deno.serve(async (req: Request) => {
       // API Ref https://ai.google.dev/api/generate-content?hl=ja#v1beta.GenerateContentResponse
       const response = await genAI.models.generateContent({
         model: model,
-        contents: prompt,
+        contents: [{ role: 'user', parts: requestParts }], // マルチモーダル入力形式
+        // role: 'user' はユーザーのメッセージを、role: 'model' はAIモデル自身の応答を示す
         // 安全性設定の例 (必要に応じて調整)
         // safetySettings: [
         //   {
@@ -335,6 +361,7 @@ Deno.serve(async (req: Request) => {
       originalFileName: fileName,
       promptUsedIdentifier: promptIdentifier, // プロンプトのバージョン管理用
       identifiedCompany: companyIdFromFrontend,
+      usageMetadata: usageMetadata, // トークン使用量も返す
       dbRecordId: dbRecordId, // DBに保存されたレコードのIDも返す (オプション)
     }
 
