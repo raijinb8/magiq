@@ -100,7 +100,7 @@ const WorkOrderTool: React.FC = () => {
       companyLabelForError: string
     ) => {
       setGeneratedText(
-        `エラーが発生しました:\n${errorMessage}\n\n詳細は開発者コンソールを確認してください。`
+        `エラーが発生しました:\n${errorMessage}\n\n処理対象の会社を正しく選択しているか確認してください。\n\n再度、手配書作成ボタンを押下してください。\n\n解決しない場合は開発者に連絡してください。`
       );
       setProcessedCompanyInfo({
         file,
