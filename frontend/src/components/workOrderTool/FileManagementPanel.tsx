@@ -136,7 +136,7 @@ export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
         onChange={onFileSelect}
         className="hidden"
       />
-      <ScrollArea className="flex-1 rounded-md border">
+      <ScrollArea className="flex-1 rounded-md border h-0">
         <div className="p-4">
           {uploadedFiles.length > 0 ? (
             <ul>
