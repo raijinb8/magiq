@@ -9,10 +9,10 @@ import App from './App.tsx';
 import './global.css';
 
 import { useCompanyStore } from './store/useCompanyStore';
-import activeConfig from './config/active.json';
+import defaultConfig from './config/default.json';
 
 // 初期化（ここで一度だけアクティブ社の設定をzustandに入れる）
-useCompanyStore.getState().setCompany(activeConfig);
+useCompanyStore.getState().setCompany(defaultConfig);
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   // Reactをどこに表示するか（index.html の <div id="root">）を指定

@@ -3,8 +3,8 @@
 import { GoogleGenAI } from '@google/genai'
 // Supabaseクライアントをインポート (Deno用)
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
-import { NOHARA_G_PROMPT } from './prompts/noharaG.ts'
-import { KATOUBENIYA_MISAWA_PROMPT } from './prompts/katouBeniyaIkebukuro/misawa.ts'
+import { getPrompt, PromptFunction } from './promptRegistry.ts'
+import { encodeBase64 } from 'https://deno.land/std@0.224.0/encoding/base64.ts' // Base64エンコード用
 
 console.log('process-pdf-single function (v2 - with Gen) has been invoked!')
 
@@ -39,6 +39,8 @@ try {
   console.error('Error initializing Supabase client:', e)
 }
 
+type CompanyIdentifier = 'NOHARA_G' | 'KATOUBENIYA_MISAWA' | 'UNKNOWN_OR_NOT_SET'
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -52,35 +54,100 @@ Deno.serve(async (req: Request) => {
       })
     }
 
-    let body: any = {}
+    // Content-Typeのチェック (multipart/form-data を期待)
+    const contentType = req.headers.get('content-type')
+    if (!contentType || !contentType.toLowerCase().includes('multipart/form-data')) {
+      console.warn(`Invalid Content-Type: "${contentType}". Expected multipart/form-data.`)
+      return new Response(
+        JSON.stringify({
+          error: '不正なリクエスト形式です。Content-Type は multipart/form-data である必要があります。',
+        }),
+        {
+          status: 415, // Unsupported Media Type
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      )
+    }
+
+    let formData: FormData
     try {
-      body = await req.json()
+      // リクエストボディを FormData としてパース
+      formData = await req.formData()
     } catch (e: unknown) {
-      let errorMessage = 'Internal Server Error. Please try again later.'
+      let errorMessage = 'リクエストボディの解析に失敗しました。multipart/form-data 形式が正しいか確認してください。'
       if (e instanceof Error) {
-        errorMessage = e.message
+        errorMessage = e.message // Deno の formData() が投げるエラーのメッセージを利用
       } else if (typeof e === 'string') {
         errorMessage = e
       }
-      console.error('Failed to parse JSON body:', errorMessage)
-      return new Response(JSON.stringify({ error: 'Invalid JSON body provided.' }), {
+      console.error('Failed to parse FormData body:', errorMessage, e) // 元のエラーオブジェクトもログに出力
+      return new Response(JSON.stringify({ error: '不正なリクエストボディです。' }), {
+        status: 400, // Bad Request
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    // 将来的にはここに実際のPDFの内容を渡す処理が入る（例: OCR結果など）
+    const companyIdFromFrontend = formData.get('companyId') as CompanyIdentifier // フロントエンドから会社IDを受け取る
+
+    if (!companyIdFromFrontend || companyIdFromFrontend === 'UNKNOWN_OR_NOT_SET') {
+      // companyIdが送られてこない、または未選択の場合はエラーにするか、デフォルト処理をする
+      return new Response(JSON.stringify({ error: '会社IDが提供されていません。' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    const fileName = body.fileName // フロントエンドから送られてくるファイル名
-    // 将来的にはここに実際のPDFの内容を渡す処理が入る（例: OCR結果など）
-    // 今回はダミーのPDF内容を使います
-    const pdfContentDummy = `これは ${
-      fileName || '不明なファイル'
-    } のダミーPDF内容です。実際にはここに抽出されたテキストが入ります。`
+    const pdfFile = formData.get('pdfFile') // フロントエンドで append したキー名
+    // バリデーション
+    if (!(pdfFile instanceof File)) {
+      return new Response(JSON.stringify({ error: 'PDFファイルが提供されていないか、形式が無効です。' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
 
+    const fileName = pdfFile.name // フロントエンドから送られてくるファイル名
     if (!fileName) {
       return new Response(JSON.stringify({ error: 'fileName is required in the request body.' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
+    }
+
+    console.log(
+      `[${new Date().toISOString()}] Received request for ${fileName}, Company ID from frontend: ${companyIdFromFrontend}`
+    )
+
+    // PDFファイルの内容をBase64エンコード
+    // ステップ1: PDFファイルの内容を ArrayBuffer として読み込む
+    let fileArrayBuffer: ArrayBuffer
+    try {
+      fileArrayBuffer = await pdfFile.arrayBuffer()
+      console.log(`[PDF Processing] Successfully read file into ArrayBuffer, size: ${fileArrayBuffer.byteLength} bytes`)
+    } catch (bufferError) {
+      console.error(`[PDF Processing] Failed to read PDF file content for ${fileName}:`, bufferError)
+      return new Response(JSON.stringify({ error: 'PDFファイル内容の読み取りに失敗しました。' }), {
+        status: 500, // Internal Server Error
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+    // ステップ2: ArrayBuffer を Base64 文字列にエンコードする
+    const pdfBase64Data = encodeBase64(fileArrayBuffer)
+    console.log(`[PDF Processing] Successfully Base64 encoded PDF content for ${fileName}.`)
+
+    // supabase/functions/process-pdf-single/promptRegistry.ts
+    // から識別子とプロンプトのマッピング情報を取得
+    const promptEntry = getPrompt(companyIdFromFrontend)
+
+    if (!promptEntry) {
+      console.error(
+        `[${new Date().toISOString()}] No prompt entry found for companyId: ${companyIdFromFrontend} (file: ${fileName})`
+      )
+      return new Response(
+        JSON.stringify({ error: `Unsupported company or prompt configuration for: ${companyIdFromFrontend}` }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
     // 1. Gemini APIキーを環境変数から取得
@@ -106,9 +173,23 @@ Deno.serve(async (req: Request) => {
     // gemini-2.0-flash 次世代の機能、速度。
 
     // 3. プロンプトの組み立て
-    const prompt = NOHARA_G_PROMPT(fileName, pdfContentDummy)
+    // PROMPT_FUNCTION を取得（どのプロンプトを使うか）
+    const selectedPromptFunction: PromptFunction = promptEntry.promptFunction
+    // 組み立て
+    const prompt = selectedPromptFunction(fileName)
+    const promptIdentifier = `${companyIdFromFrontend}_${promptEntry.version}`
+    // Gemini APIに渡すパーツを作成
+    const requestParts: Part[] = [
+      { text: prompt }, // テキストによる指示
+      {
+        inlineData: {
+          mimeType: pdfFile.type, // 'application/pdf' など、Fileオブジェクトから取得
+          data: pdfBase64Data, // Base64エンコードされたファイルデータ
+        },
+      },
+    ]
 
-    console.log(`[${new Date().toISOString()}] Sending prompt to Gemini API for file: ${fileName}`)
+    console.log(`[${new Date().toISOString()}] Sending prompt with PDF data to Gemini API for file: ${fileName}`)
     // console.debug("Full Prompt to Gen:", prompt); // デバッグ時に必要ならコメント解除 (非常に長くなる可能性)
 
     // 4. Gemini API呼び出し
@@ -118,7 +199,8 @@ Deno.serve(async (req: Request) => {
       // API Ref https://ai.google.dev/api/generate-content?hl=ja#v1beta.GenerateContentResponse
       const response = await genAI.models.generateContent({
         model: model,
-        contents: prompt,
+        contents: [{ role: 'user', parts: requestParts }], // マルチモーダル入力形式
+        // role: 'user' はユーザーのメッセージを、role: 'model' はAIモデル自身の応答を示す
         // 安全性設定の例 (必要に応じて調整)
         // safetySettings: [
         //   {
@@ -197,6 +279,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // --- データベースへの保存処理 ---
+    const companyName = promptEntry.companyName
     let dbRecordId: string | null = null
     if (supabaseClient) {
       try {
@@ -210,8 +293,8 @@ Deno.serve(async (req: Request) => {
               generated_text: generatedTextByGen,
               // edited_text: generatedTextByGen, // 初期値として同じものを入れるか、NULLのままか
               status: 'completed_from_ai', // AI処理完了を示すステータス
-              prompt_identifier: 'NOHARA_G_PROMPT_V20250515', // どのプロンプトを使ったか
-              // company_name: '野原Ｇ住環境', // 固定値または将来的に動的に設定
+              prompt_identifier: promptIdentifier, // どのプロンプトを使ったか
+              company_name: companyName, // 取引先_発注元
               gemini_processed_at: new Date().toISOString(), // Gemini処理完了時刻
             },
           ])
@@ -273,10 +356,12 @@ Deno.serve(async (req: Request) => {
 
     // 5. フロントエンドへのレスポンス
     const responseData = {
-      message: `Successfully generated and processed text for ${fileName}.`,
+      message: `Successfully generated text for ${fileName} (Company: ${companyIdFromFrontend}).`,
       generatedText: generatedTextByGen,
       originalFileName: fileName,
-      promptUsedIdentifier: 'NOHARA_G_PROMPT_V20250515', // プロンプトのバージョン管理用
+      promptUsedIdentifier: promptIdentifier, // プロンプトのバージョン管理用
+      identifiedCompany: companyIdFromFrontend,
+      usageMetadata: usageMetadata, // トークン使用量も返す
       dbRecordId: dbRecordId, // DBに保存されたレコードのIDも返す (オプション)
     }
 
