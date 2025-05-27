@@ -91,61 +91,61 @@ export const PdfPreviewPanel: React.FC<PdfPreviewPanelProps> = ({
           {/* mb-2 を追加して間隔調整 */}
           <Button
             variant="outline"
-            size="sm"
-            disabled={pageNumber <= 1}
-            onClick={handlePreviousPage}
+            size="icon"
+            onClick={handleZoomOut}
+            disabled={pageScale <= 0.25}
+            title="縮小"
           >
-            前へ
+            <Minus className="h-4 w-4" />
           </Button>
-          <span>
-            ページ {pageNumber} / {numPages}
+          <span className="text-sm w-16 text-center">
+            {(pageScale * 100).toFixed(0)}%
           </span>
           <Button
             variant="outline"
-            size="sm"
-            disabled={!numPages || pageNumber >= numPages}
-            onClick={handleNextPage}
+            size="icon"
+            onClick={handleZoomIn}
+            disabled={pageScale >= 3.0}
+            title="拡大"
           >
-            次へ
+            <Plus className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            title="100%"
+            onClick={handleZoomReset}
+            disabled={pageScale === 1.0}
+          >
+            100%
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={onRotatePdf}
+            title="回転"
+          >
+            <RotateCw className="h-4 w-4" />
           </Button>
           <div className="ml-auto flex items-center gap-2">
             <Button
               variant="outline"
-              size="icon"
-              onClick={handleZoomOut}
-              disabled={pageScale <= 0.25}
-              title="縮小"
+              size="sm"
+              disabled={pageNumber <= 1}
+              onClick={handlePreviousPage}
             >
-              <Minus className="h-4 w-4" />
+              前へ
             </Button>
-            <span className="text-sm w-16 text-center">
-              {(pageScale * 100).toFixed(0)}%
+            <span>
+              ページ {pageNumber} / {numPages}
             </span>
             <Button
               variant="outline"
-              size="icon"
-              onClick={handleZoomIn}
-              disabled={pageScale >= 3.0}
-              title="拡大"
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
               size="sm"
-              title="100%"
-              onClick={handleZoomReset}
-              disabled={pageScale === 1.0}
+              disabled={!numPages || pageNumber >= numPages}
+              onClick={handleNextPage}
             >
-              100%
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={onRotatePdf}
-              title="回転"
-            >
-              <RotateCw className="h-4 w-4" />
+              次へ
             </Button>
             {/* AI実行ボタン (既存コントロールの隣など、適切な位置に) */}
             <Button
