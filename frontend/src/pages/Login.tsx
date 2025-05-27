@@ -42,7 +42,7 @@ export default function Login() {
         const res = await fetch(`/config/${companyId}.json`);
         const config = await res.json();
         setCompany(config);
-        navigate('/dashboard'); // ✅ ここで遷移！
+        navigate('/admin/work-order-tool'); // ✅ ここで遷移！
         return;
       } catch (e) {
         setError(`会社設定の読み込みに失敗しました`);
