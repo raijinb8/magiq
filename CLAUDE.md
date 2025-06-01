@@ -215,6 +215,50 @@ main (production-ready)
 - **デプロイメント準備** → `release/*`
 - **小さなドキュメント更新** → `dev` で直接作業可能
 
+### 並列作業とGit Worktree
+
+抽象的な依頼や複数の関連タスクを処理する際は、**git worktree**を使用して効率的に作業します：
+
+#### Git Worktree の利点
+- 複数ブランチの同時作業が可能
+- ビルドキャッシュとnode_modulesを各worktreeで独立管理
+- コンテキストスイッチのコストを削減
+- 異なる機能の並列開発が容易
+
+#### 使用する場面
+1. **複数の独立した機能を同時開発**
+   - 例：「認証システムの改善とPDF処理の最適化を行って」
+   
+2. **実験的な実装の比較検討**
+   - 異なるアプローチを別々のworktreeで試行
+
+3. **バグ修正と機能開発の並行作業**
+   - mainからのhotfixとfeature開発を同時進行
+
+#### Worktree 運用ルール
+```bash
+# メインリポジトリ構造
+/app                          # メインworktree (通常はdev)
+/app-worktrees/
+  ├── feature-auth/          # 認証機能用worktree
+  ├── feature-pdf/           # PDF機能用worktree
+  └── hotfix-critical/       # 緊急修正用worktree
+
+# 新しいworktreeの作成例
+git worktree add ../app-worktrees/feature-auth feature/improve-auth-system
+
+# 作業完了後の削除
+git worktree remove ../app-worktrees/feature-auth
+```
+
+#### 自動Worktree管理
+複雑なタスクを依頼された場合、以下のように自動判断します：
+
+1. **タスクの分析**: 独立した作業単位を識別
+2. **並列化の判断**: 2つ以上の独立タスクがある場合はworktree使用
+3. **自動セットアップ**: 必要なworktreeを作成し、並列作業を開始
+4. **進捗の同期**: 各worktreeでの作業状況を適切に管理
+
 ### ベストプラクティス
 
 - **分かりやすい名前**: 変更内容を説明する明確なケバブケースの名前を使用
