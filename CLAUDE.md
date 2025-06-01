@@ -50,7 +50,10 @@ supabase functions serve process-pdf-single --env-file supabase/functions/proces
 - Frontend: Create `/app/frontend/.env` with Supabase URL and anon key
 - Backend: Create `/app/supabase/functions/process-pdf-single/.env` with `GEMINI_API_KEY`
 
-**Note:** There are no test scripts configured. When implementing tests, add appropriate test commands to package.json.
+**Note:** Test framework is not yet configured. When implementing features, I will:
+1. Set up Jest/Testing Library for frontend tests
+2. Configure test scripts in package.json
+3. Follow TDD practices for all new code
 
 ## High-Level Architecture
 
@@ -220,6 +223,61 @@ When deciding which branch to create:
 - **Testing**: Always run `npm run build` and `npm run lint` before creating PR
 - **Clean History**: Use meaningful commit messages
 
+## Test-Driven Development (TDD)
+
+This project follows Test-Driven Development principles. All new features and bug fixes should be developed using the TDD cycle:
+
+### TDD Workflow
+
+1. **Red Phase**: Write a failing test first
+   - Define the expected behavior
+   - Run the test to ensure it fails
+
+2. **Green Phase**: Write minimal code to pass the test
+   - Focus only on making the test pass
+   - Don't worry about optimization yet
+
+3. **Refactor Phase**: Improve the code
+   - Clean up the implementation
+   - Ensure all tests still pass
+
+### Testing Guidelines
+
+**Test Framework Setup:**
+- If no test framework exists, set up Jest for React/TypeScript:
+  ```bash
+  cd /app/frontend
+  npm install --save-dev jest @testing-library/react @testing-library/jest-dom
+  npm install --save-dev @types/jest ts-jest
+  ```
+- For Supabase Edge Functions, use Deno's built-in test runner
+
+**Test Structure:**
+```typescript
+describe('Component/Function Name', () => {
+  it('should handle expected behavior', () => {
+    // Arrange
+    // Act
+    // Assert
+  });
+  
+  it('should handle edge cases', () => {
+    // Test edge cases
+  });
+});
+```
+
+**Testing Priority:**
+1. Unit tests for business logic
+2. Integration tests for API endpoints
+3. Component tests for critical UI elements
+4. E2E tests for critical user flows
+
+**Test Coverage Goals:**
+- Aim for 80% code coverage
+- 100% coverage for critical business logic
+- Focus on behavior, not implementation details
+
 ## Automated Commit and PR Creation
 
 Claude Code will automatically handle commits and PR creation with appropriate granularity:
@@ -285,10 +343,13 @@ Types:
 When you ask me to implement a feature, I will:
 
 1. Create appropriate branch (`feature/`, `fix/`, etc.)
-2. Make changes with logical commits
-3. Run tests and linting
-4. Create PR when the work is complete
-5. Provide you with the PR URL
+2. **Write failing tests first** (Red phase)
+3. Implement minimal code to pass tests (Green phase)
+4. Refactor and optimize (Refactor phase)
+5. Make logical commits at each TDD cycle
+6. Run all tests and linting
+7. Create PR when the work is complete
+8. Provide you with the PR URL
 
 You can always tell me to:
 - "Hold off on commits" if you want to review first
