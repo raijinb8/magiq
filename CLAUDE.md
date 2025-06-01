@@ -162,6 +162,161 @@ GEMINI_API_KEY=your_gemini_api_key
 - CORS headers configured for cross-origin requests
 - Proper error handling for API failures
 
+## Git Branch Strategy
+
+This project follows Git-Flow principles for branch management:
+
+### Branch Structure
+```
+main (production-ready)
+├── dev (development/integration)
+├── feature/* (new features)
+├── fix/* (bug fixes)
+├── hotfix/* (urgent production fixes)
+└── release/* (release preparation)
+```
+
+### Branch Types and Usage
+
+1. **Feature Branches** (`feature/*`)
+   - Created from: `dev`
+   - Merge back to: `dev`
+   - Examples: `feature/add-export-pdf`, `feature/multi-language-support`
+   - Use for: New functionality, enhancements
+
+2. **Fix Branches** (`fix/*`)
+   - Created from: `dev`
+   - Merge back to: `dev`
+   - Examples: `fix/pdf-viewer-crash`, `fix/auth-redirect-loop`
+   - Use for: Non-urgent bug fixes in development
+
+3. **Hotfix Branches** (`hotfix/*`)
+   - Created from: `main`
+   - Merge back to: `main` AND `dev`
+   - Examples: `hotfix/critical-security-patch`, `hotfix/payment-processing`
+   - Use for: Critical production issues requiring immediate fix
+
+4. **Release Branches** (`release/*`)
+   - Created from: `dev`
+   - Merge back to: `main` AND `dev`
+   - Examples: `release/1.2.0`, `release/2.0.0-beta`
+   - Use for: Preparing releases, final testing, version bumps
+
+### Branch Selection Guidelines
+
+When deciding which branch to create:
+
+- **New functionality or enhancement** → `feature/*`
+- **Bug in development environment** → `fix/*`
+- **Critical bug in production** → `hotfix/*`
+- **Preparing for deployment** → `release/*`
+- **Small documentation updates** → Can work directly on `dev`
+
+### Best Practices
+
+- **Descriptive Names**: Use clear, kebab-case names that describe the change
+- **Small, Focused Changes**: Keep branches focused on a single issue or feature
+- **Regular Updates**: Sync with `dev` regularly to avoid conflicts
+- **Testing**: Always run `npm run build` and `npm run lint` before creating PR
+- **Clean History**: Use meaningful commit messages
+
+## Automated Commit and PR Creation
+
+Claude Code will automatically handle commits and PR creation with appropriate granularity:
+
+### Auto-Commit Guidelines
+
+**When to Commit:**
+- After completing a logical unit of work (e.g., implementing a function, fixing a specific bug)
+- When switching between different files or components
+- Before running tests or build commands
+- After significant refactoring
+
+**Commit Message Format:**
+```
+<type>: <subject>
+
+<body (optional)>
+```
+
+Types:
+- `feat`: New feature
+- `fix`: Bug fix
+- `docs`: Documentation changes
+- `style`: Code style changes (formatting, missing semicolons, etc.)
+- `refactor`: Code refactoring without changing functionality
+- `test`: Adding or updating tests
+- `chore`: Maintenance tasks, dependency updates
+
+### Auto-PR Guidelines
+
+**PR Creation Triggers:**
+- Feature implementation complete
+- Bug fix verified and tested
+- Multiple related commits ready for review
+- User explicitly requests deployment
+
+**PR Format:**
+```markdown
+## Summary
+- Brief description of changes
+- Impact on existing functionality
+
+## Changes Made
+- Specific file/component changes
+- Technical approach taken
+
+## Testing
+- Commands run: `npm run lint`, `npm run build`
+- Manual testing performed
+- Edge cases considered
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+```
+
+### Automatic Workflow Example
+
+When you ask me to implement a feature, I will:
+
+1. Create appropriate branch (`feature/`, `fix/`, etc.)
+2. Make changes with logical commits
+3. Run tests and linting
+4. Create PR when the work is complete
+5. Provide you with the PR URL
+
+You can always tell me to:
+- "Hold off on commits" if you want to review first
+- "Create PR now" if you want to merge work-in-progress
+- "Squash commits" if you prefer a cleaner history
+
+### Example Workflow
+```bash
+# For a new feature
+git checkout dev
+git pull origin dev
+git checkout -b feature/add-email-notifications
+
+# Make changes and test...
+npm run lint
+npm run build
+
+# Commit with descriptive message
+git add .
+git commit -m "feat: Add email notification system with customizable templates"
+git push origin feature/add-email-notifications
+
+# Create PR to dev branch
+gh pr create --base dev --title "Add email notification system" --body "..."
+
+# For a hotfix
+git checkout main
+git pull origin main
+git checkout -b hotfix/fix-auth-token-expiry
+
+# Fix, test, and push...
+# Create PRs to both main and dev
+```
+
 ## Important Notes
 
 - No test framework is currently configured
