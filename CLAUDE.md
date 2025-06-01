@@ -51,9 +51,10 @@ supabase functions serve process-pdf-single --env-file supabase/functions/proces
 - バックエンド: `/app/supabase/functions/process-pdf-single/.env` に `GEMINI_API_KEY` を設定
 
 **注意:** テストフレームワークはまだ設定されていません。機能実装時は以下を行います：
-1. フロントエンドテスト用にJest/Testing Libraryをセットアップ
-2. package.jsonにテストスクリプトを設定
+1. フロントエンドテスト用にVitest/Testing Libraryをセットアップ
+2. package.jsonにテストスクリプトを設定（test, test:ui, test:coverage）
 3. すべての新規コードでTDDを実践
+4. MSWでAPIモックを設定し、実際のAPIに依存しないテストを作成
 
 ## 高レベルアーキテクチャ
 
@@ -287,14 +288,45 @@ git worktree remove ../app-worktrees/feature-auth
 
 ### テストガイドライン
 
-**テストフレームワークのセットアップ:**
-- テストフレームワークが存在しない場合、React/TypeScript用にJestをセットアップ:
-  ```bash
-  cd /app/frontend
-  npm install --save-dev jest @testing-library/react @testing-library/jest-dom
-  npm install --save-dev @types/jest ts-jest
-  ```
-- Supabase Edge Functionsには、Denoの組み込みテストランナーを使用
+**推奨テストフレームワーク:**
+
+フロントエンド（React + TypeScript + Vite）:
+- **Vitest**: Viteネイティブで高速、設定が簡単
+- **React Testing Library**: ユーザー視点のコンポーネントテスト
+- **MSW (Mock Service Worker)**: APIモックの業界標準
+- **@vitest/ui**: テスト結果のビジュアル確認
+
+バックエンド（Supabase Edge Functions）:
+- **Deno Test**: Deno組み込みテストランナー（追加インストール不要）
+
+**フロントエンドテストのセットアップ:**
+```bash
+cd /app/frontend
+npm install --save-dev vitest @vitest/ui happy-dom
+npm install --save-dev @testing-library/react @testing-library/user-event
+npm install --save-dev @testing-library/jest-dom
+npm install --save-dev msw
+
+# package.jsonにテストスクリプトを追加
+# "test": "vitest",
+# "test:ui": "vitest --ui",
+# "test:coverage": "vitest --coverage"
+```
+
+**Vitest設定（vite.config.ts）:**
+```typescript
+/// <reference types="vitest" />
+import { defineConfig } from 'vite'
+
+export default defineConfig({
+  test: {
+    globals: true,
+    environment: 'happy-dom',
+    setupFiles: './src/test/setup.ts',
+    css: true,
+  },
+})
+```
 
 **Test Structure:**
 ```typescript
@@ -541,7 +573,7 @@ function validateUserEmail(email: string): boolean {
 
 ## 重要な注意事項
 
-- テストフレームワークは現在未設定
+- テストフレームワーク：Vitest（推奨）、現在は未設定
 - Tailwind CSS v4をViteプラグインで使用（PostCSSではない）
 - フロントエンドはVercelでSPAルーティング設定済み
 - PDF処理にはバックエンドのGemini APIキー設定が必要
