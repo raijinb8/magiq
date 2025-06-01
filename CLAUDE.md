@@ -248,6 +248,12 @@ Types:
 - `test`: Adding or updating tests
 - `chore`: Maintenance tasks, dependency updates
 
+**Language Requirements:**
+- Commit messages, PR descriptions, and issue comments should be written in **Japanese**
+- This includes the subject line and body of commits
+- Code comments and technical documentation remain in English
+- Example: `feat: ユーザー認証機能を追加` instead of `feat: Add user authentication`
+
 ### Auto-PR Guidelines
 
 **PR Creation Triggers:**
@@ -256,20 +262,20 @@ Types:
 - Multiple related commits ready for review
 - User explicitly requests deployment
 
-**PR Format:**
+**PR Format (in Japanese):**
 ```markdown
-## Summary
-- Brief description of changes
-- Impact on existing functionality
+## 概要
+- 変更内容の簡潔な説明
+- 既存機能への影響
 
-## Changes Made
-- Specific file/component changes
-- Technical approach taken
+## 変更内容
+- 具体的なファイル/コンポーネントの変更
+- 技術的なアプローチ
 
-## Testing
-- Commands run: `npm run lint`, `npm run build`
-- Manual testing performed
-- Edge cases considered
+## テスト
+- 実行したコマンド: `npm run lint`, `npm run build`
+- 実施した手動テスト
+- 考慮したエッジケース
 
 🤖 Generated with [Claude Code](https://claude.ai/code)
 ```
@@ -309,13 +315,13 @@ git checkout -b feature/add-email-notifications
 npm run lint
 npm run build
 
-# Commit with descriptive message
+# Commit with descriptive message (in Japanese)
 git add .
-git commit -m "feat: Add email notification system with customizable templates"
+git commit -m "feat: カスタマイズ可能なテンプレートを使用したメール通知システムを追加"
 git push origin feature/add-email-notifications
 
-# Create PR to dev branch
-gh pr create --base dev --title "Add email notification system" --body "..."
+# Create PR to dev branch (in Japanese)
+gh pr create --base dev --title "メール通知システムの追加" --body "..."
 
 # For a hotfix
 git checkout main
