@@ -397,6 +397,76 @@ git checkout -b hotfix/fix-auth-token-expiry
 # Create PRs to both main and dev
 ```
 
+## Code Quality Standards
+
+All code should be written as if it has already gone through multiple refactoring cycles. Write production-ready, clean code from the start:
+
+### Clean Code Principles
+
+1. **Single Responsibility Principle (SRP)**
+   - 各関数・クラスは1つの責任のみを持つ
+   - 1つの関数は1つのことだけを行う
+
+2. **DRY (Don't Repeat Yourself)**
+   - 重複コードを避け、再利用可能な関数・コンポーネントを作成
+   - 共通ロジックは適切に抽出する
+
+3. **KISS (Keep It Simple, Stupid)**
+   - シンプルで理解しやすいコードを書く
+   - 過度に複雑な実装を避ける
+
+4. **YAGNI (You Aren't Gonna Need It)**
+   - 現在必要な機能のみを実装
+   - 将来の仮定に基づいた過剰な実装を避ける
+
+### Refactoring Guidelines
+
+**命名規則:**
+- 変数名・関数名は意図が明確にわかる名前にする
+- `data`, `temp`, `item` などの曖昧な名前を避ける
+- 日本語のコメントがなくても理解できる名前を使う
+
+**関数の設計:**
+```typescript
+// ❌ 悪い例
+function processUserData(u: any) {
+  // 複数の責任を持つ長い関数
+  const d = u.data;
+  // 処理...
+}
+
+// ✅ 良い例
+function validateUserEmail(email: string): boolean {
+  // 単一責任で明確な関数
+  return EMAIL_REGEX.test(email);
+}
+```
+
+**エラーハンドリング:**
+- 適切なエラー処理を最初から実装
+- カスタムエラークラスを活用
+- エラーメッセージは具体的で actionable に
+
+**型安全性:**
+- TypeScript の型を最大限活用
+- `any` 型の使用を避ける
+- 型推論に頼らず明示的な型定義を行う
+
+**パフォーマンス考慮:**
+- 不要な再レンダリングを避ける（React.memo, useMemo, useCallback）
+- 大量データは仮想スクロールやページネーションを使用
+- 重い処理は Web Worker や遅延読み込みを検討
+
+### Code Review Checklist
+
+コードを書く際は以下を自己チェック:
+- [ ] 関数は10行以内に収まっているか
+- [ ] 複雑度（Cyclomatic Complexity）は低いか
+- [ ] 適切な抽象化レベルか
+- [ ] テストしやすい設計か
+- [ ] エッジケースを考慮しているか
+- [ ] パフォーマンスのボトルネックはないか
+
 ## Important Notes
 
 - No test framework is currently configured
