@@ -290,6 +290,11 @@ Claude Codeは適切な粒度でコミットとPR作成を自動的に処理し�
 - テストやビルドコマンドを実行する前
 - 重要なリファクタリング後
 
+**自動プッシュ:**
+- 各コミット後に自動的にリモートブランチへプッシュ
+- 作業の継続性を保ち、バックアップを確保
+- プッシュ失敗時は適切にエラーハンドリング
+
 **コミットメッセージフォーマット:**
 ```
 <type>: <件名>
@@ -350,7 +355,7 @@ Claude Codeは適切な粒度でコミットとPR作成を自動的に処理し�
 2. **最初に失敗するテストを書く**（レッドフェーズ）
 3. テストをパスする最小限のコードを実装（グリーンフェーズ）
 4. リファクタリングと最適化（リファクタフェーズ）
-5. 各TDDサイクルで論理的なコミットを作成
+5. 各TDDサイクルで論理的なコミットを作成し、自動プッシュ
 6. すべてのテストとリンティングを実行
 7. 作業完了時にPRを作成
 8. PR URLを提供
@@ -380,12 +385,12 @@ git checkout -b feature/add-email-notifications
 npm run lint
 npm run build
 
-# Commit with descriptive message (in Japanese)
+# コミットと自動プッシュ（日本語メッセージ）
 git add .
 git commit -m "feat: カスタマイズ可能なテンプレートを使用したメール通知システムを追加"
-git push origin feature/add-email-notifications
+git push origin feature/add-email-notifications  # 自動的に実行
 
-# Create PR to dev branch (in Japanese)
+# PR作成（日本語）
 gh pr create --base dev --title "メール通知システムの追加" --body "..."
 
 # For a hotfix
