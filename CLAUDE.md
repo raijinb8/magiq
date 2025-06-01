@@ -254,15 +254,15 @@ This project follows Test-Driven Development principles. All new features and bu
 
 **Test Structure:**
 ```typescript
-describe('Component/Function Name', () => {
-  it('should handle expected behavior', () => {
-    // Arrange
-    // Act
-    // Assert
+describe('コンポーネント/関数名', () => {
+  it('期待される動作を処理する', () => {
+    // 準備
+    // 実行
+    // 検証
   });
   
-  it('should handle edge cases', () => {
-    // Test edge cases
+  it('エッジケースを処理する', () => {
+    // エッジケースのテスト
   });
 });
 ```
@@ -307,10 +307,14 @@ Types:
 - `chore`: Maintenance tasks, dependency updates
 
 **Language Requirements:**
-- Commit messages, PR descriptions, and issue comments should be written in **Japanese**
-- This includes the subject line and body of commits
-- Code comments and technical documentation remain in English
-- Example: `feat: ユーザー認証機能を追加` instead of `feat: Add user authentication`
+- All human-readable text should be written in **Japanese**, including:
+  - Commit messages (subject and body)
+  - PR descriptions and titles
+  - Issue comments and descriptions
+  - Code comments (インラインコメント、JSDoc、etc.)
+  - Technical documentation (README, API docs, etc.)
+- Example commit: `feat: ユーザー認証機能を追加` instead of `feat: Add user authentication`
+- Example code comment: `// ユーザーの認証状態を確認` instead of `// Check user authentication status`
 
 ### Auto-PR Guidelines
 
