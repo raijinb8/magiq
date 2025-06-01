@@ -1,94 +1,94 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+このファイルは、このリポジトリでコードを扱う際のClaude Code (claude.ai/code) への指示を提供します。
 
-## Project Overview
+## プロジェクト概要
 
-MagIQ is a full-stack application for managing construction work orders and shift scheduling. It consists of a React frontend and Supabase backend with Edge Functions for PDF processing using AI.
+MagIQは、建設業の作業指示書管理とシフトスケジューリングのためのフルスタックアプリケーションです。ReactフロントエンドとSupabaseバックエンド（AIを使用したPDF処理用のEdge Functions付き）で構成されています。
 
-**Project Structure:**
-- `/app/frontend` - React TypeScript frontend
-- `/app/supabase` - Backend (Edge Functions, migrations, configuration)
+**プロジェクト構成:**
+- `/app/frontend` - React TypeScriptフロントエンド
+- `/app/supabase` - バックエンド（Edge Functions、マイグレーション、設定）
 
-**Key Technologies:**
+**主要技術:**
 
-Frontend:
+フロントエンド:
 - React 19 with TypeScript
 - Vite 6.2 with @tailwindcss/vite plugin
 - Tailwind CSS v4
 - React Router v7
-- Zustand for state management
-- react-pdf for PDF rendering
-- shadcn/ui components
+- Zustand（状態管理）
+- react-pdf（PDFレンダリング）
+- shadcn/uiコンポーネント
 
-Backend:
-- Supabase (PostgreSQL, Auth, Storage, Edge Functions)
-- Deno runtime for Edge Functions
-- Google Gemini AI API for PDF processing
+バックエンド:
+- Supabase (PostgreSQL、認証、ストレージ、Edge Functions)
+- Denoランタイム（Edge Functions用）
+- Google Gemini AI API（PDF処理用）
 - TypeScript
 
-## Common Development Commands
+## 共通開発コマンド
 
-### Frontend Commands
+### フロントエンドコマンド
 ```bash
 cd /app/frontend
-npm run dev        # Start development server (port 5173)
-npm run build      # TypeScript check + production build
-npm run lint       # Run ESLint
-npm run preview    # Preview production build
+npm run dev        # 開発サーバー起動（ポート5173）
+npm run build      # TypeScriptチェック + 本番ビルド
+npm run lint       # ESLint実行
+npm run preview    # 本番ビルドのプレビュー
 ```
 
-### Backend Commands
+### バックエンドコマンド
 ```bash
 cd /app
-supabase start     # Start local Supabase (requires Docker)
-supabase db reset  # Reset database and apply migrations
+supabase start     # ローカルSupabase起動（Docker必須）
+supabase db reset  # データベースリセットとマイグレーション適用
 supabase functions serve process-pdf-single --env-file supabase/functions/process-pdf-single/.env
 ```
 
-**Environment Setup:**
-- Frontend: Create `/app/frontend/.env` with Supabase URL and anon key
-- Backend: Create `/app/supabase/functions/process-pdf-single/.env` with `GEMINI_API_KEY`
+**環境設定:**
+- フロントエンド: `/app/frontend/.env` にSupabase URLとanon keyを設定
+- バックエンド: `/app/supabase/functions/process-pdf-single/.env` に `GEMINI_API_KEY` を設定
 
-**Note:** Test framework is not yet configured. When implementing features, I will:
-1. Set up Jest/Testing Library for frontend tests
-2. Configure test scripts in package.json
-3. Follow TDD practices for all new code
+**注意:** テストフレームワークはまだ設定されていません。機能実装時は以下を行います：
+1. フロントエンドテスト用にJest/Testing Libraryをセットアップ
+2. package.jsonにテストスクリプトを設定
+3. すべての新規コードでTDDを実践
 
-## High-Level Architecture
+## 高レベルアーキテクチャ
 
-### Multi-Company Architecture
-The application supports multiple construction companies through dynamic configuration:
-- Company ID is determined at runtime and stored in Zustand store (`useCompanyStore`)
-- Configuration loaded from `/public/config/active.json`
-- Company-specific prompts for PDF processing in backend
+### マルチカンパニーアーキテクチャ
+アプリケーションは動的設定により複数の建設会社をサポートします：
+- カンパニーIDは実行時に決定され、Zustandストア（`useCompanyStore`）に格納
+- 設定は `/public/config/active.json` から読み込み
+- バックエンドでのPDF処理用の会社固有プロンプト
 
-### Authentication Flow
-- Supabase Auth handles user authentication
-- `ProtectedRoute` component wraps authenticated pages
-- After login, users are redirected to `/admin` (admin dashboard)
-- User sessions managed through Supabase client
+### 認証フロー
+- Supabase Authがユーザー認証を処理
+- `ProtectedRoute` コンポーネントが認証済みページをラップ
+- ログイン後、ユーザーは `/admin`（管理ダッシュボード）にリダイレクト
+- ユーザーセッションはSupabaseクライアントで管理
 
-### PDF Processing Pipeline
-1. **Frontend Upload**: Files uploaded via drag-and-drop or file input in `WorkOrderTool`
-2. **Backend Processing**: Supabase Edge Function `process-pdf-single` extracts text using Google Gemini API
-   - Converts PDF to Base64 for Gemini API
-   - Uses `gemini-2.5-flash-preview-04-17` model
-   - Tracks token usage and processing time
-3. **Company-Specific Prompts**: Different prompts based on `companyId`
+### PDF処理パイプライン
+1. **フロントエンドアップロード**: `WorkOrderTool`でドラッグ&ドロップまたはファイル入力でアップロード
+2. **バックエンド処理**: Supabase Edge Function `process-pdf-single` がGoogle Gemini APIを使用してテキスト抽出
+   - Gemini API用にPDFをBase64に変換
+   - `gemini-2.5-flash-preview-04-17` モデルを使用
+   - トークン使用量と処理時間を追跡
+3. **会社固有プロンプト**: `companyId`に基づく異なるプロンプト
    - `NOHARA_G`: 野原G住環境
    - `KATOUBENIYA_MISAWA`: 加藤ベニヤ池袋_ミサワホーム
-   - Prompts enforce strict formatting (全角/半角)
-4. **Database Storage**: Results saved to `work_orders` table
-5. **Result Display**: Extracted text shown in `GeneratedTextPanel` for review/editing
+   - プロンプトは厳密なフォーマット（全角/半角）を強制
+4. **データベース保存**: 結果は `work_orders` テーブルに保存
+5. **結果表示**: 抽出されたテキストは `GeneratedTextPanel` でレビュー/編集用に表示
 
-### State Management Patterns
-- **Global State**: Zustand for company configuration
-- **Component State**: Local React state for UI interactions
-- **Server State**: Supabase queries for data fetching
-- **PDF State**: Custom hooks (`usePdfDocument`, `usePdfControls`) for PDF viewer state
+### 状態管理パターン
+- **グローバル状態**: 会社設定用のZustand
+- **コンポーネント状態**: UIインタラクション用のローカルReact状態
+- **サーバー状態**: データ取得用のSupabaseクエリ
+- **PDF状態**: PDFビューア状態用のカスタムフック（`usePdfDocument`、`usePdfControls`）
 
-### Routing Architecture
+### ルーティングアーキテクチャ
 ```
 / (Home)
 /login
@@ -100,29 +100,29 @@ The application supports multiple construction companies through dynamic configu
 /shift-form (Shift submission)
 ```
 
-## Backend Architecture
+## バックエンドアーキテクチャ
 
-### Database Schema
+### データベーススキーマ
 
-**work_orders table:**
-- Stores PDF processing results
-- Fields: `id`, `file_name`, `uploaded_at`, `company_name`, `prompt_identifier`, `generated_text`, `edited_text`, `status`, `error_message`, `gemini_processed_at`
+**work_ordersテーブル:**
+- PDF処理結果を保存
+- フィールド: `id`, `file_name`, `uploaded_at`, `company_name`, `prompt_identifier`, `generated_text`, `edited_text`, `status`, `error_message`, `gemini_processed_at`
 
-**shifts table:**
-- Manages staff shift scheduling
-- Fields: `id`, `user_id`, `date`, `shift_type`, `custom_end_time`, `note`
+**shiftsテーブル:**
+- スタッフのシフトスケジューリングを管理
+- フィールド: `id`, `user_id`, `date`, `shift_type`, `custom_end_time`, `note`
 
 ### Edge Functions
 
 **process-pdf-single:**
-- Endpoint: `/functions/v1/process-pdf-single`
-- Method: POST (multipart/form-data)
-- Required: PDF file, company ID
-- Returns: Generated text and metadata
+- エンドポイント: `/functions/v1/process-pdf-single`
+- メソッド: POST (multipart/form-data)
+- 必須: PDFファイル、カンパニーID
+- 戻り値: 生成されたテキストとメタデータ
 
-## Key Implementation Details
+## 主要な実装詳細
 
-### Environment Variables
+### 環境変数
 
 Frontend (`/app/frontend/.env`):
 ```env
@@ -135,41 +135,41 @@ Backend (`/app/supabase/functions/process-pdf-single/.env`):
 GEMINI_API_KEY=your_gemini_api_key
 ```
 
-### Frontend Implementation Details
+### フロントエンド実装詳細
 
-**Path Aliases:**
-- TypeScript configured with `@/*` → `./src/*` for clean imports
+**パスエイリアス:**
+- TypeScriptで `@/*` → `./src/*` の設定でクリーンなインポート
 
-**PDF Worker Configuration:**
-- PDF.js worker files must be copied to `public/pdfjs-dist/` for PDF rendering
+**PDFワーカー設定:**
+- PDFレンダリング用にPDF.jsワーカーファイルを `public/pdfjs-dist/` にコピー必須
 
-**Company-Specific Features:**
-1. Check `useCompanyStore` for current company context
-2. Reference company constants in `frontend/src/constants/company.ts`
-3. Company-specific prompts in `supabase/functions/process-pdf-single/prompts/`
+**会社固有機能:**
+1. 現在の会社コンテキストは `useCompanyStore` で確認
+2. 会社定数は `frontend/src/constants/company.ts` を参照
+3. 会社固有プロンプトは `supabase/functions/process-pdf-single/prompts/` に配置
 
-**Supabase Integration:**
-- Client initialized in `frontend/lib/supabase.ts`
-- API calls centralized in `frontend/lib/api.ts`
-- Database types defined in `frontend/types/index.ts`
+**Supabase統合:**
+- クライアントは `frontend/lib/supabase.ts` で初期化
+- API呼び出しは `frontend/lib/api.ts` に集約
+- データベース型は `frontend/types/index.ts` で定義
 
-### Backend Implementation Details
+### バックエンド実装詳細
 
-**Prompt Registry:**
-- Mapping in `supabase/functions/process-pdf-single/promptRegistry.ts`
-- Each company has versioned prompts (e.g., "V20250526")
-- Strict formatting rules for Japanese text processing
+**プロンプトレジストリ:**
+- マッピングは `supabase/functions/process-pdf-single/promptRegistry.ts` で管理
+- 各会社はバージョン付きプロンプトを持つ（例："V20250526"）
+- 日本語テキスト処理用の厳密なフォーマットルール
 
-**Security:**
-- Uses Supabase service role for database access
-- CORS headers configured for cross-origin requests
-- Proper error handling for API failures
+**セキュリティ:**
+- データベースアクセスにはSupabaseサービスロールを使用
+- クロスオリジンリクエスト用のCORSヘッダー設定済み
+- API障害に対する適切なエラーハンドリング
 
-## Git Branch Strategy
+## Gitブランチ戦略
 
-This project follows Git-Flow principles for branch management:
+このプロジェクトはGit-Flowの原則に従ったブランチ管理を行います：
 
-### Branch Structure
+### ブランチ構造
 ```
 main (production-ready)
 ├── dev (development/integration)
@@ -179,78 +179,78 @@ main (production-ready)
 └── release/* (release preparation)
 ```
 
-### Branch Types and Usage
+### ブランチタイプと使用法
 
-1. **Feature Branches** (`feature/*`)
-   - Created from: `dev`
-   - Merge back to: `dev`
-   - Examples: `feature/add-export-pdf`, `feature/multi-language-support`
-   - Use for: New functionality, enhancements
+1. **機能ブランチ** (`feature/*`)
+   - 作成元: `dev`
+   - マージ先: `dev`
+   - 例: `feature/add-export-pdf`, `feature/multi-language-support`
+   - 用途: 新機能、機能拡張
 
-2. **Fix Branches** (`fix/*`)
-   - Created from: `dev`
-   - Merge back to: `dev`
-   - Examples: `fix/pdf-viewer-crash`, `fix/auth-redirect-loop`
-   - Use for: Non-urgent bug fixes in development
+2. **修正ブランチ** (`fix/*`)
+   - 作成元: `dev`
+   - マージ先: `dev`
+   - 例: `fix/pdf-viewer-crash`, `fix/auth-redirect-loop`
+   - 用途: 開発環境での緊急でないバグ修正
 
-3. **Hotfix Branches** (`hotfix/*`)
-   - Created from: `main`
-   - Merge back to: `main` AND `dev`
-   - Examples: `hotfix/critical-security-patch`, `hotfix/payment-processing`
-   - Use for: Critical production issues requiring immediate fix
+3. **ホットフィックスブランチ** (`hotfix/*`)
+   - 作成元: `main`
+   - マージ先: `main` および `dev`
+   - 例: `hotfix/critical-security-patch`, `hotfix/payment-processing`
+   - 用途: 即座の修正が必要な本番環境の重大な問題
 
-4. **Release Branches** (`release/*`)
-   - Created from: `dev`
-   - Merge back to: `main` AND `dev`
-   - Examples: `release/1.2.0`, `release/2.0.0-beta`
-   - Use for: Preparing releases, final testing, version bumps
+4. **リリースブランチ** (`release/*`)
+   - 作成元: `dev`
+   - マージ先: `main` および `dev`
+   - 例: `release/1.2.0`, `release/2.0.0-beta`
+   - 用途: リリース準備、最終テスト、バージョン更新
 
-### Branch Selection Guidelines
+### ブランチ選択ガイドライン
 
-When deciding which branch to create:
+どのブランチを作成するか決定する際：
 
-- **New functionality or enhancement** → `feature/*`
-- **Bug in development environment** → `fix/*`
-- **Critical bug in production** → `hotfix/*`
-- **Preparing for deployment** → `release/*`
-- **Small documentation updates** → Can work directly on `dev`
+- **新機能や機能拡張** → `feature/*`
+- **開発環境のバグ** → `fix/*`
+- **本番環境の重大なバグ** → `hotfix/*`
+- **デプロイメント準備** → `release/*`
+- **小さなドキュメント更新** → `dev` で直接作業可能
 
-### Best Practices
+### ベストプラクティス
 
-- **Descriptive Names**: Use clear, kebab-case names that describe the change
-- **Small, Focused Changes**: Keep branches focused on a single issue or feature
-- **Regular Updates**: Sync with `dev` regularly to avoid conflicts
-- **Testing**: Always run `npm run build` and `npm run lint` before creating PR
-- **Clean History**: Use meaningful commit messages
+- **分かりやすい名前**: 変更内容を説明する明確なケバブケースの名前を使用
+- **小さく焦点を絞った変更**: ブランチは単一の問題や機能に焦点を当てる
+- **定期的な更新**: コンフリクトを避けるため定期的に `dev` と同期
+- **テスト**: PR作成前に必ず `npm run build` と `npm run lint` を実行
+- **クリーンな履歴**: 意味のあるコミットメッセージを使用
 
-## Test-Driven Development (TDD)
+## テスト駆動開発（TDD）
 
-This project follows Test-Driven Development principles. All new features and bug fixes should be developed using the TDD cycle:
+このプロジェクトはテスト駆動開発の原則に従います。すべての新機能とバグ修正はTDDサイクルを使用して開発してください：
 
-### TDD Workflow
+### TDDワークフロー
 
-1. **Red Phase**: Write a failing test first
-   - Define the expected behavior
-   - Run the test to ensure it fails
+1. **レッドフェーズ**: 最初に失敗するテストを書く
+   - 期待される動作を定義
+   - テストを実行して失敗することを確認
 
-2. **Green Phase**: Write minimal code to pass the test
-   - Focus only on making the test pass
-   - Don't worry about optimization yet
+2. **グリーンフェーズ**: テストをパスする最小限のコードを書く
+   - テストをパスすることだけに集中
+   - まだ最適化については心配しない
 
-3. **Refactor Phase**: Improve the code
-   - Clean up the implementation
-   - Ensure all tests still pass
+3. **リファクタフェーズ**: コードを改善する
+   - 実装をクリーンアップ
+   - すべてのテストがまだパスすることを確認
 
-### Testing Guidelines
+### テストガイドライン
 
-**Test Framework Setup:**
-- If no test framework exists, set up Jest for React/TypeScript:
+**テストフレームワークのセットアップ:**
+- テストフレームワークが存在しない場合、React/TypeScript用にJestをセットアップ:
   ```bash
   cd /app/frontend
   npm install --save-dev jest @testing-library/react @testing-library/jest-dom
   npm install --save-dev @types/jest ts-jest
   ```
-- For Supabase Edge Functions, use Deno's built-in test runner
+- Supabase Edge Functionsには、Denoの組み込みテストランナーを使用
 
 **Test Structure:**
 ```typescript
@@ -267,62 +267,62 @@ describe('コンポーネント/関数名', () => {
 });
 ```
 
-**Testing Priority:**
-1. Unit tests for business logic
-2. Integration tests for API endpoints
-3. Component tests for critical UI elements
-4. E2E tests for critical user flows
+**テストの優先順位:**
+1. ビジネスロジックのユニットテスト
+2. APIエンドポイントの統合テスト
+3. 重要なUI要素のコンポーネントテスト
+4. 重要なユーザーフローのE2Eテスト
 
-**Test Coverage Goals:**
-- Aim for 80% code coverage
-- 100% coverage for critical business logic
-- Focus on behavior, not implementation details
+**テストカバレッジ目標:**
+- 80%のコードカバレッジを目指す
+- 重要なビジネスロジックは100%カバレッジ
+- 実装の詳細ではなく動作に焦点を当てる
 
-## Automated Commit and PR Creation
+## 自動コミットとPR作成
 
-Claude Code will automatically handle commits and PR creation with appropriate granularity:
+Claude Codeは適切な粒度でコミットとPR作成を自動的に処理します：
 
-### Auto-Commit Guidelines
+### 自動コミットガイドライン
 
-**When to Commit:**
-- After completing a logical unit of work (e.g., implementing a function, fixing a specific bug)
-- When switching between different files or components
-- Before running tests or build commands
-- After significant refactoring
+**コミットするタイミング:**
+- 論理的な作業単位の完了後（例：関数の実装、特定のバグ修正）
+- 異なるファイルやコンポーネント間で切り替える時
+- テストやビルドコマンドを実行する前
+- 重要なリファクタリング後
 
-**Commit Message Format:**
+**コミットメッセージフォーマット:**
 ```
-<type>: <subject>
+<type>: <件名>
 
-<body (optional)>
+<本文 (オプション)>
 ```
 
-Types:
-- `feat`: New feature
-- `fix`: Bug fix
-- `docs`: Documentation changes
-- `style`: Code style changes (formatting, missing semicolons, etc.)
-- `refactor`: Code refactoring without changing functionality
-- `test`: Adding or updating tests
-- `chore`: Maintenance tasks, dependency updates
+タイプ:
+- `feat`: 新機能
+- `fix`: バグ修正
+- `docs`: ドキュメント変更
+- `style`: コードスタイル変更（フォーマット、セミコロン抜けなど）
+- `refactor`: 機能を変更しないコードのリファクタリング
+- `test`: テストの追加または更新
+- `chore`: メンテナンスタスク、依存関係の更新
 
-**Language Requirements:**
-- All human-readable text should be written in **Japanese**, including:
-  - Commit messages (subject and body)
-  - PR descriptions and titles
-  - Issue comments and descriptions
-  - Code comments (インラインコメント、JSDoc、etc.)
-  - Technical documentation (README, API docs, etc.)
-- Example commit: `feat: ユーザー認証機能を追加` instead of `feat: Add user authentication`
-- Example code comment: `// ユーザーの認証状態を確認` instead of `// Check user authentication status`
+**言語要件:**
+- すべての人間が読むテキストは**日本語**で記載:
+  - コミットメッセージ（件名と本文）
+  - PR説明とタイトル
+  - Issueコメントと説明
+  - コードコメント（インラインコメント、JSDocなど）
+  - 技術ドキュメント（README、APIドキュメントなど）
+- コミット例: `feat: ユーザー認証機能を追加`（`feat: Add user authentication` ではなく）
+- コードコメント例: `// ユーザーの認証状態を確認`（`// Check user authentication status` ではなく）
 
-### Auto-PR Guidelines
+### 自動PRガイドライン
 
-**PR Creation Triggers:**
-- Feature implementation complete
-- Bug fix verified and tested
-- Multiple related commits ready for review
-- User explicitly requests deployment
+**PR作成トリガー:**
+- 機能実装の完了
+- バグ修正の検証とテスト完了
+- レビュー準備ができた複数の関連コミット
+- ユーザーが明示的にデプロイメントを要求
 
 **PR Format (in Japanese):**
 ```markdown
@@ -342,34 +342,34 @@ Types:
 🤖 Generated with [Claude Code](https://claude.ai/code)
 ```
 
-### Automatic Workflow Example
+### 自動ワークフローの例
 
-When you ask me to implement a feature, I will:
+機能実装を依頼された場合、以下を実行します：
 
-1. Create appropriate branch (`feature/`, `fix/`, etc.)
-2. **Write failing tests first** (Red phase)
-3. Implement minimal code to pass tests (Green phase)
-4. Refactor and optimize (Refactor phase)
-5. Make logical commits at each TDD cycle
-6. Run all tests and linting
-7. Create PR when the work is complete
-8. Provide you with the PR URL
+1. 適切なブランチを作成（`feature/`、`fix/` など）
+2. **最初に失敗するテストを書く**（レッドフェーズ）
+3. テストをパスする最小限のコードを実装（グリーンフェーズ）
+4. リファクタリングと最適化（リファクタフェーズ）
+5. 各TDDサイクルで論理的なコミットを作成
+6. すべてのテストとリンティングを実行
+7. 作業完了時にPRを作成
+8. PR URLを提供
 
-You can always tell me to:
-- "Hold off on commits" if you want to review first
-- "Create PR now" if you want to merge work-in-progress
-- "Squash commits" if you prefer a cleaner history
+いつでも以下を指示できます：
+- レビューを先に行いたい場合は「コミットを保留」
+- 作業中のものをマージしたい場合は「今すぐPR作成」
+- よりクリーンな履歴を好む場合は「コミットをスカッシュ」
 
-### Session Cost Tracking
+### セッションコスト追跡
 
-After completing tasks, display the current session cost using:
+タスク完了後、現在のセッションコストを表示:
 ```bash
 npx ccusage@latest session --json | jq -r '.sessions[] | select(.sessionId == "-app") | .totalCost'
 ```
 
-This helps track AI usage costs for development work.
+これにより開発作業のAI使用コストを追跡できます。
 
-### Example Workflow
+### ワークフローの例
 ```bash
 # For a new feature
 git checkout dev
@@ -397,11 +397,11 @@ git checkout -b hotfix/fix-auth-token-expiry
 # Create PRs to both main and dev
 ```
 
-## Code Quality Standards
+## コード品質基準
 
-All code should be written as if it has already gone through multiple refactoring cycles. Write production-ready, clean code from the start:
+すべてのコードは、すでに複数のリファクタリングサイクルを経たかのように書いてください。最初から本番環境対応のクリーンなコードを書く：
 
-### Clean Code Principles
+### クリーンコードの原則
 
 1. **Single Responsibility Principle (SRP)**
    - 各関数・クラスは1つの責任のみを持つ
@@ -419,7 +419,7 @@ All code should be written as if it has already gone through multiple refactorin
    - 現在必要な機能のみを実装
    - 将来の仮定に基づいた過剰な実装を避ける
 
-### Refactoring Guidelines
+### リファクタリングガイドライン
 
 **命名規則:**
 - 変数名・関数名は意図が明確にわかる名前にする
@@ -457,7 +457,7 @@ function validateUserEmail(email: string): boolean {
 - 大量データは仮想スクロールやページネーションを使用
 - 重い処理は Web Worker や遅延読み込みを検討
 
-### Code Review Checklist
+### コードレビューチェックリスト
 
 コードを書く際は以下を自己チェック:
 - [ ] 関数は10行以内に収まっているか
@@ -467,12 +467,12 @@ function validateUserEmail(email: string): boolean {
 - [ ] エッジケースを考慮しているか
 - [ ] パフォーマンスのボトルネックはないか
 
-## Important Notes
+## 重要な注意事項
 
-- No test framework is currently configured
-- Using Tailwind CSS v4 with Vite plugin (not PostCSS)
-- Frontend deployment configured for Vercel with SPA routing
-- PDF processing requires backend Gemini API key configuration
-- Database uses PostgreSQL 15 through Supabase
-- Edge Functions use Deno v1 runtime
-- Local development requires Docker for Supabase services
+- テストフレームワークは現在未設定
+- Tailwind CSS v4をViteプラグインで使用（PostCSSではない）
+- フロントエンドはVercelでSPAルーティング設定済み
+- PDF処理にはバックエンドのGemini APIキー設定が必要
+- データベースはSupabase経由でPostgreSQL 15を使用
+- Edge FunctionsはDeno v1ランタイムを使用
+- ローカル開発にはSupabaseサービス用のDockerが必要
