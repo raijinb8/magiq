@@ -571,6 +571,124 @@ function validateUserEmail(email: string): boolean {
 - [ ] エッジケースを考慮しているか
 - [ ] パフォーマンスのボトルネックはないか
 
+## エラーハンドリングとロギング
+
+### エラーハンドリング原則
+- すべてのエラーは適切にキャッチし、ユーザーフレンドリーなメッセージを表示
+- エラー境界（Error Boundary）を使用してReactコンポーネントのクラッシュを防ぐ
+- APIエラーは統一されたフォーマットで処理
+- カスタムエラークラスで詳細な情報を保持
+
+### ロギング戦略
+- 開発環境：console.log使用可（本番では自動削除）
+- エラーログ：Supabaseのログ機能を活用
+- 重要なユーザーアクション（PDF処理、認証など）はトラッキング
+- 構造化ログで検索・分析を容易に
+
+## パフォーマンス最適化
+
+### フロントエンド最適化
+- React.lazy()とSuspenseによる遅延読み込み
+- 画像の最適化（WebP形式、適切なサイズ、lazy loading）
+- Bundle分割（vendor、app、pages）
+- Service Workerによるキャッシュ戦略
+
+### PDF処理の最適化
+- 大きなPDFは分割処理（10MB以上）
+- Web Workerでの重い処理実行
+- プログレスバーでユーザーフィードバック
+- メモリリークを防ぐための適切なクリーンアップ
+
+## セキュリティガイドライン
+
+### 認証・認可
+- Supabase RLS（Row Level Security）の厳格な適用
+- JWTトークンの適切な管理（HttpOnly Cookie推奨）
+- セッションタイムアウトの設定（30分）
+- 多要素認証（MFA）の実装検討
+
+### データ保護
+- 個人情報は最小限の保存（データ最小化原則）
+- PDFアップロード時のファイルタイプ検証
+- XSS対策（React自動エスケープ活用）
+- CSRFトークンの実装
+
+## デバッグとトラブルシューティング
+
+### よくある問題と解決策
+1. **Supabase接続エラー**
+   - 環境変数確認（VITE_PUBLIC_SUPABASE_URL、VITE_PUBLIC_SUPABASE_ANON_KEY）
+   - ネットワーク接続確認
+   - Supabaseプロジェクトの状態確認
+
+2. **PDF処理タイムアウト**
+   - ファイルサイズ制限確認（デフォルト5MB）
+   - Edge Function実行時間制限（最大10秒）
+   - Gemini APIレート制限確認
+
+3. **ビルドエラー**
+   - node_modules削除して再インストール
+   - TypeScriptバージョン互換性確認
+   - Viteキャッシュクリア
+
+### デバッグツール
+- React Developer Tools（コンポーネント階層確認）
+- Supabase Dashboard（データベース状態、ログ確認）
+- Chrome DevTools Network タブ（API通信確認）
+- Vite DevTools（ビルド分析）
+
+## CI/CDと自動化
+
+### GitHub Actions設定
+```yaml
+# .github/workflows/ci.yml
+name: CI
+on:
+  pull_request:
+    branches: [main, dev]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+      - run: npm test
+```
+
+### 品質ゲート
+- テストカバレッジ80%以上
+- TypeScriptエラー0
+- ESLintエラー0
+- ビルドサイズ監視（増加率10%以内）
+
+### デプロイメント戦略
+- main → 本番環境（Vercel）
+- dev → ステージング環境
+- feature/* → プレビュー環境
+
+## データベース管理
+
+### マイグレーション戦略
+- すべての変更はマイグレーションファイルで管理
+- ロールバック可能な設計（down関数必須）
+- 本番適用前にステージング環境でテスト
+- マイグレーション実行履歴の管理
+
+### 命名規則
+- マイグレーション: `YYYYMMDDHHMMSS_description.sql`
+- テーブル: 複数形（例：users, work_orders）
+- カラム: スネークケース（例：created_at, user_id）
+- インデックス: `idx_table_column`
+- 外部キー: `fk_table_reference`
+
+### バックアップ戦略
+- 日次自動バックアップ（Supabase Pro）
+- 重要な変更前の手動バックアップ
+- ポイントインタイムリカバリの活用
+
 ## 重要な注意事項
 
 - テストフレームワーク：Vitest（推奨）、現在は未設定
