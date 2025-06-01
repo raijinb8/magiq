@@ -289,6 +289,15 @@ You can always tell me to:
 - "Create PR now" if you want to merge work-in-progress
 - "Squash commits" if you prefer a cleaner history
 
+### Session Cost Tracking
+
+After completing tasks, display the current session cost using:
+```bash
+npx ccusage@latest session --json | jq -r '.sessions[] | select(.sessionId == "-app") | .totalCost'
+```
+
+This helps track AI usage costs for development work.
+
 ### Example Workflow
 ```bash
 # For a new feature
