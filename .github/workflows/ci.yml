@@ -8,13 +8,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: List files in root
+        run: |
+          pwd
+          ls -la
+          echo "--- Listing app directory ---"
+          ls -la ./app # appディレクトリが存在するか、その中身は何か
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+
       - name: Install dependencies
-        working-directory: /frontend # ここで作業ディレクトリを指定
+        working-directory: ./frontend # ここで作業ディレクトリを指定
         run: npm ci
+
       - run: npm run lint
       - run: npm run build
       - run: npm test
