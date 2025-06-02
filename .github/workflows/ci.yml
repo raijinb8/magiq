@@ -6,6 +6,9 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
     steps:
       - uses: actions/checkout@v4
 
@@ -13,11 +16,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-
-      - name: Install dependencies
-        working-directory: ./frontend # ここで作業ディレクトリを指定
-        run: npm ci
-
+      - run: npm ci
       - run: npm run lint
       - run: npm run build
       - run: npm test
