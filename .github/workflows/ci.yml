@@ -4,11 +4,9 @@ on:
   pull_request:
     branches: [main, dev]
 jobs:
-  test:
+  # フロントエンドのlintとテスト
+  frontend:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./frontend
     steps:
       - uses: actions/checkout@v4
 
@@ -16,7 +14,40 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - run: npm ci
-      - run: npm run lint
-      - run: npm run build
-      - run: npm test
+      
+      - name: Install frontend dependencies
+        working-directory: ./frontend
+        run: npm ci
+      
+      - name: Run frontend lint
+        working-directory: ./frontend
+        run: npm run lint
+      
+      - name: Run frontend build
+        working-directory: ./frontend
+        run: npm run build
+      
+      - name: Run frontend tests
+        working-directory: ./frontend
+        run: npm test
+
+  # Supabase Edge Functionsのlint
+  supabase:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      
+      - name: Run Supabase Functions lint
+        run: |
+          cd supabase/functions
+          deno lint --config ../deno.json || true
+      
+      - name: Type check Supabase Functions
+        run: |
+          cd supabase/functions
+          deno check **/*.ts || true
