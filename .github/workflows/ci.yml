@@ -27,9 +27,10 @@ jobs:
         working-directory: ./frontend
         run: npm run build
       
-      - name: Run frontend tests
-        working-directory: ./frontend
-        run: npm test
+      # TODO: テストフレームワーク設定後に有効化
+      # - name: Run frontend tests
+      #   working-directory: ./frontend
+      #   run: npm test
 
   # Supabase Edge Functionsのlint
   supabase:

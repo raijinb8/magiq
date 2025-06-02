@@ -17,14 +17,20 @@ export async function getSubmittedShiftsForCurrentUser(userId: string) {
     return [];
   }
 
-  // 配列に any 型の明示を加える
-  const uniqueByDate: any[] = Object.values(
+  // 重複を排除
+  interface ShiftData {
+    date: string;
+    shift_type: string;
+    custom_end_time: string;
+  }
+
+  const uniqueByDate: ShiftData[] = Object.values(
     (data || []).reduce(
       (acc, curr) => {
         acc[curr.date] = acc[curr.date] || curr;
         return acc;
       },
-      {} as Record<string, any>
+      {} as Record<string, ShiftData>
     )
   );
 

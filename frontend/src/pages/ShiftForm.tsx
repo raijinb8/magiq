@@ -34,7 +34,12 @@ const getNextWeekDates = () => {
 
 export default function ShiftForm() {
   const [user, setUser] = useState<User | null>(null);
-  const [shifts, setShifts] = useState<Record<string, any>>({});
+  interface ShiftData {
+    shift_type?: string;
+    custom_end_time?: string;
+    note?: string;
+  }
+  const [shifts, setShifts] = useState<Record<string, ShiftData>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
@@ -65,7 +70,7 @@ export default function ShiftForm() {
     }));
   };
 
-  const validateShiftType = (shift: any, dateStr: string): string | null => {
+  const validateShiftType = (shift: ShiftData | undefined, dateStr: string): string | null => {
     if (!shift || !shift.shift_type) {
       return `【${dateStr}】はシフト種別が未選択です。`;
     }
@@ -73,7 +78,7 @@ export default function ShiftForm() {
   };
 
   const validateCustomEndTime = (
-    shift: any,
+    shift: ShiftData | undefined,
     dateStr: string
   ): string | null => {
     if (shift?.shift_type === 'custom' && !shift.custom_end_time) {
@@ -111,7 +116,7 @@ export default function ShiftForm() {
         user_id: user.id,
         date: dateStr,
         shift_type: data.shift_type,
-        custom_end_time: ['custom', 'pm'].includes(data.shift_type)
+        custom_end_time: data.shift_type && ['custom', 'pm'].includes(data.shift_type)
           ? data.custom_end_time
           : null,
         note: data.note || null,
@@ -166,7 +171,7 @@ export default function ShiftForm() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {['custom', 'pm'].includes(shift.shift_type) && (
+            {shift.shift_type && ['custom', 'pm'].includes(shift.shift_type) && (
               <Input
                 type="time"
                 value={shift.custom_end_time || ''}
