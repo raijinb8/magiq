@@ -116,7 +116,7 @@ export default function ShiftForm() {
         user_id: user.id,
         date: dateStr,
         shift_type: data.shift_type,
-        custom_end_time: ['custom', 'pm'].includes(data.shift_type)
+        custom_end_time: data.shift_type && ['custom', 'pm'].includes(data.shift_type)
           ? data.custom_end_time
           : null,
         note: data.note || null,
@@ -171,7 +171,7 @@ export default function ShiftForm() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {['custom', 'pm'].includes(shift.shift_type) && (
+            {shift.shift_type && ['custom', 'pm'].includes(shift.shift_type) && (
               <Input
                 type="time"
                 value={shift.custom_end_time || ''}
