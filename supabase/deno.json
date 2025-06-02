@@ -1,0 +1,29 @@
+{
+  "lint": {
+    "include": ["functions/"],
+    "exclude": ["functions/*/node_modules"],
+    "rules": {
+      "tags": ["recommended"],
+      "include": [
+        "ban-untagged-todo",
+        "explicit-function-return-type",
+        "no-await-in-loop"
+      ]
+    }
+  },
+  "fmt": {
+    "include": ["functions/"],
+    "exclude": ["functions/*/node_modules"],
+    "useTabs": false,
+    "lineWidth": 100,
+    "indentWidth": 2,
+    "semiColons": false,
+    "singleQuote": true,
+    "proseWrap": "preserve"
+  },
+  "compilerOptions": {
+    "lib": ["deno.window"],
+    "allowJs": true,
+    "strict": true
+  }
+}

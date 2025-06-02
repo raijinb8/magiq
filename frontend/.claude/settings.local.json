@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm i:*)",
+      "Bash(mv:*)",
+      "Bash(claude --version)",
+      "Bash(claude doctor)",
+      "Bash(sudo npm update:*)",
+      "Bash(ls:*)",
+      "Bash(git checkout:*)",
+      "Bash(git add:*)",
+      "Bash(git push:*)"
+    ],
+    "deny": []
+  },
+  "enableAllProjectMcpServers": false
+}

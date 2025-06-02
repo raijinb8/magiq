@@ -40,3 +40,8 @@ echo "PATH -> Y, shell -> zsh"
 curl -fsSL https://deno.land/x/install/install.sh | sh
 
 echo "Deno用のpostCreateCommand.shが終了しました。"
+
+# Claude Codeをインストール
+echo "Installing Claude Code CLI..."
+sudo npm install -g @anthropic-ai/claude-code
+echo "Claude Code installation completed."

@@ -21,7 +21,9 @@
         "GitHub.copilot", // もし使っていれば
         "GitHub.copilot-chat", // もし使っていれば
         "Vue.volar", // Vite + React の場合に補完が効きやすくなることがある (公式はVue向け) or "msjsdiag.vscode-react-native"
-        "ms-azuretools.vscode-docker" // Docker拡張機能
+        "ms-azuretools.vscode-docker", // Docker拡張機能
+        "github.vscode-github-actions", // GitHub Actions
+        "anthropic.claude" // Claude Code
       ]
     }
   },
