@@ -21,9 +21,9 @@ export async function getSubmittedShiftsForCurrentUser(userId: string) {
   interface ShiftData {
     date: string;
     shift_type: string;
-    [key: string]: unknown;
+    custom_end_time: string;
   }
-  
+
   const uniqueByDate: ShiftData[] = Object.values(
     (data || []).reduce(
       (acc, curr) => {
@@ -32,7 +32,7 @@ export async function getSubmittedShiftsForCurrentUser(userId: string) {
       },
       {} as Record<string, ShiftData>
     )
-  )
+  );
 
   // date 昇順にソート
   uniqueByDate.sort((a, b) => a.date.localeCompare(b.date));
