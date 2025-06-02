@@ -22,9 +22,8 @@ export interface ProcessedCompanyInfo {
   companyLabel: string; // これは COMPANY_OPTIONS の label に対応する想定
 }
 
-export interface PdfFile extends File {
-  // 必要であれば File 型を拡張するカスタムプロパティ
-}
+// PDFファイルの型定義（現時点ではFileと同じだが、将来的な拡張を考慮）
+export type PdfFile = File;
 
 export interface Point {
   x: number;

@@ -44,7 +44,7 @@ export default function Login() {
         setCompany(config);
         navigate('/admin/work-order-tool'); // ✅ ここで遷移！
         return;
-      } catch (e) {
+      } catch {
         setError(`会社設定の読み込みに失敗しました`);
       }
     }

@@ -30,7 +30,7 @@ export function SubmissionStatusCard() {
   // setHasSubmittedShift: その状態を 更新するための関数
   // useState(false): 初期値は「false（＝未提出）」ってこと
   const [hasSubmittedShift, setHasSubmittedShift] = useState(false);
-  const [submittedShifts, setSubmittedShifts] = useState<any[]>([]);
+  const [submittedShifts, setSubmittedShifts] = useState<Array<{ date: string; shift_type: string }>>([]);
 
   useEffect(() => {
     const fetchStatus = async () => {
