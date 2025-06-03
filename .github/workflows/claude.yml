@@ -22,12 +22,19 @@ jobs:
       contents: write
       pull-requests: write
       issues: write
+      actions: write
       id-token: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0
+          token: ${{ secrets.CLAUDE_PAT || github.token }}
+
+      - name: Set up Git config
+        run: |
+          git config --global user.name "claude[bot]"
+          git config --global user.email "claude[bot]@users.noreply.github.com"
 
       - name: Run Claude Code
         id: claude
@@ -37,6 +44,11 @@ jobs:
           claude_access_token: ${{ secrets.CLAUDE_ACCESS_TOKEN }}
           claude_refresh_token: ${{ secrets.CLAUDE_REFRESH_TOKEN }}
           claude_expires_at: ${{ secrets.CLAUDE_EXPIRES_AT }}
+          # MCPツールを無効化し、Bashツールを使用
+          allowed_tools: 'Bash,Edit,Glob,Grep,LS,Read,Write,mcp__github__update_issue_comment'
+          disallowed_tools: 'mcp__github_file_ops__commit_files,mcp__github_file_ops__delete_files'
+        env:
+          GITHUB_TOKEN: ${{ secrets.CLAUDE_PAT || github.token }}
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
