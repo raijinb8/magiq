@@ -1,6 +1,6 @@
 // shiftHelpers.ts のテスト
 import { describe, it, expect } from 'vitest';
-import { getWeekdayLabel, getShiftTypeLabel } from './shiftHelpers';
+import { getWeekdayLabel, getShiftTypeLabel } from '../shiftHelpers';
 
 describe('getWeekdayLabel', () => {
   it('正しい曜日ラベルを返す', () => {
