@@ -9,6 +9,10 @@ vi.mock('../../lib/supabase', () => ({
       getSession: vi.fn().mockResolvedValue({
         data: { session: { user: { id: 'mock-user-id' } } },
       }),
+      getUser: vi.fn().mockResolvedValue({
+        data: { user: { id: 'mock-user-id' } },
+        error: null,
+      }),
     },
     from: vi.fn().mockReturnValue({
       select: vi.fn().mockReturnValue({
