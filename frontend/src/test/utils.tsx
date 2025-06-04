@@ -1,32 +1,55 @@
 // テストユーティリティ
 import React, { ReactElement } from 'react';
 import { render, RenderOptions } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
+import { BrowserRouter, MemoryRouter } from 'react-router-dom';
 import { Toaster } from 'sonner';
+import userEvent from '@testing-library/user-event';
 
 // カスタムプロバイダー
 interface AllTheProvidersProps {
   children: React.ReactNode;
+  initialEntries?: string[];
 }
 
-function AllTheProviders({ children }: AllTheProvidersProps) {
+function AllTheProviders({ children, initialEntries }: AllTheProvidersProps) {
+  const Router = initialEntries ? MemoryRouter : BrowserRouter;
+  const routerProps = initialEntries ? { initialEntries } : {};
+
   return (
-    <BrowserRouter>
+    <Router {...routerProps}>
       {children}
       <Toaster />
-    </BrowserRouter>
+    </Router>
   );
 }
 
 // カスタムrender関数
+interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
+  initialEntries?: string[];
+}
+
 const customRender = (
   ui: ReactElement,
-  options?: Omit<RenderOptions, 'wrapper'>
-) => render(ui, { wrapper: AllTheProviders, ...options });
+  options?: CustomRenderOptions
+) => {
+  const { initialEntries, ...renderOptions } = options || {};
+  
+  return render(ui, { 
+    wrapper: ({ children }) => (
+      <AllTheProviders initialEntries={initialEntries}>
+        {children}
+      </AllTheProviders>
+    ), 
+    ...renderOptions 
+  });
+};
 
 // re-export everything
 export * from '@testing-library/react';
 export { customRender as render };
+
+// ユーザーイベントのセットアップ
+export const setupUser = () => userEvent.setup();
 
 // モックユーザー
 export const mockUser = {

@@ -1,16 +1,31 @@
 // テスト環境のセットアップ
 import '@testing-library/jest-dom';
-import { expect, afterEach, vi } from 'vitest';
+import { expect, beforeAll, afterEach, afterAll, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import * as matchers from '@testing-library/jest-dom/matchers';
-import './mocks/server';
+import { server } from './mocks/server';
 
 // jest-domのマッチャーを拡張
 expect.extend(matchers);
 
-// 各テスト後にクリーンアップ
+// MSWサーバーの設定
+beforeAll(() => {
+  server.listen({ onUnhandledRequest: 'error' });
+});
+
 afterEach(() => {
+  // 各テスト後にReactコンポーネントをクリーンアップ
   cleanup();
+  // MSWハンドラーをリセット
+  server.resetHandlers();
+  // viのモックをクリア
+  vi.clearAllMocks();
+});
+
+afterAll(() => {
+  server.close();
+  vi.clearAllTimers();
+  vi.resetAllMocks();
 });
 
 // グローバルなモック設定

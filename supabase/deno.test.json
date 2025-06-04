@@ -1,0 +1,42 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "lib": ["deno.window", "deno.unstable"],
+    "strict": true
+  },
+  "include": [
+    "functions/**/*.ts",
+    "functions/**/*.test.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    ".git"
+  ],
+  "tasks": {
+    "test": "deno test --allow-all functions/",
+    "test:watch": "deno test --allow-all --watch functions/",
+    "test:coverage": "deno test --allow-all --coverage=coverage functions/",
+    "coverage": "deno coverage coverage --lcov --output=coverage/lcov.info"
+  },
+  "fmt": {
+    "files": {
+      "include": ["functions/"]
+    },
+    "options": {
+      "useTabs": false,
+      "lineWidth": 100,
+      "indentWidth": 2,
+      "semiColons": true,
+      "singleQuote": false,
+      "proseWrap": "preserve"
+    }
+  },
+  "lint": {
+    "files": {
+      "include": ["functions/"]
+    },
+    "rules": {
+      "tags": ["recommended"]
+    }
+  }
+}
