@@ -26,8 +26,7 @@ describe('Dashboard', () => {
     render(<Dashboard />);
 
     // ダッシュボードのタイトルが表示されることを確認
-    // 実際のDashboardコンポーネントの実装に応じて調整
-    expect(screen.getByRole('main')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'ダッシュボード' })).toBeInTheDocument();
   });
 
   it('認証されたユーザーのダッシュボードが表示される', async () => {
