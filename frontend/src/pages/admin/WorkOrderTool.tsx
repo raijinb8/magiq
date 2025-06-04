@@ -42,6 +42,11 @@ const WorkOrderTool: React.FC = () => {
   // AI処理結果に関する情報 (ファイル名、会社ラベル)
   const [processedCompanyInfo, setProcessedCompanyInfo] =
     useState<ProcessedCompanyInfo>({ file: null, companyLabel: '' });
+  
+  // 自動検出関連の状態
+  const [enableAutoDetection, setEnableAutoDetection] = useState<boolean>(true);
+  const [detectedCompany, setDetectedCompany] = useState<string | null>(null);
+  const [detectionConfidence, setDetectionConfidence] = useState<number>(0);
 
   // --- カスタムフックの利用 ---
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -89,6 +94,18 @@ const WorkOrderTool: React.FC = () => {
         ALL_COMPANY_OPTIONS.find((opt) => opt.value === data.identifiedCompany)
           ?.label || (data.identifiedCompany as string);
       setProcessedCompanyInfo({ file, companyLabel });
+      
+      // 自動検出結果を設定
+      if (data.detectedCompany) {
+        setDetectedCompany(data.detectedCompany);
+        setDetectionConfidence(data.detectionConfidence || 0);
+        
+        // 自動検出が有効で、手動選択されていない場合は、検出結果を自動選択
+        if (enableAutoDetection && !selectedCompanyId && data.detectedCompany !== 'UNKNOWN_OR_NOT_SET') {
+          setSelectedCompanyId(data.detectedCompany as CompanyOptionValue);
+        }
+      }
+      
       toast.success(
         `「${file.name}」のAI処理が完了しました！ (会社: ${companyLabel})`
       );
@@ -125,10 +142,10 @@ const WorkOrderTool: React.FC = () => {
       });
       return;
     }
-    if (!selectedCompanyId) {
+    if (!enableAutoDetection && !selectedCompanyId) {
       toast.error('会社が選択されていません。', {
         description:
-          '処理を開始する前に、ドロップダウンから会社を選択してください。',
+          '処理を開始する前に、ドロップダウンから会社を選択するか、自動検出を有効にしてください。',
       });
       return;
     }
@@ -140,17 +157,19 @@ const WorkOrderTool: React.FC = () => {
     // setGeneratedText(''); // AI処理開始時にクリアするかはUX次第 (processFileのコールバックで設定される)
     // setProcessedCompanyInfo({ file: null, companyLabel: '' }); // 同上
 
+    const companyIdToUse = enableAutoDetection && !selectedCompanyId ? '' : selectedCompanyId;
     const companyLabelForToast =
       ALL_COMPANY_OPTIONS.find((c) => c.value === selectedCompanyId)?.label ||
       selectedCompanyId;
 
     toast.info(
-      `「${processingFile.name}」のAI処理を開始します (会社: ${companyLabelForToast})...`
+      `「${processingFile.name}」のAI処理を開始します${enableAutoDetection && !selectedCompanyId ? ' (会社を自動検出)' : ` (会社: ${companyLabelForToast})`}...`
     );
-    await processFile(processingFile, selectedCompanyId, companyLabelForToast);
+    await processFile(processingFile, companyIdToUse as CompanyOptionValue, companyLabelForToast, enableAutoDetection);
   }, [
     processingFile,
     selectedCompanyId,
+    enableAutoDetection,
     isLoading,
     processFile,
     // setGeneratedText, // 実際には不要 (processFileのコールバックで設定)
@@ -252,6 +271,10 @@ const WorkOrderTool: React.FC = () => {
           onFileSelect={handleFileInputChange} // input[type=file] の onChange
           onFilePreviewRequest={handleFilePreviewRequest} // リストアイテムクリック時
           processedCompanyInfo={processedCompanyInfo}
+          enableAutoDetection={enableAutoDetection}
+          onAutoDetectionChange={setEnableAutoDetection}
+          detectedCompany={detectedCompany}
+          detectionConfidence={detectionConfidence}
         />
 
         <main className="flex-1 flex flex-row overflow-hidden">
@@ -273,7 +296,7 @@ const WorkOrderTool: React.FC = () => {
             isLoading={isLoading && !!processingFile} // AI処理中かつ対象ファイルがある場合
             processingFileForHeader={pdfFileToDisplay} // ヘッダー表示用 (プレビュー中のファイル)
             onExecuteAi={handleAiExecution} // AI実行関数を渡す
-            canExecuteAi={!!processingFile && !!selectedCompanyId} // 実行可能条件を渡す (isLoadingはPanel内で考慮も可)
+            canExecuteAi={!!processingFile && (enableAutoDetection || !!selectedCompanyId)} // 実行可能条件を渡す (isLoadingはPanel内で考慮も可)
           />
 
           <GeneratedTextPanel

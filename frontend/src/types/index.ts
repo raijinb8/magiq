@@ -43,6 +43,11 @@ export interface PdfProcessSuccessResponse {
   promptUsedIdentifier: string;
   dbRecordId: string; // UUIDなど
   message?: string; // 成功メッセージなど
+  // 自動検出関連のフィールド
+  detectedCompany?: string | null;
+  detectionConfidence?: number;
+  detectionMethod?: string;
+  wasManuallyOverridden?: boolean;
 }
 
 export interface PdfProcessErrorResponse {

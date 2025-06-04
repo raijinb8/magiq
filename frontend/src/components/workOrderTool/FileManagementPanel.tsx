@@ -31,6 +31,10 @@ interface FileManagementPanelProps {
   onFileSelect: (event: React.ChangeEvent<HTMLInputElement>) => void; // input[type=file] の onChange ハンドラ
   onFilePreviewRequest: (file: PdfFile) => void; // リスト内のファイルクリック時のプレビュー要求
   processedCompanyInfo: ProcessedCompanyInfo; // リストアイテムのスタイル用
+  enableAutoDetection: boolean; // 自動検出を有効にするかどうか
+  onAutoDetectionChange: (enabled: boolean) => void; // 自動検出の切り替え
+  detectedCompany?: string | null; // 検出された会社
+  detectionConfidence?: number; // 検出の信頼度
 }
 
 export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
@@ -46,6 +50,10 @@ export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
   onFileSelect,
   onFilePreviewRequest,
   processedCompanyInfo,
+  enableAutoDetection,
+  onAutoDetectionChange,
+  detectedCompany,
+  detectionConfidence,
 }) => {
   // リストアイテムのスタイルを決定するヘルパー関数 (元のclassNameロジックを参考に)
   const getListItemClasses = (file: PdfFile): string => {
@@ -89,37 +97,80 @@ export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
     <aside className="w-1/4 border-r bg-background p-4 flex flex-col overflow-hidden">
       <h2 className="mb-4 text-lg font-semibold">アップロード済みPDF一覧</h2>
       {/* 会社選択ドロップダウン */}
-      <div className="mb-4">
-        <label
-          htmlFor="company-select"
-          className="mb-1 block text-sm font-medium text-foreground"
-        >
-          処理対象の会社:
-        </label>
-        <Select value={selectedCompanyId} onValueChange={onCompanyChange}>
-          <SelectTrigger id="company-select" className="w-full">
-            <SelectValue placeholder="会社を選択してください" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectLabel>会社一覧</SelectLabel>
-              {COMPANY_OPTIONS.map(
-                (
-                  company // UNKNOWN_OR_NOT_SET は表示しない想定
-                ) =>
-                  company.value !== 'UNKNOWN_OR_NOT_SET' && (
-                    <SelectItem
-                      key={company.value}
-                      value={company.value}
-                      disabled={company.label.includes('準備中')}
-                    >
-                      {company.label}
-                    </SelectItem>
-                  )
-              )}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
+      <div className="mb-4 space-y-3">
+        {/* 自動検出トグル */}
+        <div className="flex items-center space-x-2">
+          <input
+            type="checkbox"
+            id="auto-detect"
+            checked={enableAutoDetection}
+            onChange={(e) => onAutoDetectionChange(e.target.checked)}
+            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+          <label
+            htmlFor="auto-detect"
+            className="text-sm font-medium text-foreground cursor-pointer"
+          >
+            会社を自動検出する
+          </label>
+        </div>
+        
+        {/* 手動選択（自動検出がOFFの場合のみ必須） */}
+        <div>
+          <label
+            htmlFor="company-select"
+            className="mb-1 block text-sm font-medium text-foreground"
+          >
+            処理対象の会社:
+            {enableAutoDetection && (
+              <span className="text-xs text-muted-foreground ml-1">
+                (手動で上書き可能)
+              </span>
+            )}
+          </label>
+          <Select 
+            value={selectedCompanyId} 
+            onValueChange={onCompanyChange}
+            disabled={enableAutoDetection && !selectedCompanyId}
+          >
+            <SelectTrigger id="company-select" className="w-full">
+              <SelectValue placeholder={enableAutoDetection ? "自動検出します" : "会社を選択してください"} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectLabel>会社一覧</SelectLabel>
+                {COMPANY_OPTIONS.map(
+                  (
+                    company // UNKNOWN_OR_NOT_SET は表示しない想定
+                  ) =>
+                    company.value !== 'UNKNOWN_OR_NOT_SET' && (
+                      <SelectItem
+                        key={company.value}
+                        value={company.value}
+                        disabled={company.label.includes('準備中')}
+                      >
+                        {company.label}
+                      </SelectItem>
+                    )
+                )}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
+        
+        {/* 検出結果の表示 */}
+        {detectedCompany && detectionConfidence !== undefined && (
+          <div className="p-2 rounded-md bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+            <p className="text-xs text-blue-900 dark:text-blue-100">
+              検出結果: <span className="font-semibold">{
+                COMPANY_OPTIONS.find(c => c.value === detectedCompany)?.label || detectedCompany
+              }</span>
+              <span className="ml-2">
+                (信頼度: {(detectionConfidence * 100).toFixed(0)}%)
+              </span>
+            </p>
+          </div>
+        )}
       </div>
       <Button
         className="w-full mb-4"
