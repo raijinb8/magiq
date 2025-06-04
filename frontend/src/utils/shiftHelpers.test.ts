@@ -55,7 +55,7 @@ describe('getShiftTypeLabel', () => {
 
   it('null/undefinedの時間を適切に処理する', () => {
     expect(getShiftTypeLabel('custom', undefined)).toBe('時間指定（未指定）');
-    expect(getShiftTypeLabel('custom', null as any)).toBe('時間指定（未指定）');
+    expect(getShiftTypeLabel('custom', null as string | null)).toBe('時間指定（未指定）');
     expect(getShiftTypeLabel('custom', '')).toBe('時間指定（）'); // 空文字の場合
   });
 });

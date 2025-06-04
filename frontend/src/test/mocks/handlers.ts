@@ -29,7 +29,6 @@ export const handlers = [
   // Work Orders API
   http.get(`${SUPABASE_URL}/rest/v1/work_orders`, ({ request }) => {
     const url = new URL(request.url);
-    const select = url.searchParams.get('select');
     const companyName = url.searchParams.get('company_name');
     
     let results = [mockWorkOrder];

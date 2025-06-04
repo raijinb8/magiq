@@ -12,8 +12,10 @@ describe('cn (className merge utility)', () => {
   });
 
   it('条件付きクラス名を処理する', () => {
-    expect(cn('base-class', true && 'conditional-class')).toBe('base-class conditional-class');
-    expect(cn('base-class', false && 'conditional-class')).toBe('base-class');
+    const isActive = true;
+    const isDisabled = false;
+    expect(cn('base-class', isActive && 'conditional-class')).toBe('base-class conditional-class');
+    expect(cn('base-class', isDisabled && 'conditional-class')).toBe('base-class');
   });
 
   it('配列形式のクラス名を処理する', () => {
@@ -39,11 +41,12 @@ describe('cn (className merge utility)', () => {
   });
 
   it('複雑な組み合わせを処理する', () => {
+    const isConditional = true;
     const result = cn(
       'base',
       ['array-class'],
       { 'object-class': true },
-      true && 'conditional',
+      isConditional && 'conditional',
       null,
       undefined,
       ''

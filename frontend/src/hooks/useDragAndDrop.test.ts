@@ -5,17 +5,22 @@ import { useDragAndDrop } from './useDragAndDrop';
 
 describe('useDragAndDrop フック', () => {
   const createMockDragEvent = (options: Partial<DragEvent> = {}) => {
+    const defaultDataTransfer = {
+      files: Object.assign([], { item: () => null, length: 0 }) as unknown as FileList,
+      items: Object.assign([], { add: vi.fn(), clear: vi.fn(), remove: vi.fn() }) as unknown as DataTransferItemList,
+      types: [],
+      dropEffect: 'none' as DataTransfer['dropEffect'],
+      effectAllowed: 'all' as DataTransfer['effectAllowed'],
+      clearData: vi.fn(),
+      getData: vi.fn(),
+      setData: vi.fn(),
+      setDragImage: vi.fn(),
+    };
+
     const event = {
       preventDefault: vi.fn(),
       stopPropagation: vi.fn(),
-      dataTransfer: {
-        files: [],
-        items: [],
-        types: [],
-        dropEffect: 'none' as DataTransfer['dropEffect'],
-        effectAllowed: 'all' as DataTransfer['effectAllowed'],
-        ...options.dataTransfer,
-      },
+      dataTransfer: { ...defaultDataTransfer, ...options.dataTransfer },
       currentTarget: document.createElement('div'),
       relatedTarget: null,
       ...options,
@@ -36,7 +41,9 @@ describe('useDragAndDrop フック', () => {
     const { result } = renderHook(() => useDragAndDrop(onFilesDropped));
     
     const mockEvent = createMockDragEvent({
-      dataTransfer: { items: [{ kind: 'file' }] as any },
+      dataTransfer: { 
+        items: Object.assign([{ kind: 'file' }], { add: vi.fn(), clear: vi.fn(), remove: vi.fn() }) as unknown as DataTransferItemList,
+      },
     });
 
     act(() => {
@@ -54,7 +61,9 @@ describe('useDragAndDrop フック', () => {
     
     const mockFile = new File(['test'], 'test.pdf', { type: 'application/pdf' });
     const mockEvent = createMockDragEvent({
-      dataTransfer: { files: [mockFile] as any },
+      dataTransfer: {
+        files: Object.assign([mockFile], { item: () => mockFile, length: 1 }) as unknown as FileList,
+      },
     });
 
     act(() => {
@@ -76,7 +85,9 @@ describe('useDragAndDrop フック', () => {
       new File(['test2'], 'test2.pdf', { type: 'application/pdf' }),
     ];
     const mockEvent = createMockDragEvent({
-      dataTransfer: { files: mockFiles as any },
+      dataTransfer: {
+        files: Object.assign(mockFiles, { item: (i: number) => mockFiles[i] || null, length: mockFiles.length }) as unknown as FileList,
+      },
     });
 
     act(() => {
@@ -92,7 +103,9 @@ describe('useDragAndDrop フック', () => {
     
     // まずドラッグ開始
     const dragEnterEvent = createMockDragEvent({
-      dataTransfer: { items: [{ kind: 'file' }] as any },
+      dataTransfer: { 
+        items: Object.assign([{ kind: 'file' }], { add: vi.fn(), clear: vi.fn(), remove: vi.fn() }) as unknown as DataTransferItemList,
+      },
     });
     act(() => {
       result.current.dragEventHandlers.onDragEnter(dragEnterEvent);
@@ -114,7 +127,9 @@ describe('useDragAndDrop フック', () => {
     
     // ドラッグ開始
     const dragEnterEvent = createMockDragEvent({
-      dataTransfer: { items: [{ kind: 'file' }] as any },
+      dataTransfer: { 
+        items: Object.assign([{ kind: 'file' }], { add: vi.fn(), clear: vi.fn(), remove: vi.fn() }) as unknown as DataTransferItemList,
+      },
     });
     act(() => {
       result.current.dragEventHandlers.onDragEnter(dragEnterEvent);
@@ -127,8 +142,8 @@ describe('useDragAndDrop フック', () => {
     parentDiv.appendChild(childDiv);
     
     const dragLeaveEvent = createMockDragEvent({
-      currentTarget: parentDiv as any,
-      relatedTarget: childDiv as any,
+      currentTarget: parentDiv as HTMLDivElement,
+      relatedTarget: childDiv as HTMLDivElement,
     });
     
     // containsをモック
@@ -163,7 +178,9 @@ describe('useDragAndDrop フック', () => {
     expect(result.current.isDragging).toBe(false);
     
     const mockEvent = createMockDragEvent({
-      dataTransfer: { items: [{ kind: 'file' }] as any },
+      dataTransfer: { 
+        items: Object.assign([{ kind: 'file' }], { add: vi.fn(), clear: vi.fn(), remove: vi.fn() }) as unknown as DataTransferItemList,
+      },
     });
     
     act(() => {
@@ -178,7 +195,9 @@ describe('useDragAndDrop フック', () => {
     const { result } = renderHook(() => useDragAndDrop(onFilesDropped));
     
     const mockEvent = createMockDragEvent({
-      dataTransfer: { files: [] as any },
+      dataTransfer: {
+        files: Object.assign([], { item: () => null, length: 0 }) as unknown as FileList,
+      },
     });
 
     act(() => {

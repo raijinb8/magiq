@@ -38,7 +38,7 @@ describe('getSubmittedShiftsForCurrentUser', () => {
       order: vi.fn().mockResolvedValue({ data: mockShifts, error: null }),
     };
 
-    vi.mocked(supabase.from).mockReturnValue(mockQuery as any);
+    vi.mocked(supabase.from).mockReturnValue(mockQuery as ReturnType<typeof supabase.from>);
 
     const result = await getSubmittedShiftsForCurrentUser(mockUserId);
 
@@ -66,7 +66,7 @@ describe('getSubmittedShiftsForCurrentUser', () => {
       order: vi.fn().mockResolvedValue({ data: null, error: mockError }),
     };
 
-    vi.mocked(supabase.from).mockReturnValue(mockQuery as any);
+    vi.mocked(supabase.from).mockReturnValue(mockQuery as ReturnType<typeof supabase.from>);
 
     const result = await getSubmittedShiftsForCurrentUser(mockUserId);
 
@@ -82,7 +82,7 @@ describe('getSubmittedShiftsForCurrentUser', () => {
       order: vi.fn().mockResolvedValue({ data: [], error: null }),
     };
 
-    vi.mocked(supabase.from).mockReturnValue(mockQuery as any);
+    vi.mocked(supabase.from).mockReturnValue(mockQuery as ReturnType<typeof supabase.from>);
 
     const result = await getSubmittedShiftsForCurrentUser(mockUserId);
 
@@ -103,7 +103,7 @@ describe('getSubmittedShiftsForCurrentUser', () => {
       order: vi.fn().mockResolvedValue({ data: mockShifts, error: null }),
     };
 
-    vi.mocked(supabase.from).mockReturnValue(mockQuery as any);
+    vi.mocked(supabase.from).mockReturnValue(mockQuery as ReturnType<typeof supabase.from>);
 
     const result = await getSubmittedShiftsForCurrentUser(mockUserId);
 
@@ -124,7 +124,7 @@ describe('getSubmittedShiftsForCurrentUser', () => {
       order: vi.fn().mockResolvedValue({ data: [], error: null }),
     };
 
-    vi.mocked(supabase.from).mockReturnValue(mockQuery as any);
+    vi.mocked(supabase.from).mockReturnValue(mockQuery as ReturnType<typeof supabase.from>);
 
     await getSubmittedShiftsForCurrentUser(mockUserId);
 
