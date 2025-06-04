@@ -84,9 +84,19 @@ describe('useDragAndDrop フック', () => {
       new File(['test1'], 'test1.pdf', { type: 'application/pdf' }),
       new File(['test2'], 'test2.pdf', { type: 'application/pdf' }),
     ];
+    const mockFileList = Object.assign(mockFiles, { 
+      item: (i: number) => mockFiles[i] || null, 
+      length: mockFiles.length,
+      [Symbol.iterator]: function*() {
+        for (let i = 0; i < this.length; i++) {
+          yield this[i];
+        }
+      }
+    }) as unknown as FileList;
+
     const mockEvent = createMockDragEvent({
       dataTransfer: {
-        files: Object.assign(mockFiles, { item: (i: number) => mockFiles[i] || null, length: mockFiles.length }) as unknown as FileList,
+        files: mockFileList,
       },
     });
 
