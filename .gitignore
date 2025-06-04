@@ -87,3 +87,6 @@ Thumbs.db
 # プロジェクト固有でバージョン管理に含めたくないファイル
 # 例: Google Cloud Service Account Keyなど (実際にはより安全な方法で管理してください)
 magiq-457412-1644a91ead49.json
+
+# Claude Code設定ファイル
+.claude/
