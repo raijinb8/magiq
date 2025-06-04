@@ -7,13 +7,11 @@ import Layout from '@/components/layout/Layout';
 
 // AppコンポーネントからBrowserRouterを除いたルーティング部分
 const AppRoutes = () => (
-  <Layout>
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/" element={<Dashboard />} />
-    </Routes>
-  </Layout>
+  <Routes>
+    <Route path="/login" element={<Login />} />
+    <Route path="/dashboard" element={<Dashboard />} />
+    <Route path="/" element={<Dashboard />} />
+  </Routes>
 );
 
 describe('App', () => {
