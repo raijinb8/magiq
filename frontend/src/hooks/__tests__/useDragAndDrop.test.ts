@@ -1,7 +1,7 @@
 // useDragAndDrop フックのテスト
 import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useDragAndDrop } from './useDragAndDrop';
+import { useDragAndDrop } from '../useDragAndDrop';
 
 describe('useDragAndDrop フック', () => {
   const createMockDragEvent = (options: Partial<DragEvent> = {}) => {
