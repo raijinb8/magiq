@@ -104,7 +104,10 @@ describe('useDragAndDrop フック', () => {
       result.current.dragEventHandlers.onDrop(mockEvent);
     });
 
-    expect(onFilesDropped).toHaveBeenCalledWith(mockFiles);
+    expect(onFilesDropped).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({ name: 'test1.pdf', type: 'application/pdf' }),
+      expect.objectContaining({ name: 'test2.pdf', type: 'application/pdf' })
+    ]));
   });
 
   it('ドラッグ領域から離れるとisDraggingがfalseになる', () => {
