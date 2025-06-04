@@ -10,7 +10,7 @@ interface CompanyConfig {
 
 interface CompanyState {
   company: CompanyConfig | null;
-  setCompany: (config: CompanyConfig) => void;
+  setCompany: (config: CompanyConfig | null) => void;
 }
 
 export const useCompanyStore = create<CompanyState>((set) => ({
