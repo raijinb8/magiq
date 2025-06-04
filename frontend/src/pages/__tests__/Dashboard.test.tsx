@@ -16,9 +16,13 @@ vi.mock('../../lib/supabase', () => ({
     },
     from: vi.fn().mockReturnValue({
       select: vi.fn().mockReturnValue({
-        eq: vi.fn().mockResolvedValue({
-          data: [],
-          error: null,
+        eq: vi.fn().mockReturnValue({
+          in: vi.fn().mockReturnValue({
+            order: vi.fn().mockResolvedValue({
+              data: [],
+              error: null,
+            }),
+          }),
         }),
       }),
     }),
