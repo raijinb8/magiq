@@ -3,7 +3,6 @@ import { render } from '../test/utils';
 import { Routes, Route } from 'react-router-dom';
 import Dashboard from '@/pages/Dashboard';
 import Login from '@/pages/Login';
-import Layout from '@/components/layout/Layout';
 
 // AppコンポーネントからBrowserRouterを除いたルーティング部分
 const AppRoutes = () => (
