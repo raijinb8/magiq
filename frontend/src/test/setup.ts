@@ -66,3 +66,16 @@ vi.mock('pdfjs-dist/build/pdf.worker.entry', () => ({
 // 環境変数のモック
 vi.stubEnv('VITE_PUBLIC_SUPABASE_URL', 'https://test.supabase.co');
 vi.stubEnv('VITE_PUBLIC_SUPABASE_ANON_KEY', 'test-anon-key');
+
+// Promise.withResolversのpolyfill (Node.js < 22対応)
+if (!Promise.withResolvers) {
+  Promise.withResolvers = function <T>() {
+    let resolve: (value: T | PromiseLike<T>) => void;
+    let reject: (reason?: any) => void;
+    const promise = new Promise<T>((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
+    return { promise, resolve: resolve!, reject: reject! };
+  };
+}
