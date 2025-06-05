@@ -46,6 +46,41 @@ MagIQは、建設業界特有のニーズに応える次世代の作業指示書
 - **ロールベースアクセス制御** - 管理者/一般ユーザーの権限分離
 - **保護されたルーティング** - 認証状態に基づく自動リダイレクト
 
+## 🧪 テスト環境
+
+### 🎯 TDD (Test-Driven Development) 対応
+本プロジェクトは、**テスト駆動開発**を採用しており、高品質なコードの継続的な開発をサポートします。
+
+**主要なテストツール:**
+- **Vitest** - 高速なユニット・統合テスト
+- **React Testing Library** - ユーザー中心のコンポーネントテスト
+- **@vitest/coverage-v8** - 高精度なカバレッジ測定
+- **Happy DOM** - 軽量なブラウザ環境シミュレーション
+
+### 📋 テスト実行方法
+
+**開発中（推奨）:**
+```bash
+cd frontend
+npm test  # ウォッチモード（ファイル変更時に自動実行）
+```
+
+**ワンタイム実行:**
+```bash
+npm run test:run      # 全テスト実行
+npm run test:coverage # カバレッジ付きテスト
+npm run test:ui       # ブラウザUIでテスト確認
+```
+
+**コミット前の品質チェック:**
+```bash
+npm run ci  # lint + type-check + build + test
+```
+
+**詳細なガイド:**
+- [TDD開発ガイド](frontend/docs/TDD_GUIDE.md) - 開発フローとベストプラクティス
+- [テスト環境設定](frontend/src/test/README.md) - 技術的な設定詳細
+
 ## 🛠️ 技術スタック
 
 ### フロントエンド
