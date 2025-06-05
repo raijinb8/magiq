@@ -3,16 +3,14 @@ import { render, RenderOptions } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 
 // カスタムプロバイダーを含むレンダーオプション
-interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
-  initialEntries?: string[];
-}
+type CustomRenderOptions = Omit<RenderOptions, 'wrapper'>;
 
 // アプリケーション全体のプロバイダーを含むカスタムレンダー関数
 function customRender(
   ui: ReactElement,
   options: CustomRenderOptions = {}
 ) {
-  const { initialEntries = ['/'], ...renderOptions } = options;
+  const { ...renderOptions } = options;
 
   function Wrapper({ children }: { children: React.ReactNode }) {
     return (
@@ -38,8 +36,28 @@ export function expectElementToHaveTextContent(element: HTMLElement | null, text
   expect(element).toHaveTextContent(text);
 }
 
-// よく使用されるテストユーティリティをエクスポート
-export * from '@testing-library/react';
+// よく使用されるテストユーティリティを個別にエクスポート
+export { 
+  screen, 
+  waitFor, 
+  waitForElementToBeRemoved,
+  fireEvent,
+  act,
+  cleanup,
+  configure,
+  getByRole,
+  getByText,
+  getByLabelText,
+  getByTestId,
+  queryByRole,
+  queryByText,
+  queryByLabelText,
+  queryByTestId,
+  findByRole,
+  findByText,
+  findByLabelText,
+  findByTestId
+} from '@testing-library/react';
 export { default as userEvent } from '@testing-library/user-event';
 
 // カスタムレンダーをデフォルトのrenderとして再エクスポート

@@ -50,14 +50,14 @@ expect.extend({
 
 // TypeScript型定義の拡張
 declare module 'vitest' {
-  interface Assertion<T = any> {
+  interface Assertion<T = unknown> {
     toBeEmptyDOMElement(): T;
     toHaveErrorMessage(message: string): T;
     toBeLoadingState(): T;
   }
   interface AsymmetricMatchersContaining {
-    toBeEmptyDOMElement(): any;
-    toHaveErrorMessage(message: string): any;
-    toBeLoadingState(): any;
+    toBeEmptyDOMElement(): unknown;
+    toHaveErrorMessage(message: string): unknown;
+    toBeLoadingState(): unknown;
   }
 }
