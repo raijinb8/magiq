@@ -50,11 +50,29 @@ supabase functions serve process-pdf-single --env-file supabase/functions/proces
 - フロントエンド: `/app/frontend/.env` にSupabase URLとanon keyを設定
 - バックエンド: `/app/supabase/functions/process-pdf-single/.env` に `GEMINI_API_KEY` を設定
 
-**注意:** テストフレームワークはまだ設定されていません。機能実装時は以下を行います：
-1. フロントエンドテスト用にVitest/Testing Libraryをセットアップ
-2. package.jsonにテストスクリプトを設定（test, test:ui, test:coverage）
-3. すべての新規コードでTDDを実践
-4. MSWでAPIモックを設定し、実際のAPIに依存しないテストを作成
+### テストコマンド
+```bash
+cd /app/frontend
+npm test              # ウォッチモード（開発中に常時実行推奨）
+npm run test:run      # 全テスト実行
+npm run test:coverage # カバレッジ付きテスト実行
+npm run test:ui       # ブラウザUIでテスト確認
+npm run ci           # CI相当チェック（lint + type-check + build + test）
+```
+
+**TDD開発フロー:**
+1. 🔴 失敗するテストを書く
+2. 🟢 テストを通す最小限のコードを書く
+3. 🔵 コードをリファクタリングする
+4. 詳細は `/app/frontend/docs/TDD_GUIDE.md` を参照
+
+**テスト環境:**
+- **Vitest**: 高速テストランナー
+- **React Testing Library**: ユーザー中心のコンポーネントテスト
+- **@vitest/coverage-v8**: 高精度カバレッジ測定
+- **包括的モック**: localStorage, fetch, Canvas, WebGL等130+のAPIをモック
+- **カスタムマッチャー**: プロジェクト固有のアサーション
+- **CI/CD統合**: GitHub Actions対応、JUnitレポート生成
 
 ## 高レベルアーキテクチャ
 
