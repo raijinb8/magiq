@@ -2,6 +2,53 @@
 
 このディレクトリには、プロジェクト全体のテスト環境設定が含まれています。
 
+## テストスクリプト
+
+### 基本コマンド
+```bash
+# 通常のテスト実行（Watch モード）
+npm test
+
+# ワンタイム実行（CI用）
+npm run test:run
+
+# ウォッチモード（明示的）
+npm run test:watch
+
+# テストUI（ブラウザでテスト結果を確認）
+npm run test:ui
+```
+
+### カバレッジ関連
+```bash
+# カバレッジ付きテスト実行
+npm run test:coverage
+
+# カバレッジ付きUI
+npm run test:coverage:ui
+
+# カバレッジレポートをブラウザで開く（macOS/Linux）
+npm run test:coverage:open
+```
+
+### CI/レポート関連
+```bash
+# CI用（JUnitレポート付き）
+npm run test:ci
+
+# 詳細レポート出力
+npm run test:reporter
+
+# デバッグモード
+npm run test:debug
+```
+
+### フルCI実行
+```bash
+# lint + type-check + build + test:ci
+npm run ci
+```
+
 ## ファイル構成
 
 ### `setup.ts`

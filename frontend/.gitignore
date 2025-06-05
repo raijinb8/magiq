@@ -1,3 +1,5 @@
 coverage
 .tmp
 node_modules/.vite*
+test-results.xml
+test-results/
