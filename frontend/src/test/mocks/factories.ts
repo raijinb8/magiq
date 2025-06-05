@@ -111,7 +111,19 @@ export function createMockAuthResponse(user: MockUser) {
 }
 
 // Edge Function レスポンスのファクトリー
-export function createMockPdfProcessingResponse(overrides?: Partial<any>) {
+interface MockPdfProcessingResponse {
+  success: boolean;
+  generatedText: string;
+  promptIdentifier: string;
+  processingTime: number;
+  tokenUsage: {
+    prompt: number;
+    completion: number;
+    total: number;
+  };
+}
+
+export function createMockPdfProcessingResponse(overrides?: Partial<MockPdfProcessingResponse>): MockPdfProcessingResponse {
   return {
     success: true,
     generatedText: `物件名：テストマンション

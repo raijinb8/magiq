@@ -73,7 +73,7 @@ describe('MSW使用例', () => {
   });
 
   it('リクエストボディを検証する例', async () => {
-    let capturedBody: any = null;
+    let capturedBody: unknown = null;
     
     mockApiResponse(
       http.post('*/auth/v1/token', async ({ request }) => {

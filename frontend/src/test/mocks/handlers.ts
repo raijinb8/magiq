@@ -94,7 +94,10 @@ export const edgeFunctionHandlers = [
     const companyId = formData.get('companyId');
     
     // 会社別のモックレスポンス
-    const mockResponses: Record<string, any> = {
+    const mockResponses: Record<string, {
+      generatedText: string;
+      promptIdentifier: string;
+    }> = {
       'NOHARA_G': {
         generatedText: `物件名：テストマンション
 工事内容：内装リフォーム工事
@@ -142,7 +145,8 @@ export const databaseHandlers = [
   // work_orders取得
   http.get('*/rest/v1/work_orders', ({ request }) => {
     const url = new URL(request.url);
-    const select = url.searchParams.get('select');
+    // selectパラメータは将来的にフィルタリングに使用予定
+    const _select = url.searchParams.get('select');
     
     return HttpResponse.json([
       {
