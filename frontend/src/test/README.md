@@ -27,9 +27,25 @@ npm run test:coverage
 # カバレッジ付きUI
 npm run test:coverage:ui
 
+# カバレッジウォッチモード
+npm run test:coverage:watch
+
 # カバレッジレポートをブラウザで開く（macOS/Linux）
 npm run test:coverage:open
+
+# 詳細レポート生成（閾値チェック付き）
+npm run test:coverage:report
+
+# 閾値チェックのみ
+npm run test:coverage:threshold
 ```
+
+#### カバレッジレポート形式
+- **HTML**: `coverage/index.html` - ブラウザで閲覧可能な詳細レポート
+- **LCOV**: `coverage/lcov.info` - IDE統合用
+- **JSON**: `coverage/coverage-final.json` - プログラム処理用
+- **XML**: `coverage/clover.xml`, `coverage/cobertura-coverage.xml` - CI/CD用
+- **Markdown**: `coverage/pr-comment.md` - PRコメント用
 
 ### CI/レポート関連
 ```bash
