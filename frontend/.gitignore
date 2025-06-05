@@ -1,1 +1,3 @@
 coverage
+.tmp
+node_modules/.vite*
