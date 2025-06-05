@@ -44,7 +44,7 @@ global.URL.revokeObjectURL = vi.fn();
 // console.error のモック（エラー出力の抑制）
 const originalError = console.error;
 beforeAll(() => {
-  console.error = (...args: any[]) => {
+  console.error = (...args: unknown[]) => {
     // React の既知の警告を除外
     if (
       typeof args[0] === 'string' &&
