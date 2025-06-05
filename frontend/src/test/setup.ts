@@ -2,6 +2,10 @@ import '@testing-library/jest-dom';
 import { cleanup, configure } from '@testing-library/react';
 import { afterEach, beforeAll, afterAll, vi } from 'vitest';
 import './matchers';
+import { setupMSW } from './mocks/server';
+
+// MSWのセットアップ
+setupMSW();
 
 // React Testing Libraryの設定
 configure({
