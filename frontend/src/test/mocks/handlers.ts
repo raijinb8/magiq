@@ -290,7 +290,7 @@ export const storageHandlers = [
   // ファイルアップロード
   http.post('*/storage/v1/object/:bucket/*', async ({ request, params }) => {
     const { bucket } = params;
-    const pathMatch = request.url.match(/\/object\/.+?\/(.*)/);;
+    const pathMatch = request.url.match(/\/object\/.+?\/(.*)/);
     const filePath = pathMatch ? pathMatch[1] : 'unknown-file';
     
     // 認証チェック
@@ -357,7 +357,7 @@ export const storageHandlers = [
   // ファイルダウンロード
   http.get('*/storage/v1/object/:bucket/*', ({ request, params }) => {
     const { bucket } = params;
-    const pathMatch = request.url.match(/\/object\/.+?\/(.*)/);;
+    const pathMatch = request.url.match(/\/object\/.+?\/(.*)/);
     const filePath = pathMatch ? pathMatch[1] : '';
     const fullPath = `${bucket}/${filePath}`;
     
@@ -389,7 +389,7 @@ export const storageHandlers = [
   // ファイル削除
   http.delete('*/storage/v1/object/:bucket/*', ({ request, params }) => {
     const { bucket } = params;
-    const pathMatch = request.url.match(/\/object\/.+?\/(.*)/);;
+    const pathMatch = request.url.match(/\/object\/.+?\/(.*)/);
     const filePath = pathMatch ? pathMatch[1] : '';
     const fullPath = `${bucket}/${filePath}`;
     
