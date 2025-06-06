@@ -14,6 +14,7 @@ interface MockAuthState {
     email_confirmed_at: string | null;
     created_at: string;
     updated_at: string;
+    user_metadata?: Record<string, unknown>;
   } | null;
   accessToken: string | null;
 }
@@ -217,7 +218,7 @@ export const authHandlers = [
       data?: Record<string, unknown>;
     };
     
-    const updatedUser = {
+    const updatedUser: NonNullable<MockAuthState['currentUser']> = {
       ...mockAuthState.currentUser!,
       updated_at: new Date().toISOString(),
       user_metadata: {
@@ -238,9 +239,7 @@ export const authHandlers = [
   }),
 
   // ログアウト
-  http.post('*/auth/v1/logout', ({ request }) => {
-    const authHeader = request.headers.get('Authorization');
-    
+  http.post('*/auth/v1/logout', () => {
     // 認証状態をリセット
     mockAuthState.isAuthenticated = false;
     mockAuthState.currentUser = null;
