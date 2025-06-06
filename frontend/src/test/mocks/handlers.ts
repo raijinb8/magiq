@@ -195,9 +195,18 @@ export const authHandlers = [
   http.post('*/auth/v1/recover', async ({ request }) => {
     const body = await request.json() as { email: string };
     
+    // 実際のAPIではメールアドレスの存在確認を行うが、モックでは常に成功
+    if (!body.email || !body.email.includes('@')) {
+      return HttpResponse.json(
+        { error: 'Invalid email', error_description: '有効なメールアドレスを入力してください' },
+        { status: 400 }
+      );
+    }
+    
     // メール送信成功（実際の送信は行わない）
     return HttpResponse.json({
       message: 'パスワードリセットメールを送信しました',
+      email: body.email,
     });
   }),
   
