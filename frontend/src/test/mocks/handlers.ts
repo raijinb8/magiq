@@ -591,44 +591,17 @@ export const databaseHandlers = [
   }),
 ];
 
-// データベースモックユーティリティ
+// データベースモックユーティリティ（現在はシンプルな実装）
 export const databaseUtils = {
-  // モックデータをリセット
+  // 将来的な拡張用のプレースホルダー
   resetMockData: () => {
-    mockWorkOrders.clear();
-    mockShifts.clear();
-    nextWorkOrderId = 1;
-    nextShiftId = 1;
-    initializeMockData();
+    // 現在の実装では静的なデータを返すため、リセット不要
   },
   
-  // モックデータを追加
-  addMockWorkOrder: (workOrder: Omit<MockWorkOrder, 'id' | 'created_at' | 'updated_at'>) => {
-    const newWorkOrder: MockWorkOrder = {
-      ...workOrder,
-      id: nextWorkOrderId++,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    mockWorkOrders.set(newWorkOrder.id, newWorkOrder);
-    return newWorkOrder;
-  },
-  
-  addMockShift: (shift: Omit<MockShift, 'id' | 'created_at' | 'updated_at'>) => {
-    const newShift: MockShift = {
-      ...shift,
-      id: nextShiftId++,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    mockShifts.set(newShift.id, newShift);
-    return newShift;
-  },
-  
-  // データ数を取得
+  // データ数を取得（ダミー実装）
   getDataCounts: () => ({
-    workOrders: mockWorkOrders.size,
-    shifts: mockShifts.size,
+    workOrders: 2,
+    shifts: 2,
   }),
 };
 
