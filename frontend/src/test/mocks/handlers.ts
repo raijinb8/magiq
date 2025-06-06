@@ -1,21 +1,31 @@
 import { http, HttpResponse } from 'msw';
+import {
+  createMockUser,
+  createMockWorkOrder,
+  createMockShift,
+  createMockWorkOrders,
+  createMockShifts,
+  createMockAuthResponse,
+  createMockPdfProcessingResponse,
+  createMockWorkOrderForCompany,
+  createMockSupabaseResponse,
+  createMockErrorResponse,
+  resetFactorySequences,
+  type MockUser,
+  type MockWorkOrder,
+  type MockShift,
+  type CompanyOptionValue,
+} from './factories';
 
 /**
  * Supabase API 用の包括的なモックハンドラー
- * テスト環境で実際のAPI呼び出しをモックし、一貫した動作を提供
+ * ファクトリーシステムと統合し、動的で一貫したテストデータを提供
  */
 
-// 認証トークンの管理用
+// 認証トークンの管理用（ファクトリーシステム統合版）
 interface MockAuthState {
   isAuthenticated: boolean;
-  currentUser: {
-    id: string;
-    email: string;
-    email_confirmed_at: string | null;
-    created_at: string;
-    updated_at: string;
-    user_metadata?: Record<string, unknown>;
-  } | null;
+  currentUser: MockUser | null;
   accessToken: string | null;
 }
 
@@ -26,9 +36,42 @@ const mockAuthState: MockAuthState = {
   accessToken: null,
 };
 
+// テスト用ユーザーデータベース（ファクトリーで生成）
+const createTestUsersDatabase = () => [
+  createMockUser({ 
+    email: 'test@example.com', 
+    role: 'user',
+    user_metadata: { password: 'password123' }
+  }),
+  createMockUser({ 
+    email: 'admin@example.com', 
+    role: 'admin',
+    user_metadata: { password: 'admin123' }
+  }),
+  createMockUser({ 
+    email: 'manager@nohara.com', 
+    role: 'manager',
+    user_metadata: { 
+      password: 'nohara123',
+      company: 'NOHARA_G' 
+    }
+  }),
+  createMockUser({ 
+    email: 'staff@katoubeniya.com', 
+    role: 'staff',
+    user_metadata: { 
+      password: 'katou123',
+      company: 'KATOUBENIYA_MISAWA' 
+    }
+  }),
+];
+
+// 動的に生成されるテストユーザー
+let testUsersDatabase = createTestUsersDatabase();
+
 // Supabase認証エンドポイントのモック
 export const authHandlers = [
-  // メールパスワードログイン
+  // メールパスワードログイン（ファクトリー統合版）
   http.post('*/auth/v1/token', async ({ request }) => {
     const body = await request.json() as { 
       email: string; 
@@ -36,43 +79,25 @@ export const authHandlers = [
       grant_type?: string;
     };
     
-    // 有効なテストユーザーのデータベース
-    const validUsers = [
-      { email: 'test@example.com', password: 'password123', role: 'user' },
-      { email: 'admin@example.com', password: 'admin123', role: 'admin' },
-      { email: 'manager@nohara.com', password: 'nohara123', role: 'manager' },
-      { email: 'staff@katoubeniya.com', password: 'katou123', role: 'staff' },
-    ];
-    
-    const user = validUsers.find(u => u.email === body.email && u.password === body.password);
+    // ファクトリーで生成されたユーザーから認証
+    const user = testUsersDatabase.find(u => 
+      u.email === body.email && 
+      u.user_metadata?.password === body.password
+    );
     
     if (user) {
-      const mockUser = {
-        id: `mock-user-${user.role}`,
-        email: user.email,
-        email_confirmed_at: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        user_metadata: {
-          role: user.role,
-          company: user.email.includes('nohara') ? 'NOHARA_G' : 
-                   user.email.includes('katou') ? 'KATOUBENIYA_MISAWA' : 'GENERAL'
-        },
-      };
-      
       // 状態を更新
       mockAuthState.isAuthenticated = true;
-      mockAuthState.currentUser = mockUser;
+      mockAuthState.currentUser = user;
       mockAuthState.accessToken = `mock-access-token-${Date.now()}`;
       
-      return HttpResponse.json({
-        access_token: mockAuthState.accessToken,
-        token_type: 'bearer',
-        expires_in: 3600,
-        expires_at: Math.floor(Date.now() / 1000) + 3600,
-        refresh_token: `mock-refresh-token-${Date.now()}`,
-        user: mockUser,
-      });
+      // ファクトリーで認証レスポンスを生成
+      const authResponse = createMockAuthResponse(user);
+      
+      // 生成されたトークンで状態を同期
+      mockAuthState.accessToken = authResponse.access_token;
+      
+      return HttpResponse.json(authResponse);
     }
     
     return HttpResponse.json(
@@ -115,7 +140,7 @@ export const authHandlers = [
     );
   }),
 
-  // メールサインアップ
+  // メールサインアップ（ファクトリー統合版）
   http.post('*/auth/v1/signup', async ({ request }) => {
     const body = await request.json() as { 
       email: string; 
@@ -124,11 +149,11 @@ export const authHandlers = [
     };
     
     // 既存ユーザーのチェック
-    const existingEmails = ['existing@example.com', 'admin@example.com'];
+    const existingUser = testUsersDatabase.find(u => u.email === body.email);
     
-    if (existingEmails.includes(body.email)) {
+    if (existingUser) {
       return HttpResponse.json(
-        { error: 'User already registered', error_description: 'このメールアドレスは既に登録されています' },
+        createMockErrorResponse('このメールアドレスは既に登録されています', 422),
         { status: 422 }
       );
     }
@@ -136,19 +161,23 @@ export const authHandlers = [
     // パスワード強度チェック
     if (body.password.length < 6) {
       return HttpResponse.json(
-        { error: 'Weak password', error_description: 'パスワードは6文字以上である必要があります' },
+        createMockErrorResponse('パスワードは6文字以上である必要があります', 422),
         { status: 422 }
       );
     }
     
-    const newUser = {
-      id: `mock-new-user-${Date.now()}`,
+    // ファクトリーで新しいユーザーを作成
+    const newUser = createMockUser({
       email: body.email,
       email_confirmed_at: null, // メール確認待ち
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      user_metadata: body.data || {},
-    };
+      user_metadata: {
+        ...body.data,
+        password: body.password, // テスト用にパスワードを保存
+      },
+    });
+    
+    // テストデータベースに追加
+    testUsersDatabase.push(newUser);
     
     return HttpResponse.json({
       user: newUser,
@@ -455,166 +484,310 @@ export const storageUtils = {
   getFileCount: () => mockFileStorage.size,
 };
 
-// Edge Functions (PDF処理) のモック
+// Edge Functions (PDF処理) のモック（ファクトリー統合版）
 export const edgeFunctionHandlers = [
   // PDF処理
   http.post('*/functions/v1/process-pdf-single', async ({ request }) => {
     const formData = await request.formData();
-    const companyId = formData.get('companyId');
+    const companyId = formData.get('companyId') as CompanyOptionValue;
+    const file = formData.get('file') as File;
     
-    // 会社別のモックレスポンス
-    const mockResponses: Record<string, {
-      generatedText: string;
-      promptIdentifier: string;
-    }> = {
-      'NOHARA_G': {
-        generatedText: `物件名：テストマンション
-工事内容：内装リフォーム工事
-日付：2025年06月05日
-作業者：田中太郎
-作業時間：9:00〜17:00
-作業内容：
-- 壁紙張替え
-- フローリング施工
-- 設備点検`,
-        promptIdentifier: 'NOHARA_G_V20250526',
-      },
-      'KATOUBENIYA_MISAWA': {
-        generatedText: `受注番号：TEST-001
-発注者：株式会社テスト
-現場名：テスト現場
-作業内容：防水工事
-施工日：2025年06月05日
-施工者：山田花子
-完了報告：異常なし`,
-        promptIdentifier: 'KATOUBENIYA_MISAWA_V20250526',
-      },
-    };
+    // 認証チェック
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.includes('mock-access-token')) {
+      return HttpResponse.json(
+        createMockErrorResponse('認証が必要です', 401),
+        { status: 401 }
+      );
+    }
     
-    const response = mockResponses[companyId as string] || {
-      generatedText: 'デフォルトのテキスト抽出結果',
-      promptIdentifier: 'DEFAULT',
-    };
+    // ファイルの基本チェック
+    if (!file) {
+      return HttpResponse.json(
+        createMockErrorResponse('ファイルが指定されていません', 400),
+        { status: 400 }
+      );
+    }
     
-    return HttpResponse.json({
-      success: true,
-      ...response,
-      processingTime: 1234,
-      tokenUsage: {
-        prompt: 100,
-        completion: 50,
-        total: 150,
-      },
-    });
+    if (!file.type.includes('pdf')) {
+      return HttpResponse.json(
+        createMockErrorResponse('PDFファイルのみサポートされています', 400),
+        { status: 400 }
+      );
+    }
+    
+    // ファイルサイズ制限（5MB）
+    if (file.size > 5 * 1024 * 1024) {
+      return HttpResponse.json(
+        createMockErrorResponse('ファイルサイズは5MB以下である必要があります', 413),
+        { status: 413 }
+      );
+    }
+    
+    // ランダムな処理失敗をシミュレート（5%の確率）
+    if (Math.random() < 0.05) {
+      return HttpResponse.json(
+        createMockErrorResponse('PDF処理中にエラーが発生しました', 500),
+        { status: 500 }
+      );
+    }
+    
+    // ファクトリーでPDF処理レスポンスを生成
+    try {
+      let response;
+      
+      if (companyId && ['NOHARA_G', 'KATOUBENIYA_MISAWA', 'YAMADA_K'].includes(companyId)) {
+        // 会社固有のレスポンス
+        const workOrder = createMockWorkOrderForCompany(companyId);
+        response = createMockPdfProcessingResponse({
+          generatedText: workOrder.generated_text,
+          promptIdentifier: workOrder.prompt_identifier,
+          originalFileName: file.name,
+        });
+      } else {
+        // デフォルトレスポンス
+        response = createMockPdfProcessingResponse({
+          generatedText: 'デフォルトのテキスト抽出結果',
+          promptIdentifier: 'DEFAULT_V20250605',
+          originalFileName: file.name,
+        });
+      }
+      
+      return HttpResponse.json(response);
+    } catch {
+      return HttpResponse.json(
+        createMockErrorResponse('PDF処理中に予期しないエラーが発生しました', 500),
+        { status: 500 }
+      );
+    }
   }),
 ];
 
-// データベース操作のモック
+// データベース操作のモック（ファクトリー統合版）
+// 動的なデータベース状態
+let mockWorkOrders: MockWorkOrder[] = [];
+let mockShifts: MockShift[] = [];
+
+// 初期データの生成
+const initializeMockDatabase = () => {
+  mockWorkOrders = [
+    createMockWorkOrderForCompany('NOHARA_G', { id: 1 }),
+    createMockWorkOrderForCompany('KATOUBENIYA_MISAWA', { id: 2 }),
+    ...createMockWorkOrders(3, { status: 'completed' }),
+  ];
+  
+  mockShifts = createMockShifts(10, { 
+    user_id: mockAuthState.currentUser?.id || 'default-user' 
+  });
+};
+
+// 初期化実行
+initializeMockDatabase();
+
 export const databaseHandlers = [
-  // work_orders取得
+  // work_orders取得（ファクトリー統合版）
   http.get('*/rest/v1/work_orders', ({ request }) => {
     const url = new URL(request.url);
-    // selectパラメータは将来的にフィルタリングに使用予定
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const _select = url.searchParams.get('select');
+    const userId = url.searchParams.get('user_id');
+    const status = url.searchParams.get('status');
+    const limit = url.searchParams.get('limit');
     
-    return HttpResponse.json([
-      {
-        id: 1,
-        file_name: 'test-file-1.pdf',
-        uploaded_at: '2025-06-01T10:00:00Z',
-        company_name: '野原G住環境',
-        prompt_identifier: 'NOHARA_G_V20250526',
-        generated_text: '物件名：テストマンション...',
-        status: 'completed',
-        gemini_processed_at: '2025-06-01T10:00:30Z',
-      },
-      {
-        id: 2,
-        file_name: 'test-file-2.pdf',
-        uploaded_at: '2025-06-02T14:30:00Z',
-        company_name: '加藤ベニヤ池袋_ミサワホーム',
-        prompt_identifier: 'KATOUBENIYA_MISAWA_V20250526',
-        generated_text: '受注番号：TEST-002...',
-        status: 'completed',
-        gemini_processed_at: '2025-06-02T14:30:45Z',
-      },
-    ]);
+    // 認証チェック
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.includes('mock-access-token')) {
+      return HttpResponse.json(
+        createMockSupabaseResponse([], true),
+        { status: 401 }
+      );
+    }
+    
+    let filteredWorkOrders = [...mockWorkOrders];
+    
+    // フィルタリング
+    if (userId) {
+      filteredWorkOrders = filteredWorkOrders.filter(wo => wo.user_id === userId);
+    }
+    
+    if (status) {
+      filteredWorkOrders = filteredWorkOrders.filter(wo => wo.status === status);
+    }
+    
+    // 制限
+    if (limit) {
+      filteredWorkOrders = filteredWorkOrders.slice(0, parseInt(limit));
+    }
+    
+    return HttpResponse.json(filteredWorkOrders);
   }),
 
-  // work_orders作成
+  // work_orders作成（ファクトリー統合版）
   http.post('*/rest/v1/work_orders', async ({ request }) => {
-    const body = await request.json();
+    const body = await request.json() as Partial<MockWorkOrder>;
     
-    return HttpResponse.json({
-      id: 3,
+    // 認証チェック
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.includes('mock-access-token')) {
+      return HttpResponse.json(
+        createMockSupabaseResponse([], true),
+        { status: 401 }
+      );
+    }
+    
+    // ファクトリーで新しいワークオーダーを作成
+    const newWorkOrder = createMockWorkOrder({
       ...body,
-      uploaded_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
+      user_id: body.user_id || mockAuthState.currentUser?.id || 'default-user',
     });
+    
+    // データベースに追加
+    mockWorkOrders.push(newWorkOrder);
+    
+    return HttpResponse.json(newWorkOrder, { status: 201 });
   }),
 
-  // work_orders更新
+  // work_orders更新（ファクトリー統合版）
   http.patch('*/rest/v1/work_orders', async ({ request }) => {
-    const body = await request.json();
+    const body = await request.json() as Partial<MockWorkOrder>;
     const url = new URL(request.url);
     const id = url.searchParams.get('id');
     
-    return HttpResponse.json({
-      id: Number(id),
+    // 認証チェック
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.includes('mock-access-token')) {
+      return HttpResponse.json(
+        createMockSupabaseResponse([], true),
+        { status: 401 }
+      );
+    }
+    
+    const workOrderIndex = mockWorkOrders.findIndex(wo => wo.id === Number(id));
+    
+    if (workOrderIndex === -1) {
+      return HttpResponse.json(
+        createMockErrorResponse('ワークオーダーが見つかりません', 404),
+        { status: 404 }
+      );
+    }
+    
+    // 更新
+    mockWorkOrders[workOrderIndex] = {
+      ...mockWorkOrders[workOrderIndex],
       ...body,
       updated_at: new Date().toISOString(),
-    });
-  }),
-
-  // shifts取得
-  http.get('*/rest/v1/shifts', () => {
-    return HttpResponse.json([
-      {
-        id: 1,
-        user_id: 'mock-user-id',
-        date: '2025-06-05',
-        shift_type: 'morning',
-        note: '朝番勤務',
-      },
-      {
-        id: 2,
-        user_id: 'mock-user-id',
-        date: '2025-06-06',
-        shift_type: 'night',
-        custom_end_time: '22:00',
-        note: '夜勤（延長あり）',
-      },
-    ]);
-  }),
-
-  // shifts作成
-  http.post('*/rest/v1/shifts', async ({ request }) => {
-    const body = await request.json();
+    };
     
-    return HttpResponse.json({
-      id: 3,
+    return HttpResponse.json(mockWorkOrders[workOrderIndex]);
+  }),
+
+  // shifts取得（ファクトリー統合版）
+  http.get('*/rest/v1/shifts', ({ request }) => {
+    const url = new URL(request.url);
+    const userId = url.searchParams.get('user_id');
+    const date = url.searchParams.get('date');
+    
+    // 認証チェック
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.includes('mock-access-token')) {
+      return HttpResponse.json(
+        createMockSupabaseResponse([], true),
+        { status: 401 }
+      );
+    }
+    
+    let filteredShifts = [...mockShifts];
+    
+    // フィルタリング
+    if (userId) {
+      filteredShifts = filteredShifts.filter(shift => shift.user_id === userId);
+    }
+    
+    if (date) {
+      filteredShifts = filteredShifts.filter(shift => shift.date === date);
+    }
+    
+    return HttpResponse.json(filteredShifts);
+  }),
+
+  // shifts作成（ファクトリー統合版）
+  http.post('*/rest/v1/shifts', async ({ request }) => {
+    const body = await request.json() as Partial<MockShift>;
+    
+    // 認証チェック
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.includes('mock-access-token')) {
+      return HttpResponse.json(
+        createMockSupabaseResponse([], true),
+        { status: 401 }
+      );
+    }
+    
+    // ファクトリーで新しいシフトを作成
+    const newShift = createMockShift({
       ...body,
-      created_at: new Date().toISOString(),
+      user_id: body.user_id || mockAuthState.currentUser?.id || 'default-user',
     });
+    
+    // データベースに追加
+    mockShifts.push(newShift);
+    
+    return HttpResponse.json(newShift, { status: 201 });
   }),
 ];
 
-// データベースモックユーティリティ（現在はシンプルな実装）
+// データベースモックユーティリティ（ファクトリー統合版）
 export const databaseUtils = {
-  // 将来的な拡張用のプレースホルダー
+  // モックデータベースをリセット
   resetMockData: () => {
-    // 現在の実装では静的なデータを返すため、リセット不要
+    mockWorkOrders = [];
+    mockShifts = [];
+    initializeMockDatabase();
   },
   
-  // データ数を取得（ダミー実装）
+  // 特定のデータを追加
+  addMockWorkOrder: (workOrder: Partial<MockWorkOrder>) => {
+    const newWorkOrder = createMockWorkOrder(workOrder);
+    mockWorkOrders.push(newWorkOrder);
+    return newWorkOrder;
+  },
+  
+  addMockShift: (shift: Partial<MockShift>) => {
+    const newShift = createMockShift(shift);
+    mockShifts.push(newShift);
+    return newShift;
+  },
+  
+  // データ数を取得
   getDataCounts: () => ({
-    workOrders: 2,
-    shifts: 2,
+    workOrders: mockWorkOrders.length,
+    shifts: mockShifts.length,
+    users: testUsersDatabase.length,
   }),
+  
+  // 現在のデータを取得
+  getCurrentData: () => ({
+    workOrders: [...mockWorkOrders],
+    shifts: [...mockShifts],
+    users: [...testUsersDatabase],
+  }),
+  
+  // 特定のユーザーのデータを生成
+  seedUserData: (userId: string, options?: {
+    workOrderCount?: number;
+    shiftCount?: number;
+  }) => {
+    const { workOrderCount = 3, shiftCount = 7 } = options || {};
+    
+    const userWorkOrders = createMockWorkOrders(workOrderCount, { user_id: userId });
+    const userShifts = createMockShifts(shiftCount, { user_id: userId });
+    
+    mockWorkOrders.push(...userWorkOrders);
+    mockShifts.push(...userShifts);
+    
+    return { workOrders: userWorkOrders, shifts: userShifts };
+  },
 };
 
-// モックユーティリティをまとめてエクスポート
+// モックユーティリティをまとめてエクスポート（ファクトリー統合版）
 export const mockUtils = {
   // 認証状態をリセット
   resetAuthState: () => {
@@ -623,14 +796,76 @@ export const mockUtils = {
     mockAuthState.accessToken = null;
   },
   
+  // テストユーザーデータベースをリセット
+  resetTestUsers: () => {
+    testUsersDatabase = createTestUsersDatabase();
+  },
+  
   // 現在の認証状態を取得
   getAuthState: () => ({ ...mockAuthState }),
   
+  // 特定のユーザーでログイン状態にする
+  loginAsUser: (email: string) => {
+    const user = testUsersDatabase.find(u => u.email === email);
+    if (user) {
+      mockAuthState.isAuthenticated = true;
+      mockAuthState.currentUser = user;
+      mockAuthState.accessToken = `mock-access-token-${Date.now()}`;
+      return user;
+    }
+    return null;
+  },
+  
+  // 新しいテストユーザーを追加
+  addTestUser: (userData: Partial<MockUser>) => {
+    const newUser = createMockUser(userData);
+    testUsersDatabase.push(newUser);
+    return newUser;
+  },
+  
   // すべてのモックデータをリセット
   resetAllData: () => {
+    resetFactorySequences();
     mockUtils.resetAuthState();
+    mockUtils.resetTestUsers();
     storageUtils.clearMockStorage();
     databaseUtils.resetMockData();
+  },
+  
+  // テストシナリオのセットアップ
+  setupScenario: (scenarioName: 'clean' | 'populated' | 'error-prone') => {
+    mockUtils.resetAllData();
+    
+    switch (scenarioName) {
+      case 'clean':
+        // クリーンな状態（初期データのみ）
+        break;
+        
+      case 'populated': {
+        // データが豊富な状態
+        const activeUser = createMockUser({ email: 'active@example.com' });
+        testUsersDatabase.push(activeUser);
+        databaseUtils.seedUserData(activeUser.id, { workOrderCount: 10, shiftCount: 20 });
+        break;
+      }
+        
+      case 'error-prone': {
+        // エラーが多い状態
+        const errorUser = createMockUser({ email: 'error@example.com' });
+        testUsersDatabase.push(errorUser);
+        
+        // エラー状態のワークオーダーを追加
+        for (let i = 0; i < 5; i++) {
+          const errorWorkOrder = createMockWorkOrder({
+            user_id: errorUser.id,
+            status: 'error',
+            error_message: `エラー ${i + 1}: テスト用エラー`,
+          });
+          mockWorkOrders.push(errorWorkOrder);
+        }
+        break;
+      }
+    }
   },
 };
 

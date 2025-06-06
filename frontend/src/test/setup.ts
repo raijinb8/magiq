@@ -3,6 +3,7 @@ import { cleanup, configure } from '@testing-library/react';
 import { afterEach, beforeAll, afterAll, vi } from 'vitest';
 import './matchers';
 import { setupMSW } from './mocks/server';
+import { mockUtils, databaseUtils } from './mocks/handlers';
 
 // MSWのセットアップ
 setupMSW();
@@ -16,15 +17,25 @@ configure({
   showOriginalStackTrace: true,
 });
 
-// React Testing Libraryの自動クリーンアップ
+// React Testing Libraryの自動クリーンアップ（MSW統合版）
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
   vi.clearAllTimers();
+  
+  // MSWのモックデータをリセット（各テスト間での独立性を保証）
+  mockUtils.resetAllData();
 });
 
-// グローバル変数とAPIのモック設定
+// グローバル変数とAPIのモック設定（MSW統合版）
 beforeAll(() => {
+  // MSWとファクトリーシステムの初期化確認
+  console.log('🚀 MSW統合テスト環境を初期化中...');
+  
+  // 初期データの確認
+  const initialCounts = databaseUtils.getDataCounts();
+  console.log('📊 初期データ状況:', initialCounts);
+  
   // Vitestのグローバル設定（FakeTimersは必要に応じて有効化）
   // vi.useFakeTimers(); // コメントアウト：デフォルトでは実時間を使用
   
@@ -348,4 +359,8 @@ afterAll(() => {
   vi.clearAllMocks();
   vi.resetAllMocks();
   vi.restoreAllMocks();
+  
+  // MSWの最終クリーンアップ
+  mockUtils.resetAllData();
+  console.log('🧹 MSW統合テスト環境をクリーンアップ完了');
 });
