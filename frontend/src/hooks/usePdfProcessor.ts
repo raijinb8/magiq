@@ -23,7 +23,8 @@ export interface UsePdfProcessorReturn {
   processFile: (
     fileToProcess: File,
     companyId: CompanyOptionValue,
-    companyLabelForError: string // エラーメッセージ表示用の会社ラベル
+    companyLabelForError: string, // エラーメッセージ表示用の会社ラベル
+    enableAutoDetection?: boolean // 自動検出を有効にするかどうか
   ) => Promise<void>;
 }
 
@@ -37,10 +38,11 @@ export const usePdfProcessor = ({
     async (
       fileToProcess: File,
       companyId: CompanyOptionValue,
-      companyLabelForError: string // エラーメッセージ用に会社ラベルを受け取る
+      companyLabelForError: string, // エラーメッセージ用に会社ラベルを受け取る
+      enableAutoDetection: boolean = false // 自動検出フラグ
     ): Promise<void> => {
-      if (!companyId) {
-        // companyId の存在チェックを追加
+      if (!enableAutoDetection && !companyId) {
+        // 自動検出が無効で、companyIdが未選択の場合のみエラー
         toast.error('会社が選択されていません。');
         onError('会社未選択', fileToProcess, companyLabelForError);
         return;
@@ -71,7 +73,10 @@ export const usePdfProcessor = ({
         // FormDataオブジェクトを作成してファイルと他のデータを格納
         const formData = new FormData();
         formData.append('pdfFile', fileToProcess, fileToProcess.name); // 第3引数でファイル名を指定
-        formData.append('companyId', companyId);
+        if (companyId) {
+          formData.append('companyId', companyId);
+        }
+        formData.append('enableAutoDetection', enableAutoDetection.toString());
         // 必要に応じて他のデータも formData.append() で追加できます
         // 例: formData.append('originalFileName', fileToProcess.name);
 

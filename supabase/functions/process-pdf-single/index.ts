@@ -1,6 +1,6 @@
 // supabase/functions/process-pdf-single/index.ts
 
-import { GoogleGenAI } from '@google/genai'
+import { GoogleGenAI, Part } from '@google/genai'
 // Supabaseクライアントをインポート (Deno用)
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { getPrompt, PromptFunction } from './promptRegistry.ts'
@@ -40,6 +40,91 @@ try {
 }
 
 type CompanyIdentifier = 'NOHARA_G' | 'KATOUBENIYA_MISAWA' | 'UNKNOWN_OR_NOT_SET'
+
+// 会社検出結果の型定義
+interface CompanyDetectionResult {
+  companyId: CompanyIdentifier
+  confidence: number
+  method: string
+  details?: any
+}
+
+// PDFから会社を自動検出する関数
+async function detectCompanyFromPDF(
+  pdfBase64Data: string,
+  mimeType: string,
+  genAI: GoogleGenAI
+): Promise<CompanyDetectionResult> {
+  try {
+    // 会社検出用のプロンプト
+    const detectionPrompt = `以下のPDFファイルから建設会社を特定してください。
+
+次の会社のいずれかを判定してください：
+1. NOHARA_G: 野原G住環境（特徴：野原グループ、野原G、NOHARA等の記載）
+2. KATOUBENIYA_MISAWA: 加藤ベニヤ池袋_ミサワホーム（特徴：加藤ベニヤ、ミサワホーム、池袋等の記載）
+
+判定基準：
+- 会社名、ロゴ、住所の記載
+- 発注元、取引先の記載
+- 作業場所、現場名の記載
+- 特徴的な書式やフォーマット
+
+必ず以下のJSON形式で回答してください：
+{
+  "company_id": "NOHARA_G" または "KATOUBENIYA_MISAWA" または "UNKNOWN_OR_NOT_SET",
+  "confidence": 0.0〜1.0の数値（判定の確信度）,
+  "reason": "判定理由（見つかった証拠）"
+}`
+
+    const model = 'gemini-2.5-flash-preview-04-17'
+    const requestParts: Part[] = [
+      { text: detectionPrompt },
+      {
+        inlineData: {
+          mimeType: mimeType,
+          data: pdfBase64Data,
+        },
+      },
+    ]
+
+    console.log('[Company Detection] Sending request to Gemini API for company detection')
+    const response = await genAI.models.generateContent({
+      model: model,
+      contents: [{ role: 'user', parts: requestParts }],
+    })
+
+    const responseText = response.text || ''
+    console.log('[Company Detection] Raw response:', responseText)
+
+    // JSONパースを試みる
+    try {
+      const parsed = JSON.parse(responseText)
+      return {
+        companyId: parsed.company_id || 'UNKNOWN_OR_NOT_SET',
+        confidence: parsed.confidence || 0,
+        method: 'gemini_content_analysis',
+        details: parsed,
+      }
+    } catch (parseError) {
+      console.error('[Company Detection] Failed to parse JSON response:', parseError)
+      // パース失敗時のフォールバック
+      return {
+        companyId: 'UNKNOWN_OR_NOT_SET',
+        confidence: 0,
+        method: 'gemini_content_analysis_failed',
+        details: { error: 'JSON parse failed', rawResponse: responseText },
+      }
+    }
+  } catch (error) {
+    console.error('[Company Detection] Error during company detection:', error)
+    return {
+      companyId: 'UNKNOWN_OR_NOT_SET',
+      confidence: 0,
+      method: 'error',
+      details: { error: error instanceof Error ? error.message : 'Unknown error' },
+    }
+  }
+}
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -88,15 +173,8 @@ Deno.serve(async (req: Request) => {
     }
 
     // 将来的にはここに実際のPDFの内容を渡す処理が入る（例: OCR結果など）
-    const companyIdFromFrontend = formData.get('companyId') as CompanyIdentifier // フロントエンドから会社IDを受け取る
-
-    if (!companyIdFromFrontend || companyIdFromFrontend === 'UNKNOWN_OR_NOT_SET') {
-      // companyIdが送られてこない、または未選択の場合はエラーにするか、デフォルト処理をする
-      return new Response(JSON.stringify({ error: '会社IDが提供されていません。' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
+    const companyIdFromFrontend = formData.get('companyId') as CompanyIdentifier | null // フロントエンドから会社IDを受け取る（オプショナル）
+    const enableAutoDetection = formData.get('enableAutoDetection') === 'true' // 自動検出を有効にするかどうか
 
     const pdfFile = formData.get('pdfFile') // フロントエンドで append したキー名
     // バリデーション
@@ -136,20 +214,6 @@ Deno.serve(async (req: Request) => {
     const pdfBase64Data = encodeBase64(fileArrayBuffer)
     console.log(`[PDF Processing] Successfully Base64 encoded PDF content for ${fileName}.`)
 
-    // supabase/functions/process-pdf-single/promptRegistry.ts
-    // から識別子とプロンプトのマッピング情報を取得
-    const promptEntry = getPrompt(companyIdFromFrontend)
-
-    if (!promptEntry) {
-      console.error(
-        `[${new Date().toISOString()}] No prompt entry found for companyId: ${companyIdFromFrontend} (file: ${fileName})`
-      )
-      return new Response(
-        JSON.stringify({ error: `Unsupported company or prompt configuration for: ${companyIdFromFrontend}` }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
     // 1. Gemini APIキーを環境変数から取得
     const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY')
     if (!GEMINI_API_KEY) {
@@ -168,16 +232,56 @@ Deno.serve(async (req: Request) => {
     // 2. Genクライアントの初期化
     const genAI = new GoogleGenAI({ apiKey: GEMINI_API_KEY })
     const model = 'gemini-2.5-flash-preview-04-17' // または "gen-pro", "gen-1.5-pro-latest" など。速度とコストで選択。
-    // gemini-2.5-flash-preview-04-17 適応的思考、費用対効果
-    // gemini-2.5-pro-preview-05-06 思考と推論の強化、マルチモーダル理解、高度なコーディングなど
-    // gemini-2.0-flash 次世代の機能、速度。
+
+    // まず会社自動検出を実行（enableAutoDetectionがtrueまたはcompanyIdが未指定の場合）
+    let detectedCompanyId: CompanyIdentifier | null = null
+    let detectionConfidence: number = 0
+    let detectionMethod: string = 'none'
+    let finalCompanyId: CompanyIdentifier = companyIdFromFrontend || 'UNKNOWN_OR_NOT_SET'
+
+    if (enableAutoDetection || !companyIdFromFrontend) {
+      // 会社検出用のプロンプト
+      const detectionResult = await detectCompanyFromPDF(pdfBase64Data, pdfFile.type, genAI)
+      detectedCompanyId = detectionResult.companyId
+      detectionConfidence = detectionResult.confidence
+      detectionMethod = detectionResult.method
+      
+      // 自動検出の結果を使用するかどうか
+      if (!companyIdFromFrontend && detectedCompanyId && detectedCompanyId !== 'UNKNOWN_OR_NOT_SET') {
+        finalCompanyId = detectedCompanyId
+        console.log(`[Company Detection] Auto-detected company: ${detectedCompanyId} with confidence: ${detectionConfidence}`)
+      }
+    }
+
+    // 最終的な会社IDを使用してプロンプトを取得
+    if (finalCompanyId === 'UNKNOWN_OR_NOT_SET') {
+      return new Response(JSON.stringify({ 
+        error: '会社を自動検出できませんでした。手動で選択してください。',
+        detectedCompany: null,
+        confidence: detectionConfidence
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const promptEntry = getPrompt(finalCompanyId)
+    if (!promptEntry) {
+      console.error(
+        `[${new Date().toISOString()}] No prompt entry found for companyId: ${finalCompanyId} (file: ${fileName})`
+      )
+      return new Response(
+        JSON.stringify({ error: `Unsupported company or prompt configuration for: ${finalCompanyId}` }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
 
     // 3. プロンプトの組み立て
     // PROMPT_FUNCTION を取得（どのプロンプトを使うか）
     const selectedPromptFunction: PromptFunction = promptEntry.promptFunction
     // 組み立て
     const prompt = selectedPromptFunction(fileName)
-    const promptIdentifier = `${companyIdFromFrontend}_${promptEntry.version}`
+    const promptIdentifier = `${finalCompanyId}_${promptEntry.version}`
     // Gemini APIに渡すパーツを作成
     const requestParts: Part[] = [
       { text: prompt }, // テキストによる指示
@@ -296,6 +400,11 @@ Deno.serve(async (req: Request) => {
               prompt_identifier: promptIdentifier, // どのプロンプトを使ったか
               company_name: companyName, // 取引先_発注元
               gemini_processed_at: new Date().toISOString(), // Gemini処理完了時刻
+              // 自動検出フィールド
+              detected_company_id: detectedCompanyId,
+              detection_confidence: detectionConfidence,
+              detection_method: detectionMethod,
+              is_manual_override: companyIdFromFrontend !== null && detectedCompanyId !== companyIdFromFrontend
             },
           ])
           .select('id') // 挿入されたレコードのIDを取得
@@ -321,6 +430,29 @@ Deno.serve(async (req: Request) => {
           console.log(
             `[${new Date().toISOString()}] Successfully saved to database for ${fileName}, record ID: ${dbRecordId}`
           )
+          
+          // 検出履歴を保存（自動検出を実行した場合のみ）
+          if (detectedCompanyId && detectionMethod !== 'none') {
+            const { error: historyError } = await supabaseClient
+              .from('company_detection_history')
+              .insert([
+                {
+                  work_order_id: dbRecordId,
+                  detected_company_id: detectedCompanyId,
+                  confidence: detectionConfidence,
+                  detection_details: {
+                    method: detectionMethod,
+                    manual_override: companyIdFromFrontend !== null && detectedCompanyId !== companyIdFromFrontend,
+                    timestamp: new Date().toISOString()
+                  }
+                }
+              ])
+            
+            if (historyError) {
+              console.error(`[${new Date().toISOString()}] Error saving detection history:`, historyError)
+              // 履歴保存のエラーは致命的ではないので、ログに記録するだけ
+            }
+          }
         } else {
           console.warn(
             `[${new Date().toISOString()}] Saved to database for ${fileName}, but no ID returned or insert failed silently.`
@@ -356,11 +488,16 @@ Deno.serve(async (req: Request) => {
 
     // 5. フロントエンドへのレスポンス
     const responseData = {
-      message: `Successfully generated text for ${fileName} (Company: ${companyIdFromFrontend}).`,
+      message: `Successfully generated text for ${fileName} (Company: ${finalCompanyId}).`,
       generatedText: generatedTextByGen,
       originalFileName: fileName,
       promptUsedIdentifier: promptIdentifier, // プロンプトのバージョン管理用
-      identifiedCompany: companyIdFromFrontend,
+      identifiedCompany: finalCompanyId,
+      // 自動検出情報
+      detectedCompany: detectedCompanyId,
+      detectionConfidence: detectionConfidence,
+      detectionMethod: detectionMethod,
+      wasManuallyOverridden: companyIdFromFrontend !== null && detectedCompanyId !== companyIdFromFrontend,
       usageMetadata: usageMetadata, // トークン使用量も返す
       dbRecordId: dbRecordId, // DBに保存されたレコードのIDも返す (オプション)
     }
