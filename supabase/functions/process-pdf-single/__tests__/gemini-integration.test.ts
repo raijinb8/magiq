@@ -8,7 +8,7 @@ import {
   createTrackingMockGeminiAI,
   GEMINI_MOCK_RESPONSES,
   MockGoogleGenAI,
-} from '../test-helpers.ts'
+} from '../../_shared/test-helpers.ts'
 
 describe('Gemini API モック統合デモ', () => {
   let mockGeminiAI: MockGoogleGenAI

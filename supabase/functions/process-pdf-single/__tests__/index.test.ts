@@ -7,7 +7,7 @@ import {
   MockGoogleGenAI,
   setupTestEnv,
   cleanupTestEnv,
-} from '../test-helpers.ts'
+} from '../../_shared/test-helpers.ts'
 
 // テスト用のSupabaseクライアントモック
 const mockSupabaseClient = {

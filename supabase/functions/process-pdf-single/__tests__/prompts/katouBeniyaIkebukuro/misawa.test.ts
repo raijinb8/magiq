@@ -1,7 +1,7 @@
 // katouBeniyaIkebukuro/misawa プロンプトのテスト
 import { assertEquals, assertStringIncludes } from '@std/testing/asserts'
 import { describe, it } from '@std/testing/mod'
-import { KATOUBENIYA_MISAWA_PROMPT } from './misawa.ts'
+import { KATOUBENIYA_MISAWA_PROMPT } from '../../../prompts/katouBeniyaIkebukuro/misawa.ts'
 
 describe('KATOUBENIYA_MISAWA_PROMPT', () => {
   it('ファイル名を含むプロンプトを生成する', () => {

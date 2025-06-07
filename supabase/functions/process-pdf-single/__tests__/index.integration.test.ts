@@ -15,7 +15,7 @@ import {
   GEMINI_MOCK_RESPONSES,
   MockGoogleGenAI,
   TrackingMockGeminiAI,
-} from '../test-helpers.ts'
+} from '../../_shared/test-helpers.ts'
 
 describe('process-pdf-single Edge Function with Gemini Mock', () => {
   let mockGeminiAI: MockGoogleGenAI | TrackingMockGeminiAI
