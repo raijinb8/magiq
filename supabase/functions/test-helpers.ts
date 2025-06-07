@@ -1,5 +1,6 @@
 // Edge Functions用の共通テストヘルパー関数
 import { stub } from '@std/testing/mock'
+export * from './test-helpers/gemini-mock.ts'
 
 /**
  * FormDataを作成するヘルパー関数

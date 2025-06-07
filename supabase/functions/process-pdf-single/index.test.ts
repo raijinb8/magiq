@@ -1,7 +1,13 @@
 // process-pdf-single 関数のテスト
 import { assertEquals, assertExists } from '@std/testing/asserts'
-import { describe, it } from '@std/testing/mod'
+import { describe, it, beforeEach, afterEach } from '@std/testing/mod'
 import { stub } from '@std/testing/mock'
+import {
+  createMockGeminiAI,
+  MockGoogleGenAI,
+  setupTestEnv,
+  cleanupTestEnv,
+} from '../test-helpers.ts'
 
 // テスト用のSupabaseクライアントモック
 const mockSupabaseClient = {
@@ -17,33 +23,20 @@ const mockSupabaseClient = {
   }),
 }
 
-// Google Gemini AIモック
-const mockGenerateContent = stub(
-  {},
-  'generateContent',
-  () => Promise.resolve({
-    text: 'テスト生成されたテキスト',
-    usageMetadata: {
-      promptTokenCount: 100,
-      candidatesTokenCount: 50,
-      totalTokenCount: 150,
-    },
-  })
-)
+// Google Gemini AIモック（新しいモックシステムを使用）
+let mockGeminiAI: MockGoogleGenAI
 
 describe('process-pdf-single Edge Function', () => {
   // 環境変数のセットアップ
   beforeEach(() => {
-    Deno.env.set('GEMINI_API_KEY', 'test-api-key')
-    Deno.env.set('SUPABASE_URL', 'https://test.supabase.co')
-    Deno.env.set('SUPABASE_SERVICE_ROLE_KEY', 'test-service-key')
+    setupTestEnv()
+    mockGeminiAI = createMockGeminiAI()
   })
 
   // 環境変数のクリーンアップ
   afterEach(() => {
-    Deno.env.delete('GEMINI_API_KEY')
-    Deno.env.delete('SUPABASE_URL')
-    Deno.env.delete('SUPABASE_SERVICE_ROLE_KEY')
+    cleanupTestEnv()
+    mockGeminiAI.reset()
   })
 
   it('OPTIONSリクエストに対してCORSヘッダーを返す', async () => {
@@ -164,6 +157,16 @@ describe('process-pdf-single Edge Function', () => {
   })
 
   it('正常なリクエストで生成されたテキストを返す', async () => {
+    // Geminiモックのレスポンスを設定
+    mockGeminiAI.setCustomResponse({
+      text: 'テスト生成されたテキスト',
+      usageMetadata: {
+        promptTokenCount: 100,
+        candidatesTokenCount: 50,
+        totalTokenCount: 150,
+      },
+    })
+
     const formData = new FormData()
     formData.append('companyId', 'NOHARA_G')
     formData.append('pdfFile', new File(['test pdf content'], 'test.pdf', { type: 'application/pdf' }))
