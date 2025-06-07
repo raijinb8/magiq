@@ -23,7 +23,12 @@
     "test:reporter": "vitest --reporter=verbose --reporter=junit --outputFile=test-results.xml",
     "test:debug": "vitest --inspect-brk --no-coverage",
     "test:ci": "vitest --run --coverage --reporter=junit --outputFile=test-results.xml",
-    "ci": "npm run lint && npm run type-check && npm run build && npm run test:ci"
+    "ci": "npm run lint && npm run type-check && npm run build && npm run test:ci",
+    "test:deno": "cd ../supabase && deno task test",
+    "test:deno:watch": "cd ../supabase && deno task test:watch",
+    "test:deno:coverage": "cd ../supabase && deno task test:coverage",
+    "test:backend": "npm run test:deno",
+    "test:all": "npm run test:ci && npm run test:deno"
   },
   "dependencies": {
     "@radix-ui/react-dropdown-menu": "^2.1.7",
@@ -66,6 +71,7 @@
     "eslint-plugin-react-refresh": "^0.4.19",
     "globals": "^15.15.0",
     "happy-dom": "^17.6.3",
+    "msw": "^2.8.6",
     "prettier": "^3.5.3",
     "supabase": "^2.22.12",
     "typescript": "~5.7.2",
