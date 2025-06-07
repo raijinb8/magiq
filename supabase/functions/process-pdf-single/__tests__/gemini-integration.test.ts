@@ -61,7 +61,7 @@ describe('Gemini API モック統合デモ', () => {
         })
         throw new Error('エラーが発生するはずでした')
       } catch (error) {
-        assertEquals(error.message, 'Rate limit exceeded')
+        assertEquals((error as Error).message, 'Rate limit exceeded')
       }
     })
   })

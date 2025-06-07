@@ -95,7 +95,7 @@ describe('process-pdf-single Edge Function with Gemini Mock', () => {
         })
         throw new Error('エラーが発生するはずでした')
       } catch (error) {
-        assertEquals(error.message, 'API rate limit exceeded')
+        assertEquals((error as Error).message, 'API rate limit exceeded')
       }
     })
 
@@ -109,7 +109,7 @@ describe('process-pdf-single Edge Function with Gemini Mock', () => {
         })
         throw new Error('エラーが発生するはずでした')
       } catch (error) {
-        assertEquals(error.message, 'API key is required')
+        assertEquals((error as Error).message, 'API key is required')
       }
     })
 
