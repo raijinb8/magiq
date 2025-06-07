@@ -1,6 +1,6 @@
 // process-pdf-single 関数の統合テスト（Geminiモック使用）
 import { assertEquals, assertExists } from '@std/testing/asserts'
-import { describe, it, beforeEach, afterEach } from '@std/testing/mod'
+import { describe, it, beforeEach, afterEach } from '@std/testing'
 import {
   createFormData,
   createRequest,

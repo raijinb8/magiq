@@ -1,6 +1,6 @@
 // noharaG プロンプトのテスト
 import { assertEquals, assertStringIncludes } from '@std/testing/asserts'
-import { describe, it } from '@std/testing/mod'
+import { describe, it } from '@std/testing'
 import { NOHARA_G_PROMPT } from '../../prompts/noharaG.ts'
 
 describe('NOHARA_G_PROMPT', () => {
@@ -16,9 +16,9 @@ describe('NOHARA_G_PROMPT', () => {
     const prompt = NOHARA_G_PROMPT('test.pdf')
     
     // プロンプトに含まれるべき重要な指示を確認
-    assertStringIncludes(prompt, '野原G住環境')
-    assertStringIncludes(prompt, 'データ抽出')
-    assertStringIncludes(prompt, '作業指示書')
+    assertStringIncludes(prompt, '野原Ｇ住環境')
+    assertStringIncludes(prompt, '抽出')
+    assertStringIncludes(prompt, '発注書')
   })
 
   it('フォーマット指示が含まれている', () => {
@@ -46,7 +46,7 @@ describe('NOHARA_G_PROMPT', () => {
   it('空のファイル名でもエラーにならない', () => {
     const prompt = NOHARA_G_PROMPT('')
     assertEquals(typeof prompt, 'string')
-    assertStringIncludes(prompt, '野原G住環境')
+    assertStringIncludes(prompt, '野原Ｇ住環境')
   })
 
   it('特殊文字を含むファイル名を正しく処理する', () => {

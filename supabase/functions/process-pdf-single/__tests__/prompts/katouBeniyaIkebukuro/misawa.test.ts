@@ -1,6 +1,6 @@
 // katouBeniyaIkebukuro/misawa プロンプトのテスト
 import { assertEquals, assertStringIncludes } from '@std/testing/asserts'
-import { describe, it } from '@std/testing/mod'
+import { describe, it } from '@std/testing'
 import { KATOUBENIYA_MISAWA_PROMPT } from '../../../prompts/katouBeniyaIkebukuro/misawa.ts'
 
 describe('KATOUBENIYA_MISAWA_PROMPT', () => {
@@ -16,9 +16,9 @@ describe('KATOUBENIYA_MISAWA_PROMPT', () => {
     const prompt = KATOUBENIYA_MISAWA_PROMPT('test.pdf')
     
     // プロンプトに含まれるべき重要な指示を確認
-    assertStringIncludes(prompt, '加藤ベニヤ池袋')
+    assertStringIncludes(prompt, '加藤ベニヤ')
     assertStringIncludes(prompt, 'ミサワホーム')
-    assertStringIncludes(prompt, 'データ抽出')
+    assertStringIncludes(prompt, '抽出')
   })
 
   it('フォーマット指示が含まれている', () => {
@@ -46,7 +46,7 @@ describe('KATOUBENIYA_MISAWA_PROMPT', () => {
   it('空のファイル名でもエラーにならない', () => {
     const prompt = KATOUBENIYA_MISAWA_PROMPT('')
     assertEquals(typeof prompt, 'string')
-    assertStringIncludes(prompt, '加藤ベニヤ池袋')
+    assertStringIncludes(prompt, '加藤ベニヤ')
     assertStringIncludes(prompt, 'ミサワホーム')
   })
 

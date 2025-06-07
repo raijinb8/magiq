@@ -1,6 +1,6 @@
 // process-pdf-single 関数のテスト
 import { assertEquals, assertExists } from '@std/testing/asserts'
-import { describe, it, beforeEach, afterEach } from '@std/testing/mod'
+import { describe, it, beforeEach, afterEach } from '@std/testing'
 import { stub } from '@std/testing/mock'
 import {
   createMockGeminiAI,
