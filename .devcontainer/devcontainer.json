@@ -24,7 +24,7 @@
         "ms-azuretools.vscode-docker", // Docker拡張機能
         "github.vscode-github-actions", // GitHub Actions
         "anthropic.claude", // Claude Code
-        "coderabbit.ai-pr-reviewer" // CodeRabbit AI PR Reviewer
+        "coderabbit.coderabbit-vscode" // CodeRabbit AI PR Reviewer
       ]
     }
   },
