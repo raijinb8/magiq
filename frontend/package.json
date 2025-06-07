@@ -24,9 +24,9 @@
     "test:debug": "vitest --inspect-brk --no-coverage",
     "test:ci": "vitest --run --coverage --reporter=junit --outputFile=test-results.xml",
     "ci": "npm run lint && npm run type-check && npm run build && npm run test:ci",
-    "test:deno": "cd ../supabase && deno test --config deno.test.json",
-    "test:deno:watch": "cd ../supabase && deno test --config deno.test.json --watch",
-    "test:deno:coverage": "cd ../supabase && deno test --config deno.test.json --coverage",
+    "test:deno": "cd ../supabase && deno task test",
+    "test:deno:watch": "cd ../supabase && deno task test:watch",
+    "test:deno:coverage": "cd ../supabase && deno task test:coverage",
     "test:backend": "npm run test:deno",
     "test:all": "npm run test:ci && npm run test:deno"
   },
