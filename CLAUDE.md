@@ -430,8 +430,19 @@ Claude Codeは適切な粒度でコミットとPR作成を自動的に処理し�
    ```bash
    git branch --show-current  # 必ず実行
    ```
-2. **1つのコミットに複数の種類の変更を含めない**
-3. **異なる目的の修正は別々のブランチで行う**
+2. **CI相当のチェックを必ず実行**
+   ```bash
+   # フロントエンドのチェック
+   cd /app/frontend
+   npm run lint        # ESLint実行
+   npx tsc -b          # TypeScriptビルドチェック
+   
+   # 全体のチェック（可能な場合）
+   npm run build       # 本番ビルド確認
+   npm test           # テスト実行（テストが設定されている場合）
+   ```
+3. **1つのコミットに複数の種類の変更を含めない**
+4. **異なる目的の修正は別々のブランチで行う**
 
 **コミットするタイミング:**
 - 論理的な作業単位の完了後（例：関数の実装、特定のバグ修正）
@@ -731,15 +742,26 @@ on:
   pull_request:
     branches: [main, dev]
 jobs:
-  test:
+  frontend:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-      - run: npm ci
-      - run: npm run lint
-      - run: npm run build
-      - run: npm test
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install frontend dependencies
+        working-directory: ./frontend
+        run: npm ci
+      - name: Run frontend lint
+        working-directory: ./frontend
+        run: npm run lint
+      - name: Run frontend build
+        working-directory: ./frontend
+        run: npm run build
+      # テストが設定されている場合のみ有効化
+      # - name: Run frontend tests
+      #   working-directory: ./frontend
+      #   run: npm test
 ```
 
 ### 品質ゲート
