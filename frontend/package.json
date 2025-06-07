@@ -23,6 +23,7 @@
     "test:reporter": "vitest --reporter=verbose --reporter=junit --outputFile=test-results.xml",
     "test:debug": "vitest --inspect-brk --no-coverage",
     "test:ci": "vitest --run --coverage --reporter=junit --outputFile=test-results.xml",
+    "test:deno": "cd ../supabase && deno test --allow-net=supabase.co,googleapis.com --allow-env --allow-read",
     "ci": "npm run lint && npm run type-check && npm run build && npm run test:ci"
   },
   "dependencies": {
