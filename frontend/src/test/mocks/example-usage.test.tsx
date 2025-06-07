@@ -138,4 +138,98 @@ describe('MSW使用例', () => {
     expect(data.promptIdentifier).toBe('NOHARA_G_V20250526');
     expect(data.generatedText).toContain('物件名：テストマンション');
   });
+
+  it('リクエストボディキャプチャとFormData検証の例', async () => {
+    let capturedFile: File | null = null;
+    let capturedCompanyId: string | null = null;
+
+    mockApiResponse(
+      http.post('*/functions/v1/process-pdf-single', async ({ request }) => {
+        const formData = await request.formData();
+        capturedFile = formData.get('file') as File;
+        capturedCompanyId = formData.get('companyId') as string;
+        
+        return HttpResponse.json({
+          success: true,
+          data: { generated_text: 'Captured FormData' }
+        });
+      })
+    );
+
+    const testFile = new File(['test content'], 'test.pdf', { type: 'application/pdf' });
+    const formData = new FormData();
+    formData.append('file', testFile);
+    formData.append('companyId', 'NOHARA_G');
+
+    await fetch('https://example.supabase.co/functions/v1/process-pdf-single', {
+      method: 'POST',
+      body: formData
+    });
+
+    expect(capturedFile?.name).toBe('test.pdf');
+    expect(capturedCompanyId).toBe('NOHARA_G');
+  });
+
+  it('遅延レスポンスとタイムアウトの例', async () => {
+    const { delay } = await import('msw');
+    
+    // 遅延レスポンスのテスト
+    mockApiResponse(
+      http.get('*/rest/v1/work_orders', async () => {
+        await delay(2000); // 2秒の遅延
+        return HttpResponse.json([
+          createMockWorkOrder({ status: 'delayed-response' })
+        ]);
+      })
+    );
+
+    const startTime = Date.now();
+    const response = await fetch('https://example.supabase.co/rest/v1/work_orders');
+    const endTime = Date.now();
+
+    expect(response.status).toBe(200);
+    expect(endTime - startTime).toBeGreaterThanOrEqual(2000);
+
+    // タイムアウトのテスト
+    mockApiResponse(
+      http.post('*/functions/v1/process-pdf-single', async () => {
+        await delay('infinite'); // 無限遅延
+        return HttpResponse.json({ success: true });
+      })
+    );
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 1000);
+
+    try {
+      await fetch('https://example.supabase.co/functions/v1/process-pdf-single', {
+        method: 'POST',
+        signal: controller.signal,
+        body: new FormData()
+      });
+      
+      fail('Should have timed out');
+    } catch (error) {
+      expect(error).toBeInstanceOf(DOMException);
+      expect((error as DOMException).name).toBe('AbortError');
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  });
+
+  it('ネットワークエラーシミュレーションの例', async () => {
+    mockApiResponse(
+      http.get('*/rest/v1/work_orders', () => {
+        return HttpResponse.error();
+      })
+    );
+
+    try {
+      await fetch('https://example.supabase.co/rest/v1/work_orders');
+      fail('Should have thrown network error');
+    } catch (error) {
+      expect(error).toBeInstanceOf(TypeError);
+      expect((error as TypeError).message).toContain('Failed to fetch');
+    }
+  });
 });

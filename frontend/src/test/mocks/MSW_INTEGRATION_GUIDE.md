@@ -243,6 +243,151 @@ describe('ファイル操作', () => {
 });
 ```
 
+### リクエストボディのキャプチャと検証
+
+```typescript
+import { server } from './server';
+import { http, HttpResponse } from 'msw';
+
+describe('リクエストボディのキャプチャ', () => {
+  it('送信されたデータを検証する', async () => {
+    let capturedData: any = null;
+
+    // カスタムハンドラーでリクエストボディをキャプチャ
+    server.use(
+      http.post('/rest/v1/work_orders', async ({ request }) => {
+        capturedData = await request.json();
+        return HttpResponse.json({ id: 'captured-123' });
+      })
+    );
+
+    // リクエスト送信
+    const response = await fetch('/rest/v1/work_orders', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${mockUtils.getAuthState().accessToken}`
+      },
+      body: JSON.stringify({
+        file_name: 'test.pdf',
+        company_name: '野原G住環境',
+        status: 'pending'
+      })
+    });
+
+    // キャプチャしたデータの検証
+    expect(capturedData).toEqual({
+      file_name: 'test.pdf',
+      company_name: '野原G住環境',
+      status: 'pending'
+    });
+  });
+
+  it('FormDataの内容を検証する', async () => {
+    let capturedFile: File | null = null;
+    let capturedCompanyId: string | null = null;
+
+    server.use(
+      http.post('/functions/v1/process-pdf-single', async ({ request }) => {
+        const formData = await request.formData();
+        capturedFile = formData.get('file') as File;
+        capturedCompanyId = formData.get('companyId') as string;
+        
+        return HttpResponse.json({
+          success: true,
+          data: { generated_text: 'Captured FormData' }
+        });
+      })
+    );
+
+    const testFile = new File(['test content'], 'test.pdf', { type: 'application/pdf' });
+    const formData = new FormData();
+    formData.append('file', testFile);
+    formData.append('companyId', 'NOHARA_G');
+
+    await fetch('/functions/v1/process-pdf-single', {
+      method: 'POST',
+      body: formData
+    });
+
+    expect(capturedFile?.name).toBe('test.pdf');
+    expect(capturedCompanyId).toBe('NOHARA_G');
+  });
+});
+```
+
+### 遅延レスポンスとタイムアウトのテスト
+
+```typescript
+import { delay } from 'msw';
+
+describe('ネットワーク遅延のテスト', () => {
+  it('遅延レスポンスの処理', async () => {
+    // 2秒の遅延を追加
+    server.use(
+      http.get('/rest/v1/work_orders', async () => {
+        await delay(2000);
+        return HttpResponse.json([
+          createMockWorkOrder({ status: 'delayed' })
+        ]);
+      })
+    );
+
+    const startTime = Date.now();
+    const response = await fetch('/rest/v1/work_orders');
+    const endTime = Date.now();
+
+    expect(response.status).toBe(200);
+    expect(endTime - startTime).toBeGreaterThanOrEqual(2000);
+  });
+
+  it('タイムアウトのシミュレーション', async () => {
+    server.use(
+      http.post('/functions/v1/process-pdf-single', async () => {
+        // 無限遅延でタイムアウトをシミュレート
+        await delay('infinite');
+        return HttpResponse.json({ success: true });
+      })
+    );
+
+    // AbortControllerでタイムアウトを設定
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 1000);
+
+    try {
+      await fetch('/functions/v1/process-pdf-single', {
+        method: 'POST',
+        signal: controller.signal,
+        body: new FormData()
+      });
+      
+      fail('Should have timed out');
+    } catch (error) {
+      expect(error).toBeInstanceOf(DOMException);
+      expect((error as DOMException).name).toBe('AbortError');
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  });
+
+  it('ネットワーク接続エラーのシミュレーション', async () => {
+    server.use(
+      http.get('/rest/v1/work_orders', () => {
+        return HttpResponse.error();
+      })
+    );
+
+    try {
+      await fetch('/rest/v1/work_orders');
+      fail('Should have thrown network error');
+    } catch (error) {
+      expect(error).toBeInstanceOf(TypeError);
+      expect((error as TypeError).message).toContain('Failed to fetch');
+    }
+  });
+});
+```
+
 ## ユーティリティ関数
 
 ### mockUtils

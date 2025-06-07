@@ -370,6 +370,93 @@ describe('MSW統合テスト', () => {
         expect(shift.user_id).toBe(problematicData.user.id);
       });
     });
+
+    it('複数プリセットの組み合わせ統合テスト', () => {
+      // 新規ユーザープリセット
+      const newUserScenario = testPresets.newUser();
+      expect(newUserScenario.workOrders).toHaveLength(0);
+      expect(newUserScenario.shifts).toHaveLength(0);
+
+      // アクティブユーザープリセット  
+      const activeUserScenario = testPresets.activeUser();
+      expect(activeUserScenario.workOrders.length).toBeGreaterThan(5);
+      expect(activeUserScenario.shifts.length).toBeGreaterThan(10);
+
+      // プリセット間でのユーザーIDの独立性確認
+      expect(newUserScenario.user.id).not.toBe(activeUserScenario.user.id);
+    });
+
+    it('企業固有ワークフローの統合テスト', async () => {
+      // 野原G住環境の典型的なワークフロー
+      mockUtils.loginAsUser('nohara@example.com');
+      
+      // PDF処理APIの呼び出し
+      const formData = new FormData();
+      formData.append('file', new File(['野原G PDFコンテンツ'], 'nohara-plan.pdf', { type: 'application/pdf' }));
+      formData.append('companyId', 'NOHARA_G');
+
+      const response = await fetch('/functions/v1/process-pdf-single', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${mockUtils.getAuthState().accessToken}` },
+        body: formData
+      });
+
+      expect(response.status).toBe(200);
+      const result = await response.json();
+      expect(result.data.generated_text).toContain('グリーンマンション');
+
+      // 処理結果がデータベースに保存されることを確認
+      const workOrdersResponse = await fetch('/rest/v1/work_orders', {
+        headers: { 'Authorization': `Bearer ${mockUtils.getAuthState().accessToken}` }
+      });
+      const workOrders = await workOrdersResponse.json();
+      
+      expect(workOrders.some((wo: { company_name: string }) => wo.company_name === '野原G住環境')).toBe(true);
+    });
+
+    it('エラー復旧フローの統合テスト', async () => {
+      // エラー状況をセットアップ
+      const user = mockUtils.loginAsUser('error-recovery@example.com');
+      
+      // エラー状態のワークオーダーを作成
+      databaseUtils.addMockWorkOrder({
+        user_id: user!.id,
+        file_name: 'failed-processing.pdf',
+        status: 'error',
+        error_message: 'PDF処理中にタイムアウトが発生しました'
+      });
+
+      // エラー状態の確認
+      let response = await fetch(`/rest/v1/work_orders?user_id=${user!.id}&status=eq.error`, {
+        headers: { 'Authorization': `Bearer ${mockUtils.getAuthState().accessToken}` }
+      });
+      const errorOrders = await response.json();
+      expect(errorOrders).toHaveLength(1);
+      expect(errorOrders[0].error_message).toContain('タイムアウト');
+
+      // 再処理API呼び出し（ステータス更新）
+      response = await fetch(`/rest/v1/work_orders?id=eq.${errorOrders[0].id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${mockUtils.getAuthState().accessToken}`
+        },
+        body: JSON.stringify({
+          status: 'processing',
+          error_message: null
+        })
+      });
+
+      expect(response.status).toBe(200);
+
+      // 復旧状況の確認
+      response = await fetch(`/rest/v1/work_orders?user_id=${user!.id}&status=eq.processing`, {
+        headers: { 'Authorization': `Bearer ${mockUtils.getAuthState().accessToken}` }
+      });
+      const processingOrders = await response.json();
+      expect(processingOrders).toHaveLength(1);
+      expect(processingOrders[0].error_message).toBeNull();
+    });
   });
 
   describe('データ整合性確認', () => {

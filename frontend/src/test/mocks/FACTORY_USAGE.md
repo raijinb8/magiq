@@ -374,6 +374,245 @@ const futureDate = dateHelpers.daysFromNow(7);
 const pastDate = dateHelpers.daysFromNow(-30);
 ```
 
+## 高度な使用パターン
+
+### カスタムファクトリーの作成
+
+```typescript
+import { createMockUser, randomHelpers, dateHelpers } from './mocks/factories';
+
+// プロジェクト固有のユーザーファクトリー
+function createProjectManager(projectName: string) {
+  return createMockUser({
+    role: 'admin',
+    email: `manager-${randomHelpers.string(6)}@company.com`,
+    user_metadata: {
+      projects: [projectName],
+      joinedAt: dateHelpers.daysFromNow(-365), // 1年前に参加
+      isProjectManager: true
+    }
+  });
+}
+
+// 使用例
+const manager = createProjectManager('グリーンマンション建設');
+expect(manager.user_metadata.isProjectManager).toBe(true);
+expect(manager.user_metadata.projects).toContain('グリーンマンション建設');
+```
+
+### 条件付きデータ生成
+
+```typescript
+function createConditionalWorkOrders(count: number, condition: 'success' | 'error' | 'mixed') {
+  const workOrders = [];
+  
+  for (let i = 0; i < count; i++) {
+    let workOrder;
+    
+    switch (condition) {
+      case 'success':
+        workOrder = createMockWorkOrder({
+          status: 'completed',
+          generated_text: `成功事例 ${i + 1}の処理結果`
+        });
+        break;
+        
+      case 'error':
+        workOrder = createMockWorkOrderWithError(`エラー事例 ${i + 1}: 処理失敗`);
+        break;
+        
+      case 'mixed':
+        workOrder = i % 2 === 0 
+          ? createMockWorkOrder({ status: 'completed' })
+          : createMockWorkOrderWithError(`エラー事例 ${i + 1}`);
+        break;
+    }
+    
+    workOrders.push(workOrder);
+  }
+  
+  return workOrders;
+}
+
+// 使用例
+const successWorkOrders = createConditionalWorkOrders(5, 'success');
+const mixedWorkOrders = createConditionalWorkOrders(10, 'mixed');
+
+expect(successWorkOrders.every(wo => wo.status === 'completed')).toBe(true);
+expect(mixedWorkOrders.filter(wo => wo.status === 'error')).toHaveLength(5);
+```
+
+### パフォーマンステスト用データ生成
+
+```typescript
+describe('大量データパフォーマンステスト', () => {
+  it('1000件のワークオーダーを効率的に処理できる', () => {
+    const startTime = performance.now();
+    
+    // 大量データの生成
+    const largeDataset = createMockWorkOrders(1000, {
+      company_name: '野原G住環境'
+    });
+    
+    const generationTime = performance.now() - startTime;
+    
+    // データ生成が1秒以内であることを確認
+    expect(generationTime).toBeLessThan(1000);
+    expect(largeDataset).toHaveLength(1000);
+    
+    // メモリ使用量の確認（ブラウザ環境では制限あり）
+    const dataSize = JSON.stringify(largeDataset).length;
+    console.log(`Generated ${largeDataset.length} records in ${generationTime}ms, size: ${dataSize} bytes`);
+  });
+
+  it('メモリ効率的なファクトリー使用', () => {
+    // 必要な場合のみ詳細データを生成
+    const lightweightOrders = createMockWorkOrders(100, {
+      // 必要最小限のデータのみ設定
+      status: 'pending',
+      generated_text: '', // 重いテキストデータは空に
+      edited_text: null
+    });
+
+    expect(lightweightOrders).toHaveLength(100);
+    expect(lightweightOrders[0].generated_text).toBe('');
+  });
+});
+```
+
+### 階層データの生成
+
+```typescript
+// 組織階層のテストデータ
+function createOrganizationalData() {
+  // 管理者ユーザー
+  const admin = createMockUser({
+    role: 'admin',
+    email: 'admin@company.com'
+  });
+
+  // マネージャーユーザー（複数）
+  const managers = createMockUsers(3, {
+    role: 'manager',
+    user_metadata: { reportsTo: admin.id }
+  });
+
+  // 一般ユーザー（各マネージャーに3人ずつ）
+  const staffMembers = managers.flatMap(manager => 
+    createMockUsers(3, {
+      role: 'user',
+      user_metadata: { reportsTo: manager.id }
+    })
+  );
+
+  // 各スタッフのワークオーダー
+  const allWorkOrders = staffMembers.flatMap(staff =>
+    createMockWorkOrders(randomHelpers.arrayElement([2, 3, 4]), {
+      user_id: staff.id,
+      company_name: '野原G住環境'
+    })
+  );
+
+  return {
+    admin,
+    managers,
+    staffMembers,
+    workOrders: allWorkOrders,
+    totalUsers: 1 + managers.length + staffMembers.length
+  };
+}
+
+// 使用例
+describe('組織階層テスト', () => {
+  it('組織全体のデータが正しく生成される', () => {
+    const org = createOrganizationalData();
+    
+    expect(org.admin.role).toBe('admin');
+    expect(org.managers).toHaveLength(3);
+    expect(org.staffMembers).toHaveLength(9); // 3 managers × 3 staff each
+    expect(org.totalUsers).toBe(13); // 1 admin + 3 managers + 9 staff
+    
+    // 各スタッフが管理者に紐づいている
+    org.staffMembers.forEach(staff => {
+      expect(org.managers.some(manager => 
+        manager.id === staff.user_metadata.reportsTo
+      )).toBe(true);
+    });
+  });
+});
+```
+
+### テストシナリオ別ファクトリー
+
+```typescript
+// シナリオ別のデータセット生成
+const testScenarios = {
+  // 新規システム導入時のテスト
+  freshInstall: () => ({
+    users: [createMockUser({ role: 'admin', email: 'admin@newcompany.com' })],
+    workOrders: [],
+    shifts: []
+  }),
+
+  // 運用中のシステムテスト
+  activeProduction: () => {
+    const users = createMockUsers(20);
+    const workOrders = createMockWorkOrders(50, {
+      status: randomHelpers.arrayElement(['completed', 'processing', 'pending'])
+    });
+    const shifts = createMockShifts(100);
+    
+    return { users, workOrders, shifts };
+  },
+
+  // 障害復旧後のテスト
+  postIncident: () => {
+    const users = createMockUsers(10);
+    const workOrders = [
+      ...createMockWorkOrders(5, { status: 'completed' }), // 正常分
+      ...createMockWorkOrders(3, { status: 'error', error_message: '障害による処理失敗' }), // 障害分
+      ...createMockWorkOrders(2, { status: 'pending' }) // 再処理待ち
+    ];
+    
+    return { users, workOrders, shifts: [] };
+  },
+
+  // 高負荷状況のテスト
+  highLoad: () => ({
+    users: createMockUsers(100),
+    workOrders: createMockWorkOrders(500, {
+      status: 'processing',
+      uploaded_at: dateHelpers.today() // 今日の日付に集中
+    }),
+    shifts: createMockShifts(200)
+  })
+};
+
+// 使用例
+describe('シナリオ別テスト', () => {
+  it('新規導入環境で正しく動作する', () => {
+    const scenario = testScenarios.freshInstall();
+    
+    expect(scenario.users).toHaveLength(1);
+    expect(scenario.users[0].role).toBe('admin');
+    expect(scenario.workOrders).toHaveLength(0);
+  });
+
+  it('高負荷環境でも安定動作する', () => {
+    const scenario = testScenarios.highLoad();
+    
+    expect(scenario.users.length).toBeGreaterThan(50);
+    expect(scenario.workOrders.length).toBeGreaterThan(400);
+    
+    // 今日の日付のデータが多いことを確認
+    const todayOrders = scenario.workOrders.filter(wo => 
+      wo.uploaded_at.startsWith(dateHelpers.today().toISOString().split('T')[0])
+    );
+    expect(todayOrders.length).toBeGreaterThan(400);
+  });
+});
+```
+
 ## トラブルシューティング
 
 ### よくある問題
