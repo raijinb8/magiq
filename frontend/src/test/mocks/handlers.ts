@@ -489,8 +489,11 @@ export const edgeFunctionHandlers = [
   // PDF処理
   http.post('*/functions/v1/process-pdf-single', async ({ request }) => {
     const formData = await request.formData();
-    const companyId = formData.get('companyId') as CompanyOptionValue;
-    const file = formData.get('file') as File;
+    const companyIdValue = formData.get('companyId');
+    const fileValue = formData.get('file');
+    
+    const companyId = typeof companyIdValue === 'string' ? companyIdValue as CompanyOptionValue : '';
+    const file = fileValue instanceof File ? fileValue : null;
     
     // 認証チェック
     const authHeader = request.headers.get('Authorization');

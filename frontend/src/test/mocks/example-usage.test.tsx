@@ -164,7 +164,8 @@ describe('MSW使用例', () => {
       http.post('*/functions/v1/process-pdf-single', async ({ request }) => {
         const formData = await request.formData();
         capturedFile = formData.get('file');
-        capturedCompanyId = formData.get('companyId') as string;
+        const companyIdValue = formData.get('companyId');
+        capturedCompanyId = typeof companyIdValue === 'string' ? companyIdValue : null;
 
         return HttpResponse.json({
           success: true,
