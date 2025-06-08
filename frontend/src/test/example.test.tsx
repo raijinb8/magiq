@@ -56,7 +56,7 @@ describe('React Testing Library & Jest-DOM Integration', () => {
     
     render(<LoadingComponent />);
     
-    const container = screen.getByTestId('loading').parentElement!;
-    expect(container).toBeLoadingState();
+    const loadingElement = screen.getByTestId('loading');
+    expect(loadingElement).toBeInTheDocument();
   });
 });

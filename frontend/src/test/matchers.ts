@@ -48,16 +48,13 @@ expect.extend({
   }
 });
 
-// TypeScript型定義の拡張
-declare module 'vitest' {
-  interface Assertion<T = unknown> {
-    toBeEmptyDOMElement(): T;
-    toHaveErrorMessage(message: string): T;
-    toBeLoadingState(): T;
-  }
-  interface AsymmetricMatchersContaining {
-    toBeEmptyDOMElement(): unknown;
-    toHaveErrorMessage(message: string): unknown;
-    toBeLoadingState(): unknown;
+// TypeScript型定義の拡張（型の競合を避けるため、条件付きで拡張）
+declare global {
+  namespace Vi {
+    interface JestAssertion<T = any> {
+      toBeEmptyDOMElement(): T;
+      toHaveErrorMessage(message: string): T;
+      toBeLoadingState(): T;
+    }
   }
 }

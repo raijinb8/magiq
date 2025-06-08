@@ -153,21 +153,25 @@ beforeAll(() => {
   global.URL.revokeObjectURL = vi.fn();
 
   // File API のモック
-  global.FileReader = vi.fn().mockImplementation(() => ({
-    readAsDataURL: vi.fn(),
-    readAsText: vi.fn(),
-    readAsArrayBuffer: vi.fn(),
-    abort: vi.fn(),
-    result: null,
-    error: null,
-    onload: null,
-    onerror: null,
-    onabort: null,
-    onloadstart: null,
-    onloadend: null,
-    onprogress: null,
-    readyState: 0,
-  }));
+  global.FileReader = class MockFileReader {
+    static EMPTY = 0;
+    static LOADING = 1;
+    static DONE = 2;
+    
+    readAsDataURL = vi.fn();
+    readAsText = vi.fn();
+    readAsArrayBuffer = vi.fn();
+    abort = vi.fn();
+    result = null;
+    error = null;
+    onload = null;
+    onerror = null;
+    onabort = null;
+    onloadstart = null;
+    onloadend = null;
+    onprogress = null;
+    readyState = 0;
+  } as any;
 
   // Geolocation API のモック
   const geolocationMock = {
@@ -208,11 +212,14 @@ beforeAll(() => {
   });
 
   // Notification API のモック
-  global.Notification = vi.fn().mockImplementation(() => ({
-    close: vi.fn(),
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-  }));
+  global.Notification = class MockNotification {
+    static permission = 'granted';
+    static requestPermission = vi.fn().mockResolvedValue('granted');
+    
+    close = vi.fn();
+    addEventListener = vi.fn();
+    removeEventListener = vi.fn();
+  } as any;
   Object.defineProperty(Notification, 'permission', {
     value: 'default',
     writable: true,
@@ -260,7 +267,7 @@ beforeAll(() => {
   }));
 
   // Canvas API のモック（既存のモックがない場合のみ）
-  if (!HTMLCanvasElement.prototype.getContext.mockImplementation) {
+  if (!(HTMLCanvasElement.prototype.getContext as any).mockImplementation) {
     HTMLCanvasElement.prototype.getContext = vi.fn().mockImplementation((contextType) => {
       if (contextType === 'webgl' || contextType === 'webgl2') {
         return {

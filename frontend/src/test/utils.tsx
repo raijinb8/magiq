@@ -1,6 +1,7 @@
 import { ReactElement } from 'react';
 import { render, RenderOptions } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
+import { expect } from 'vitest';
 
 // カスタムプロバイダーを含むレンダーオプション
 type CustomRenderOptions = Omit<RenderOptions, 'wrapper'>;

@@ -7,6 +7,9 @@
 
 import { COMPANY_OPTIONS_CONST, type CompanyOptionValue } from '../../types';
 
+// 型を再エクスポート
+export type { CompanyOptionValue };
+
 // シーケンス管理（一意なIDやインデックスの生成）
 let userIdSequence = 1;
 let workOrderIdSequence = 1;
@@ -106,6 +109,7 @@ export interface MockWorkOrder {
   user_id?: string;
   file_size?: number;
   processing_time_ms?: number;
+  updated_at?: string;
   token_usage?: {
     prompt: number;
     completion: number;
