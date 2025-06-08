@@ -1,6 +1,6 @@
 // promptRegistry のテスト
 import { assertEquals, assertExists, assertNotEquals } from '@std/testing/asserts'
-import { describe, it } from '@std/testing'
+import { describe, it } from '@std/testing/bdd'
 import { getPrompt, PROMPT_REGISTRY, type PromptFunction } from '../promptRegistry.ts'
 
 describe('promptRegistry', () => {
