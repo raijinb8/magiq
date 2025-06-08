@@ -10,7 +10,7 @@ import { server } from './server';
 export const createMockResponse = {
   // 成功レスポンス
   success: <T>(data: T, status = 200) => 
-    HttpResponse.json(data as any, { status }),
+    HttpResponse.json(data as Record<string, unknown>, { status }),
   
   // エラーレスポンス
   error: (message: string, status = 400) => 

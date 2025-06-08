@@ -171,7 +171,7 @@ beforeAll(() => {
     onloadend = null;
     onprogress = null;
     readyState = 0;
-  } as any;
+  } as typeof FileReader;
 
   // Geolocation API のモック
   const geolocationMock = {
@@ -219,7 +219,7 @@ beforeAll(() => {
     close = vi.fn();
     addEventListener = vi.fn();
     removeEventListener = vi.fn();
-  } as any;
+  } as typeof Notification;
   Object.defineProperty(Notification, 'permission', {
     value: 'default',
     writable: true,
@@ -267,7 +267,7 @@ beforeAll(() => {
   }));
 
   // Canvas API のモック（既存のモックがない場合のみ）
-  if (!(HTMLCanvasElement.prototype.getContext as any).mockImplementation) {
+  if (!(HTMLCanvasElement.prototype.getContext as { mockImplementation?: unknown }).mockImplementation) {
     HTMLCanvasElement.prototype.getContext = vi.fn().mockImplementation((contextType) => {
       if (contextType === 'webgl' || contextType === 'webgl2') {
         return {
