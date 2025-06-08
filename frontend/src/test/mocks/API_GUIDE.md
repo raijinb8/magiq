@@ -5,6 +5,7 @@
 ## 🎯 作成された主要機能
 
 ### 1. Supabase認証API（authHandlers）
+
 - **メール/パスワードログイン** - 複数のテストユーザー対応
 - **OAuth認証** - Google, GitHub等の認証フロー
 - **ユーザー登録** - バリデーション付き
@@ -14,6 +15,7 @@
 - **ユーザー情報更新** - プロフィール変更
 
 ### 2. Supabase Storage（storageHandlers）
+
 - **ファイルアップロード** - 認証・サイズ制限・タイプチェック
 - **ファイルダウンロード** - アクセス制御付き
 - **ファイル削除** - 権限チェック
@@ -22,12 +24,14 @@
 - **署名付きURL** - セキュアアクセス
 
 ### 3. Edge Functions（edgeFunctionHandlers）
+
 - **PDF処理** - 会社別プロンプト対応
 - **バッチ処理** - 複数ファイル同時処理
 - **ヘルスチェック** - システム状態監視
 - **処理状況確認** - リアルタイム進捗
 
 ### 4. データベース操作（databaseHandlers）
+
 - **work_orders CRUD** - 作業指示書管理
 - **shifts CRUD** - シフト管理
 - **高度なクエリ** - フィルタ・ソート・ページネーション
@@ -36,6 +40,7 @@
 ## 🚀 使用方法
 
 ### 基本的なテスト
+
 ```typescript
 import { mockApi } from '@/test/mocks/api-helpers';
 
@@ -47,29 +52,33 @@ mockApi.mockPdfProcessing(true);
 ```
 
 ### エラーシナリオ
+
 ```typescript
 import { testScenarios } from '@/test/mocks/api-helpers';
 
 // ネットワークエラー
 testScenarios.networkErrors();
 
-// 認証エラー  
+// 認証エラー
 testScenarios.authenticationErrors();
 ```
 
 ## 🔧 提供されるユーティリティ
 
 ### APIヘルパー（api-helpers.ts）
+
 - `mockApi` - 動的なモック制御
 - `testScenarios` - よくあるテストシナリオ
 - `createMockResponse` - レスポンス作成ヘルパー
 
 ### データファクトリー（factories.ts）
+
 - `createMockUser()` - ユーザーデータ生成
 - `createMockWorkOrder()` - 作業指示書データ生成
 - `createMockShift()` - シフトデータ生成
 
 ### モック管理ユーティリティ（handlers.ts）
+
 - `mockUtils` - 認証状態管理
 - `storageUtils` - ファイルストレージ管理
 - `databaseUtils` - データベース操作

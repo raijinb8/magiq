@@ -40,6 +40,9 @@ WORKDIR /app/frontend
 RUN npm install -g npm@latest
 RUN npm install
 
+# node_modulesの権限を適切に設定
+RUN chmod -R 755 node_modules || true
+
 # Vite開発サーバーがデフォルトで使用するポートを公開
 EXPOSE 5173
 

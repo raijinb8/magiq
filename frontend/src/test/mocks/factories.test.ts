@@ -8,29 +8,29 @@ import {
   resetFactorySequences,
   randomHelpers,
   dateHelpers,
-  
+
   // 基本ファクトリー
   createMockUser,
   createMockWorkOrder,
   createMockShift,
-  
+
   // 複数データ生成
   createMockUsers,
   createMockWorkOrders,
-  
+
   // 特殊パターン
   createMockWorkOrderForCompany,
   createMockWorkOrderWithError,
   createMockWorkOrderProcessing,
   createMockUserWithRelatedData,
   createMockWeeklyShifts,
-  
+
   // APIレスポンス
   createMockAuthResponse,
   createMockPdfProcessingResponse,
   createMockErrorResponse,
   createMockSupabaseResponse,
-  
+
   // プリセット
   createMockFullDataset,
   testPresets,
@@ -93,7 +93,7 @@ describe('基本ファクトリー関数', () => {
   describe('createMockUser', () => {
     it('デフォルト値でユーザーを作成できる', () => {
       const user = createMockUser();
-      
+
       expect(user.id).toBe('user-1');
       expect(user.email).toMatch(/^test-.+@example\.com$/);
       expect(user.role).toBe('user');
@@ -107,7 +107,7 @@ describe('基本ファクトリー関数', () => {
         email: 'custom@test.com',
         role: 'admin',
       });
-      
+
       expect(user.email).toBe('custom@test.com');
       expect(user.role).toBe('admin');
     });
@@ -115,7 +115,7 @@ describe('基本ファクトリー関数', () => {
     it('シーケンシャルなIDを生成する', () => {
       const user1 = createMockUser();
       const user2 = createMockUser();
-      
+
       expect(user1.id).toBe('user-1');
       expect(user2.id).toBe('user-2');
     });
@@ -124,7 +124,7 @@ describe('基本ファクトリー関数', () => {
   describe('createMockWorkOrder', () => {
     it('完全なワークオーダーを作成できる', () => {
       const workOrder = createMockWorkOrder();
-      
+
       expect(workOrder.id).toBe(1);
       expect(workOrder.file_name).toMatch(/^work-order-\d+\.pdf$/);
       expect(workOrder.status).toBe('completed');
@@ -140,7 +140,7 @@ describe('基本ファクトリー関数', () => {
       const workOrder = createMockWorkOrder({
         company_name: '野原G住環境',
       });
-      
+
       expect(workOrder.generated_text).toContain('グリーンマンション');
     });
   });
@@ -148,11 +148,13 @@ describe('基本ファクトリー関数', () => {
   describe('createMockShift', () => {
     it('シフトデータを作成できる', () => {
       const shift = createMockShift();
-      
+
       expect(shift.id).toBe(1);
       expect(shift.user_id).toMatch(/^user-\d+$/);
       expect(shift.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-      expect(['morning', 'afternoon', 'night', 'custom']).toContain(shift.shift_type);
+      expect(['morning', 'afternoon', 'night', 'custom']).toContain(
+        shift.shift_type
+      );
       expect(shift.status).toBe('scheduled');
     });
   });
@@ -165,7 +167,7 @@ describe('複数データ生成', () => {
 
   it('指定した数のユーザーを作成できる', () => {
     const users = createMockUsers(5);
-    
+
     expect(users).toHaveLength(5);
     expect(users[0].id).toBe('user-1');
     expect(users[4].id).toBe('user-5');
@@ -173,17 +175,17 @@ describe('複数データ生成', () => {
 
   it('指定した数のワークオーダーを作成できる', () => {
     const workOrders = createMockWorkOrders(3);
-    
+
     expect(workOrders).toHaveLength(3);
-    workOrders.forEach(wo => {
+    workOrders.forEach((wo) => {
       expect(wo.id).toBeGreaterThan(0);
     });
   });
 
   it('オーバーライドが全てのデータに適用される', () => {
     const workOrders = createMockWorkOrders(3, { status: 'error' });
-    
-    workOrders.forEach(wo => {
+
+    workOrders.forEach((wo) => {
       expect(wo.status).toBe('error');
     });
   });
@@ -192,7 +194,7 @@ describe('複数データ生成', () => {
 describe('特殊パターンファクトリー', () => {
   it('特定の会社用のワークオーダーを作成できる', () => {
     const workOrder = createMockWorkOrderForCompany('NOHARA_G');
-    
+
     expect(workOrder.company_name).toBe('野原G住環境');
     expect(workOrder.prompt_identifier).toBe('NOHARA_G_V20250605');
     expect(workOrder.generated_text).toContain('グリーンマンション');
@@ -200,7 +202,7 @@ describe('特殊パターンファクトリー', () => {
 
   it('エラー状態のワークオーダーを作成できる', () => {
     const workOrder = createMockWorkOrderWithError('カスタムエラー');
-    
+
     expect(workOrder.status).toBe('error');
     expect(workOrder.error_message).toBe('カスタムエラー');
     expect(workOrder.generated_text).toBe('');
@@ -209,7 +211,7 @@ describe('特殊パターンファクトリー', () => {
 
   it('処理中のワークオーダーを作成できる', () => {
     const workOrder = createMockWorkOrderProcessing();
-    
+
     expect(workOrder.status).toBe('processing');
     expect(workOrder.generated_text).toBe('');
     expect(workOrder.gemini_processed_at).toBeUndefined();
@@ -217,27 +219,27 @@ describe('特殊パターンファクトリー', () => {
 
   it('関連データ付きのユーザーを作成できる', () => {
     const result = createMockUserWithRelatedData();
-    
+
     expect(result.user).toBeDefined();
     expect(result.workOrders.length).toBeGreaterThan(0);
     expect(result.shifts.length).toBeGreaterThan(0);
-    
+
     // 関連性を確認
-    result.workOrders.forEach(wo => {
+    result.workOrders.forEach((wo) => {
       expect(wo.user_id).toBe(result.user.id);
     });
-    result.shifts.forEach(shift => {
+    result.shifts.forEach((shift) => {
       expect(shift.user_id).toBe(result.user.id);
     });
   });
 
   it('週間シフトを作成できる', () => {
     const shifts = createMockWeeklyShifts('user-1', '2025-06-06');
-    
+
     expect(shifts.length).toBeGreaterThan(0);
     expect(shifts.length).toBeLessThanOrEqual(7);
-    
-    shifts.forEach(shift => {
+
+    shifts.forEach((shift) => {
       expect(shift.user_id).toBe('user-1');
       expect(shift.date).toMatch(/^2025-06-/);
     });
@@ -247,7 +249,7 @@ describe('特殊パターンファクトリー', () => {
 describe('APIレスポンスファクトリー', () => {
   it('認証レスポンスを作成できる', () => {
     const response = createMockAuthResponse();
-    
+
     expect(response.access_token).toMatch(/^mock-access-token-/);
     expect(response.token_type).toBe('bearer');
     expect(response.expires_in).toBe(3600);
@@ -256,7 +258,7 @@ describe('APIレスポンスファクトリー', () => {
 
   it('PDF処理レスポンスを作成できる', () => {
     const response = createMockPdfProcessingResponse();
-    
+
     expect(response.success).toBe(true);
     expect(response.generatedText).toBeTruthy();
     expect(response.tokenUsage.total).toBe(
@@ -266,7 +268,7 @@ describe('APIレスポンスファクトリー', () => {
 
   it('エラーレスポンスを作成できる', () => {
     const response = createMockErrorResponse('テストエラー', 500);
-    
+
     expect(response.error).toBe('テストエラー');
     expect(response.status).toBe(500);
     expect(response.timestamp).toBeTruthy();
@@ -275,7 +277,7 @@ describe('APIレスポンスファクトリー', () => {
   it('Supabaseレスポンスを作成できる', () => {
     const data = [{ id: 1, name: 'test' }];
     const response = createMockSupabaseResponse(data);
-    
+
     expect(response.data).toEqual(data);
     expect(response.error).toBeNull();
     expect(response.count).toBe(1);
@@ -284,7 +286,7 @@ describe('APIレスポンスファクトリー', () => {
 
   it('Supabaseエラーレスポンスを作成できる', () => {
     const response = createMockSupabaseResponse([], true);
-    
+
     expect(response.data).toBeNull();
     expect(response.error).toBeDefined();
     expect(response.status).toBe(400);
@@ -294,7 +296,7 @@ describe('APIレスポンスファクトリー', () => {
 describe('プリセット', () => {
   it('完全なデータセットを作成できる', () => {
     const dataset = createMockFullDataset();
-    
+
     expect(dataset.users.length).toBe(4); // 3 users + 1 admin
     expect(dataset.adminUser.role).toBe('admin');
     expect(dataset.workOrders.length).toBeGreaterThan(0);
@@ -303,7 +305,7 @@ describe('プリセット', () => {
 
   it('新規ユーザープリセットが空のデータを返す', () => {
     const preset = testPresets.newUser();
-    
+
     expect(preset.user).toBeDefined();
     expect(preset.workOrders).toHaveLength(0);
     expect(preset.shifts).toHaveLength(0);
@@ -311,7 +313,7 @@ describe('プリセット', () => {
 
   it('アクティブユーザープリセットが多くのデータを返す', () => {
     const preset = testPresets.activeUser();
-    
+
     expect(preset.user).toBeDefined();
     expect(preset.workOrders.length).toBe(10);
     expect(preset.shifts.length).toBe(20);
@@ -319,19 +321,19 @@ describe('プリセット', () => {
 
   it('問題のあるユーザープリセットがエラーデータを返す', () => {
     const preset = testPresets.problematicUser();
-    
+
     expect(preset.user).toBeDefined();
-    preset.workOrders.forEach(wo => {
+    preset.workOrders.forEach((wo) => {
       expect(wo.status).toBe('error');
     });
-    preset.shifts.forEach(shift => {
+    preset.shifts.forEach((shift) => {
       expect(shift.status).toBe('cancelled');
     });
   });
 
   it('企業別データプリセットが正しい会社データを返す', () => {
     const preset = testPresets.companySpecificData();
-    
+
     expect(preset.noharaG.company_name).toBe('野原G住環境');
     expect(preset.katoubeniya.company_name).toBe('加藤ベニヤ池袋_ミサワホーム');
     expect(preset.yamadaK.company_name).toBe('山田K建設 (準備中)');
@@ -344,14 +346,14 @@ describe('シーケンスリセット', () => {
     createMockUser();
     createMockUser();
     createMockWorkOrder();
-    
+
     // リセット
     resetFactorySequences();
-    
+
     // 新しいデータが1から始まることを確認
     const user = createMockUser();
     const workOrder = createMockWorkOrder();
-    
+
     expect(user.id).toBe('user-1');
     expect(workOrder.id).toBe(1);
   });

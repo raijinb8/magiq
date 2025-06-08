@@ -18,7 +18,7 @@ describe('MSW統合テスト', () => {
       // Given: ファクトリーで生成されたテストユーザー
       const testUser = mockUtils.addTestUser({
         email: 'test-integration@example.com',
-        user_metadata: { password: 'test123' }
+        user_metadata: { password: 'test123' },
       });
 
       // When: ログインAPIを呼び出し
@@ -27,17 +27,17 @@ describe('MSW統合テスト', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: testUser.email,
-          password: 'test123'
-        })
+          password: 'test123',
+        }),
       });
 
       // Then: 正常にログインできる
       expect(response.status).toBe(200);
-      
+
       const authData = await response.json();
       expect(authData.user.email).toBe(testUser.email);
       expect(authData.access_token).toMatch(/^mock-access-token-/);
-      
+
       // 認証状態が更新されている
       const authState = mockUtils.getAuthState();
       expect(authState.isAuthenticated).toBe(true);
@@ -50,12 +50,12 @@ describe('MSW統合テスト', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: 'nonexistent@example.com',
-          password: 'wrongpassword'
-        })
+          password: 'wrongpassword',
+        }),
       });
 
       expect(response.status).toBe(400);
-      
+
       const errorData = await response.json();
       expect(errorData.error).toBe('Invalid login credentials');
     });
@@ -63,17 +63,17 @@ describe('MSW統合テスト', () => {
     it('新しいユーザーをサインアップできる', async () => {
       const newUserData = {
         email: 'new-user@example.com',
-        password: 'securepassword123'
+        password: 'securepassword123',
       };
 
       const response = await fetch('/auth/v1/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newUserData)
+        body: JSON.stringify(newUserData),
       });
 
       expect(response.status).toBe(200);
-      
+
       const signupData = await response.json();
       expect(signupData.user.email).toBe(newUserData.email);
       expect(signupData.user.email_confirmed_at).toBeNull(); // メール確認待ち
@@ -87,7 +87,7 @@ describe('MSW統合テスト', () => {
 
       // PDF ファイルのモック
       const pdfFile = new File(['%PDF-1.4 テストコンテンツ'], 'test.pdf', {
-        type: 'application/pdf'
+        type: 'application/pdf',
       });
 
       const formData = new FormData();
@@ -98,14 +98,14 @@ describe('MSW統合テスト', () => {
       const response = await fetch('/functions/v1/process-pdf-single', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${mockUtils.getAuthState().accessToken}`
+          Authorization: `Bearer ${mockUtils.getAuthState().accessToken}`,
         },
-        body: formData
+        body: formData,
       });
 
       // Then: 正常に処理される
       expect(response.status).toBe(200);
-      
+
       const result = await response.json();
       expect(result.success).toBe(true);
       expect(result.generatedText).toContain('グリーンマンション'); // NOHARA_G固有のテキスト
@@ -114,7 +114,7 @@ describe('MSW統合テスト', () => {
 
     it('未認証ユーザーはPDF処理ができない', async () => {
       const pdfFile = new File(['%PDF-1.4 テストコンテンツ'], 'test.pdf', {
-        type: 'application/pdf'
+        type: 'application/pdf',
       });
 
       const formData = new FormData();
@@ -123,7 +123,7 @@ describe('MSW統合テスト', () => {
 
       const response = await fetch('/functions/v1/process-pdf-single', {
         method: 'POST',
-        body: formData
+        body: formData,
       });
 
       expect(response.status).toBe(401);
@@ -131,9 +131,9 @@ describe('MSW統合テスト', () => {
 
     it('無効なファイルタイプは拒否される', async () => {
       mockUtils.loginAsUser('test@example.com');
-      
+
       const textFile = new File(['テキストファイル'], 'test.txt', {
-        type: 'text/plain'
+        type: 'text/plain',
       });
 
       const formData = new FormData();
@@ -143,13 +143,13 @@ describe('MSW統合テスト', () => {
       const response = await fetch('/functions/v1/process-pdf-single', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${mockUtils.getAuthState().accessToken}`
+          Authorization: `Bearer ${mockUtils.getAuthState().accessToken}`,
         },
-        body: formData
+        body: formData,
       });
 
       expect(response.status).toBe(400);
-      
+
       const errorData = await response.json();
       expect(errorData.error).toContain('PDFファイルのみサポート');
     });
@@ -159,18 +159,21 @@ describe('MSW統合テスト', () => {
     it('認証済みユーザーがワークオーダーを取得できる', async () => {
       // Given: ログイン状態のユーザーと関連データ
       const user = mockUtils.loginAsUser('test@example.com');
-      databaseUtils.seedUserData(user!.id, { workOrderCount: 3, shiftCount: 5 });
+      databaseUtils.seedUserData(user!.id, {
+        workOrderCount: 3,
+        shiftCount: 5,
+      });
 
       // When: ワークオーダー取得APIを呼び出し
       const response = await fetch(`/rest/v1/work_orders?user_id=${user!.id}`, {
         headers: {
-          'Authorization': `Bearer ${mockUtils.getAuthState().accessToken}`
-        }
+          Authorization: `Bearer ${mockUtils.getAuthState().accessToken}`,
+        },
       });
 
       // Then: ユーザーのワークオーダーが取得される
       expect(response.status).toBe(200);
-      
+
       const workOrders = await response.json();
       expect(workOrders.length).toBeGreaterThan(0);
       workOrders.forEach((wo: { user_id: string }) => {
@@ -180,24 +183,24 @@ describe('MSW統合テスト', () => {
 
     it('新しいワークオーダーを作成できる', async () => {
       const user = mockUtils.loginAsUser('admin@example.com');
-      
+
       const newWorkOrderData = {
         file_name: 'integration-test.pdf',
         company_name: '野原G住環境',
-        status: 'pending'
+        status: 'pending',
       };
 
       const response = await fetch('/rest/v1/work_orders', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${mockUtils.getAuthState().accessToken}`
+          Authorization: `Bearer ${mockUtils.getAuthState().accessToken}`,
         },
-        body: JSON.stringify(newWorkOrderData)
+        body: JSON.stringify(newWorkOrderData),
       });
 
       expect(response.status).toBe(201);
-      
+
       const createdWorkOrder = await response.json();
       expect(createdWorkOrder.file_name).toBe(newWorkOrderData.file_name);
       expect(createdWorkOrder.user_id).toBe(user!.id);
@@ -206,21 +209,21 @@ describe('MSW統合テスト', () => {
 
     it('シフトデータのCRUD操作が動作する', async () => {
       mockUtils.loginAsUser('manager@nohara.com');
-      
+
       // Create - シフト作成
       const newShiftData = {
         date: '2025-06-10',
         shift_type: 'morning',
-        note: '統合テスト用シフト'
+        note: '統合テスト用シフト',
       };
 
       const createResponse = await fetch('/rest/v1/shifts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${mockUtils.getAuthState().accessToken}`
+          Authorization: `Bearer ${mockUtils.getAuthState().accessToken}`,
         },
-        body: JSON.stringify(newShiftData)
+        body: JSON.stringify(newShiftData),
       });
 
       expect(createResponse.status).toBe(201);
@@ -229,13 +232,15 @@ describe('MSW統合テスト', () => {
       // Read - シフト取得
       const readResponse = await fetch('/rest/v1/shifts', {
         headers: {
-          'Authorization': `Bearer ${mockUtils.getAuthState().accessToken}`
-        }
+          Authorization: `Bearer ${mockUtils.getAuthState().accessToken}`,
+        },
       });
 
       expect(readResponse.status).toBe(200);
       const shifts = await readResponse.json();
-      const foundShift = shifts.find((s: { id: number }) => s.id === createdShift.id);
+      const foundShift = shifts.find(
+        (s: { id: number }) => s.id === createdShift.id
+      );
       expect(foundShift).toBeDefined();
       expect(foundShift.note).toBe(newShiftData.note);
     });
@@ -248,46 +253,59 @@ describe('MSW統合テスト', () => {
 
       // Upload
       const testFile = new File(['テストファイル内容'], 'test-upload.pdf', {
-        type: 'application/pdf'
+        type: 'application/pdf',
       });
 
       const formData = new FormData();
       formData.append('file', testFile);
 
-      const uploadResponse = await fetch('/storage/v1/object/work-orders/test-upload.pdf', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${authToken}`
-        },
-        body: formData
-      });
+      const uploadResponse = await fetch(
+        '/storage/v1/object/work-orders/test-upload.pdf',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+          body: formData,
+        }
+      );
 
       expect(uploadResponse.status).toBe(200);
       const uploadResult = await uploadResponse.json();
       expect(uploadResult.path).toBe('test-upload.pdf');
 
       // Download
-      const downloadResponse = await fetch('/storage/v1/object/work-orders/test-upload.pdf', {
-        headers: {
-          'Authorization': `Bearer ${authToken}`
+      const downloadResponse = await fetch(
+        '/storage/v1/object/work-orders/test-upload.pdf',
+        {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
         }
-      });
+      );
 
       expect(downloadResponse.status).toBe(200);
-      expect(downloadResponse.headers.get('Content-Type')).toBe('application/pdf');
+      expect(downloadResponse.headers.get('Content-Type')).toBe(
+        'application/pdf'
+      );
 
       // Delete
-      const deleteResponse = await fetch('/storage/v1/object/work-orders/test-upload.pdf', {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${authToken}`
+      const deleteResponse = await fetch(
+        '/storage/v1/object/work-orders/test-upload.pdf',
+        {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
         }
-      });
+      );
 
       expect(deleteResponse.status).toBe(200);
 
       // 削除後のダウンロード試行（404になるはず）
-      const notFoundResponse = await fetch('/storage/v1/object/work-orders/test-upload.pdf');
+      const notFoundResponse = await fetch(
+        '/storage/v1/object/work-orders/test-upload.pdf'
+      );
       expect(notFoundResponse.status).toBe(404);
     });
   });
@@ -310,10 +328,12 @@ describe('MSW統合テスト', () => {
       mockUtils.setupScenario('error-prone');
 
       const currentData = databaseUtils.getCurrentData();
-      const errorWorkOrders = currentData.workOrders.filter(wo => wo.status === 'error');
-      
+      const errorWorkOrders = currentData.workOrders.filter(
+        (wo) => wo.status === 'error'
+      );
+
       expect(errorWorkOrders.length).toBeGreaterThan(0);
-      errorWorkOrders.forEach(wo => {
+      errorWorkOrders.forEach((wo) => {
         expect(wo.error_message).toContain('テスト用エラー');
       });
     });
@@ -337,14 +357,14 @@ describe('MSW統合テスト', () => {
     it('testPresetsがMSWハンドラーと連携する', async () => {
       // Given: 企業別データプリセット
       const companyData = testPresets.companySpecificData();
-      
+
       // MSWを通して各企業のデータを確認
       for (const [companyKey, workOrder] of Object.entries(companyData)) {
         // ワークオーダーがファクトリーで正しく生成されていることを確認
         expect(workOrder.company_name).toBeTruthy();
         expect(workOrder.generated_text).toBeTruthy();
         expect(workOrder.prompt_identifier).toMatch(/V20250605$/);
-        
+
         // 企業固有のテキストが含まれることを確認
         if (companyKey === 'noharaG') {
           expect(workOrder.generated_text).toContain('グリーンマンション');
@@ -356,16 +376,16 @@ describe('MSW統合テスト', () => {
 
     it('problematicUserプリセットがエラー状態を正しく生成する', () => {
       const problematicData = testPresets.problematicUser();
-      
+
       expect(problematicData.user).toBeDefined();
       expect(problematicData.workOrders.length).toBeGreaterThan(0);
-      
-      problematicData.workOrders.forEach(wo => {
+
+      problematicData.workOrders.forEach((wo) => {
         expect(wo.status).toBe('error');
         expect(wo.user_id).toBe(problematicData.user.id);
       });
-      
-      problematicData.shifts.forEach(shift => {
+
+      problematicData.shifts.forEach((shift) => {
         expect(shift.status).toBe('cancelled');
         expect(shift.user_id).toBe(problematicData.user.id);
       });
@@ -377,7 +397,7 @@ describe('MSW統合テスト', () => {
       expect(newUserScenario.workOrders).toHaveLength(0);
       expect(newUserScenario.shifts).toHaveLength(0);
 
-      // アクティブユーザープリセット  
+      // アクティブユーザープリセット
       const activeUserScenario = testPresets.activeUser();
       expect(activeUserScenario.workOrders.length).toBeGreaterThan(5);
       expect(activeUserScenario.shifts.length).toBeGreaterThan(10);
@@ -389,16 +409,23 @@ describe('MSW統合テスト', () => {
     it('企業固有ワークフローの統合テスト', async () => {
       // 野原G住環境の典型的なワークフロー
       mockUtils.loginAsUser('nohara@example.com');
-      
+
       // PDF処理APIの呼び出し
       const formData = new FormData();
-      formData.append('file', new File(['野原G PDFコンテンツ'], 'nohara-plan.pdf', { type: 'application/pdf' }));
+      formData.append(
+        'file',
+        new File(['野原G PDFコンテンツ'], 'nohara-plan.pdf', {
+          type: 'application/pdf',
+        })
+      );
       formData.append('companyId', 'NOHARA_G');
 
       const response = await fetch('/functions/v1/process-pdf-single', {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${mockUtils.getAuthState().accessToken}` },
-        body: formData
+        headers: {
+          Authorization: `Bearer ${mockUtils.getAuthState().accessToken}`,
+        },
+        body: formData,
       });
 
       expect(response.status).toBe(200);
@@ -407,52 +434,71 @@ describe('MSW統合テスト', () => {
 
       // 処理結果がデータベースに保存されることを確認
       const workOrdersResponse = await fetch('/rest/v1/work_orders', {
-        headers: { 'Authorization': `Bearer ${mockUtils.getAuthState().accessToken}` }
+        headers: {
+          Authorization: `Bearer ${mockUtils.getAuthState().accessToken}`,
+        },
       });
       const workOrders = await workOrdersResponse.json();
-      
-      expect(workOrders.some((wo: { company_name: string }) => wo.company_name === '野原G住環境')).toBe(true);
+
+      expect(
+        workOrders.some(
+          (wo: { company_name: string }) => wo.company_name === '野原G住環境'
+        )
+      ).toBe(true);
     });
 
     it('エラー復旧フローの統合テスト', async () => {
       // エラー状況をセットアップ
       const user = mockUtils.loginAsUser('error-recovery@example.com');
-      
+
       // エラー状態のワークオーダーを作成
       databaseUtils.addMockWorkOrder({
         user_id: user!.id,
         file_name: 'failed-processing.pdf',
         status: 'error',
-        error_message: 'PDF処理中にタイムアウトが発生しました'
+        error_message: 'PDF処理中にタイムアウトが発生しました',
       });
 
       // エラー状態の確認
-      let response = await fetch(`/rest/v1/work_orders?user_id=${user!.id}&status=eq.error`, {
-        headers: { 'Authorization': `Bearer ${mockUtils.getAuthState().accessToken}` }
-      });
+      let response = await fetch(
+        `/rest/v1/work_orders?user_id=${user!.id}&status=eq.error`,
+        {
+          headers: {
+            Authorization: `Bearer ${mockUtils.getAuthState().accessToken}`,
+          },
+        }
+      );
       const errorOrders = await response.json();
       expect(errorOrders).toHaveLength(1);
       expect(errorOrders[0].error_message).toContain('タイムアウト');
 
       // 再処理API呼び出し（ステータス更新）
-      response = await fetch(`/rest/v1/work_orders?id=eq.${errorOrders[0].id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${mockUtils.getAuthState().accessToken}`
-        },
-        body: JSON.stringify({
-          status: 'processing',
-          error_message: null
-        })
-      });
+      response = await fetch(
+        `/rest/v1/work_orders?id=eq.${errorOrders[0].id}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${mockUtils.getAuthState().accessToken}`,
+          },
+          body: JSON.stringify({
+            status: 'processing',
+            error_message: null,
+          }),
+        }
+      );
 
       expect(response.status).toBe(200);
 
       // 復旧状況の確認
-      response = await fetch(`/rest/v1/work_orders?user_id=${user!.id}&status=eq.processing`, {
-        headers: { 'Authorization': `Bearer ${mockUtils.getAuthState().accessToken}` }
-      });
+      response = await fetch(
+        `/rest/v1/work_orders?user_id=${user!.id}&status=eq.processing`,
+        {
+          headers: {
+            Authorization: `Bearer ${mockUtils.getAuthState().accessToken}`,
+          },
+        }
+      );
       const processingOrders = await response.json();
       expect(processingOrders).toHaveLength(1);
       expect(processingOrders[0].error_message).toBeNull();
@@ -466,18 +512,20 @@ describe('MSW統合テスト', () => {
         user_id: user!.id,
         file_name: 'consistency-test.pdf',
         company_name: '野原G住環境',
-        status: 'completed'
+        status: 'completed',
       });
 
       const response = await fetch(`/rest/v1/work_orders?user_id=${user!.id}`, {
         headers: {
-          'Authorization': `Bearer ${mockUtils.getAuthState().accessToken}`
-        }
+          Authorization: `Bearer ${mockUtils.getAuthState().accessToken}`,
+        },
       });
 
       const workOrders = await response.json();
-      const testWorkOrder = workOrders.find((wo: { file_name: string }) => wo.file_name === 'consistency-test.pdf');
-      
+      const testWorkOrder = workOrders.find(
+        (wo: { file_name: string }) => wo.file_name === 'consistency-test.pdf'
+      );
+
       expect(testWorkOrder).toBeDefined();
       expect(testWorkOrder.company_name).toBe('野原G住環境');
       expect(testWorkOrder.user_id).toBe(user!.id);
@@ -495,8 +543,8 @@ describe('MSW統合テスト', () => {
       // ログイン後の状態
       response = await fetch('/auth/v1/user', {
         headers: {
-          'Authorization': `Bearer ${authState.accessToken}`
-        }
+          Authorization: `Bearer ${authState.accessToken}`,
+        },
       });
 
       expect(response.status).toBe(200);

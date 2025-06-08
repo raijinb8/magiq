@@ -70,7 +70,10 @@ export default function ShiftForm() {
     }));
   };
 
-  const validateShiftType = (shift: ShiftData | undefined, dateStr: string): string | null => {
+  const validateShiftType = (
+    shift: ShiftData | undefined,
+    dateStr: string
+  ): string | null => {
     if (!shift || !shift.shift_type) {
       return `【${dateStr}】はシフト種別が未選択です。`;
     }
@@ -116,9 +119,10 @@ export default function ShiftForm() {
         user_id: user.id,
         date: dateStr,
         shift_type: data.shift_type,
-        custom_end_time: data.shift_type && ['custom', 'pm'].includes(data.shift_type)
-          ? data.custom_end_time
-          : null,
+        custom_end_time:
+          data.shift_type && ['custom', 'pm'].includes(data.shift_type)
+            ? data.custom_end_time
+            : null,
         note: data.note || null,
       };
     });
@@ -171,16 +175,17 @@ export default function ShiftForm() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {shift.shift_type && ['custom', 'pm'].includes(shift.shift_type) && (
-              <Input
-                type="time"
-                value={shift.custom_end_time || ''}
-                onChange={(e) =>
-                  handleChange(dateStr, 'custom_end_time', e.target.value)
-                }
-                className="w-full bg-gray-50 border border-gray-300 text-sm"
-              />
-            )}
+            {shift.shift_type &&
+              ['custom', 'pm'].includes(shift.shift_type) && (
+                <Input
+                  type="time"
+                  value={shift.custom_end_time || ''}
+                  onChange={(e) =>
+                    handleChange(dateStr, 'custom_end_time', e.target.value)
+                  }
+                  className="w-full bg-gray-50 border border-gray-300 text-sm"
+                />
+              )}
 
             <Textarea
               placeholder="備考（任意）"

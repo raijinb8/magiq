@@ -5,18 +5,18 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { HttpResponse } from 'msw';
 import { server } from './server';
-import { 
-  createMockResponse, 
-  mockApi, 
+import {
+  createMockResponse,
+  mockApi,
   testScenarios,
-  cleanupMocks 
+  cleanupMocks,
 } from './api-helpers';
 
 describe('createMockResponse', () => {
   it('成功レスポンスを作成できる', () => {
     const data = { message: 'success' };
     const response = createMockResponse.success(data);
-    
+
     expect(response).toBeInstanceOf(HttpResponse);
     expect(response.status).toBe(200);
   });
@@ -24,32 +24,32 @@ describe('createMockResponse', () => {
   it('カスタムステータスコードで成功レスポンスを作成できる', () => {
     const data = { created: true };
     const response = createMockResponse.success(data, 201);
-    
+
     expect(response.status).toBe(201);
   });
 
   it('エラーレスポンスを作成できる', () => {
     const response = createMockResponse.error('エラーが発生しました');
-    
+
     expect(response.status).toBe(400);
   });
 
   it('認証エラーレスポンスを作成できる', () => {
     const response = createMockResponse.unauthorized();
-    
+
     expect(response.status).toBe(401);
   });
 
   it('空のレスポンスを作成できる', () => {
     const response = createMockResponse.empty();
-    
+
     expect(response.status).toBe(204);
   });
 
   it('ファイルレスポンスを作成できる', () => {
     const content = 'ファイルコンテンツ';
     const response = createMockResponse.file(content, 'text/plain');
-    
+
     expect(response.status).toBe(200);
   });
 });
@@ -75,32 +75,32 @@ describe('mockApi', () => {
 
   it('PDF処理の成功をモックできる', () => {
     mockApi.mockPdfProcessing(true);
-    
+
     expect(server.listHandlers()).toHaveLength(1);
   });
 
   it('PDF処理の失敗をモックできる', () => {
     mockApi.mockPdfProcessing(false);
-    
+
     expect(server.listHandlers()).toHaveLength(1);
   });
 
   it('ストレージ操作をモックできる', () => {
     mockApi.mockStorageOperation('upload', true);
-    
+
     expect(server.listHandlers()).toHaveLength(1);
   });
 
   it('データベース操作をモックできる', () => {
     mockApi.mockDatabaseOperation('work_orders', 'get', true);
-    
+
     expect(server.listHandlers()).toHaveLength(1);
   });
 
   it('APIの失敗をモックできる', () => {
     const endpoint = '*/test/endpoint';
     mockApi.mockApiFailure(endpoint, 500, 'Server Error');
-    
+
     expect(server.listHandlers()).toHaveLength(1);
   });
 });
@@ -112,26 +112,26 @@ describe('testScenarios', () => {
 
   it('フルワークフローシナリオを設定できる', () => {
     testScenarios.fullWorkflow();
-    
+
     // 複数のハンドラーが追加されることを確認
     expect(server.listHandlers().length).toBeGreaterThan(1);
   });
 
   it('ネットワークエラーシナリオを設定できる', () => {
     testScenarios.networkErrors();
-    
+
     expect(server.listHandlers().length).toBeGreaterThan(1);
   });
 
   it('認証エラーシナリオを設定できる', () => {
     testScenarios.authenticationErrors();
-    
+
     expect(server.listHandlers().length).toBeGreaterThan(1);
   });
 
   it('レート制限エラーシナリオを設定できる', () => {
     testScenarios.rateLimitErrors();
-    
+
     expect(server.listHandlers()).toHaveLength(1);
   });
 });
@@ -144,7 +144,7 @@ describe('cleanupMocks', () => {
 
     // クリーンアップ
     cleanupMocks();
-    
+
     // デフォルトハンドラーのみが残ることを確認
     // （setupServerで設定されたハンドラーは残る）
     const handlersAfterCleanup = server.listHandlers();
@@ -156,7 +156,7 @@ describe('レスポンス型チェック', () => {
   it('成功レスポンスのJSONが正しい', async () => {
     const testData = { id: 1, name: 'テスト' };
     const response = createMockResponse.success(testData);
-    
+
     const json = await response.json();
     expect(json).toEqual(testData);
   });
@@ -164,7 +164,7 @@ describe('レスポンス型チェック', () => {
   it('エラーレスポンスのJSONが正しい', async () => {
     const errorMessage = 'テストエラー';
     const response = createMockResponse.error(errorMessage);
-    
+
     const json = await response.json();
     expect(json).toEqual({
       error: errorMessage,
@@ -174,7 +174,7 @@ describe('レスポンス型チェック', () => {
 
   it('認証エラーレスポンスのJSONが正しい', async () => {
     const response = createMockResponse.unauthorized();
-    
+
     const json = await response.json();
     expect(json).toEqual({
       error: 'Unauthorized',

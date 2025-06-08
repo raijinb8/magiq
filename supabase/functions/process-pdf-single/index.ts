@@ -60,12 +60,13 @@ Deno.serve(async (req: Request) => {
       console.warn(`Invalid Content-Type: "${contentType}". Expected multipart/form-data.`)
       return new Response(
         JSON.stringify({
-          error: '不正なリクエスト形式です。Content-Type は multipart/form-data である必要があります。',
+          error:
+            '不正なリクエスト形式です。Content-Type は multipart/form-data である必要があります。',
         }),
         {
           status: 415, // Unsupported Media Type
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
+        },
       )
     }
 
@@ -74,7 +75,8 @@ Deno.serve(async (req: Request) => {
       // リクエストボディを FormData としてパース
       formData = await req.formData()
     } catch (e: unknown) {
-      let errorMessage = 'リクエストボディの解析に失敗しました。multipart/form-data 形式が正しいか確認してください。'
+      let errorMessage =
+        'リクエストボディの解析に失敗しました。multipart/form-data 形式が正しいか確認してください。'
       if (e instanceof Error) {
         errorMessage = e.message // Deno の formData() が投げるエラーのメッセージを利用
       } else if (typeof e === 'string') {
@@ -101,10 +103,13 @@ Deno.serve(async (req: Request) => {
     const pdfFile = formData.get('pdfFile') // フロントエンドで append したキー名
     // バリデーション
     if (!(pdfFile instanceof File)) {
-      return new Response(JSON.stringify({ error: 'PDFファイルが提供されていないか、形式が無効です。' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      return new Response(
+        JSON.stringify({ error: 'PDFファイルが提供されていないか、形式が無効です。' }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      )
     }
 
     const fileName = pdfFile.name // フロントエンドから送られてくるファイル名
@@ -116,7 +121,9 @@ Deno.serve(async (req: Request) => {
     }
 
     console.log(
-      `[${new Date().toISOString()}] Received request for ${fileName}, Company ID from frontend: ${companyIdFromFrontend}`
+      `[${
+        new Date().toISOString()
+      }] Received request for ${fileName}, Company ID from frontend: ${companyIdFromFrontend}`,
     )
 
     // PDFファイルの内容をBase64エンコード
@@ -124,9 +131,14 @@ Deno.serve(async (req: Request) => {
     let fileArrayBuffer: ArrayBuffer
     try {
       fileArrayBuffer = await pdfFile.arrayBuffer()
-      console.log(`[PDF Processing] Successfully read file into ArrayBuffer, size: ${fileArrayBuffer.byteLength} bytes`)
+      console.log(
+        `[PDF Processing] Successfully read file into ArrayBuffer, size: ${fileArrayBuffer.byteLength} bytes`,
+      )
     } catch (bufferError) {
-      console.error(`[PDF Processing] Failed to read PDF file content for ${fileName}:`, bufferError)
+      console.error(
+        `[PDF Processing] Failed to read PDF file content for ${fileName}:`,
+        bufferError,
+      )
       return new Response(JSON.stringify({ error: 'PDFファイル内容の読み取りに失敗しました。' }), {
         status: 500, // Internal Server Error
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -142,11 +154,15 @@ Deno.serve(async (req: Request) => {
 
     if (!promptEntry) {
       console.error(
-        `[${new Date().toISOString()}] No prompt entry found for companyId: ${companyIdFromFrontend} (file: ${fileName})`
+        `[${
+          new Date().toISOString()
+        }] No prompt entry found for companyId: ${companyIdFromFrontend} (file: ${fileName})`,
       )
       return new Response(
-        JSON.stringify({ error: `Unsupported company or prompt configuration for: ${companyIdFromFrontend}` }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({
+          error: `Unsupported company or prompt configuration for: ${companyIdFromFrontend}`,
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       )
     }
 
@@ -161,7 +177,7 @@ Deno.serve(async (req: Request) => {
         {
           status: 500, // Internal Server Error
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
+        },
       )
     }
 
@@ -189,7 +205,11 @@ Deno.serve(async (req: Request) => {
       },
     ]
 
-    console.log(`[${new Date().toISOString()}] Sending prompt with PDF data to Gemini API for file: ${fileName}`)
+    console.log(
+      `[${
+        new Date().toISOString()
+      }] Sending prompt with PDF data to Gemini API for file: ${fileName}`,
+    )
     // console.debug("Full Prompt to Gen:", prompt); // デバッグ時に必要ならコメント解除 (非常に長くなる可能性)
 
     // 4. Gemini API呼び出し
@@ -231,7 +251,11 @@ Deno.serve(async (req: Request) => {
         generatedTextByGen = '' // またはエラー処理
         console.error('response.text is undefined')
       }
-      console.log(`[${new Date().toISOString()}] Successfully received response from Gemini API for: ${fileName}`)
+      console.log(
+        `[${
+          new Date().toISOString()
+        }] Successfully received response from Gemini API for: ${fileName}`,
+      )
       usageMetadata = response.usageMetadata
 
       // usageMetadata が存在する場合、トークン数をログに出力
@@ -251,12 +275,19 @@ Deno.serve(async (req: Request) => {
           console.log(`  Cached Content Token Count: ${usageMetadata.cachedContentTokenCount}`)
         }
       } else {
-        console.log(`[${new Date().toISOString()}] usageMetadata not found in Gemini API response for: ${fileName}`)
+        console.log(
+          `[${
+            new Date().toISOString()
+          }] usageMetadata not found in Gemini API response for: ${fileName}`,
+        )
       }
 
       // console.debug("Gen Raw Response Text:", generatedTextByGen); // デバッグ時に必要ならコメント解除
     } catch (genError: any) {
-      console.error(`[${new Date().toISOString()}] Error calling Gemini API for ${fileName}:`, genError)
+      console.error(
+        `[${new Date().toISOString()}] Error calling Gemini API for ${fileName}:`,
+        genError,
+      )
       let userFriendlyErrorMessage = 'AIによるテキスト生成に失敗しました。'
       // Gemini APIからのエラーレスポンスに詳細が含まれていれば、それをログに出力
       // genError.message にも情報が含まれることがある
@@ -274,7 +305,7 @@ Deno.serve(async (req: Request) => {
         {
           status: 502, // Bad Gateway (外部APIとの連携で問題があった場合)
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
+        },
       )
     }
 
@@ -283,7 +314,11 @@ Deno.serve(async (req: Request) => {
     let dbRecordId: string | null = null
     if (supabaseClient) {
       try {
-        console.log(`[${new Date().toISOString()}] Attempting to save generated text to database for: ${fileName}`)
+        console.log(
+          `[${
+            new Date().toISOString()
+          }] Attempting to save generated text to database for: ${fileName}`,
+        )
         const { data: insertedData, error: dbError } = await supabaseClient
           .from('work_orders') // 作成したテーブル名
           .insert([
@@ -302,7 +337,10 @@ Deno.serve(async (req: Request) => {
           .single() // 1件のレコードが返ることを期待
 
         if (dbError) {
-          console.error(`[${new Date().toISOString()}] Error saving to database for ${fileName}:`, dbError)
+          console.error(
+            `[${new Date().toISOString()}] Error saving to database for ${fileName}:`,
+            dbError,
+          )
           // DB保存エラーは致命的ではないかもしれないので、フロントには成功として返しつつログで警告する選択肢もある
           // 今回はエラーとして扱う
           return new Response(
@@ -313,21 +351,28 @@ Deno.serve(async (req: Request) => {
             {
               status: 500,
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            }
+            },
           )
         }
         if (insertedData && insertedData.id) {
           dbRecordId = insertedData.id
           console.log(
-            `[${new Date().toISOString()}] Successfully saved to database for ${fileName}, record ID: ${dbRecordId}`
+            `[${
+              new Date().toISOString()
+            }] Successfully saved to database for ${fileName}, record ID: ${dbRecordId}`,
           )
         } else {
           console.warn(
-            `[${new Date().toISOString()}] Saved to database for ${fileName}, but no ID returned or insert failed silently.`
+            `[${
+              new Date().toISOString()
+            }] Saved to database for ${fileName}, but no ID returned or insert failed silently.`,
           )
         }
       } catch (e: unknown) {
-        console.error(`[${new Date().toISOString()}] Exception during database save for ${fileName}:`, e)
+        console.error(
+          `[${new Date().toISOString()}] Exception during database save for ${fileName}:`,
+          e,
+        )
         // こちらもエラーとして扱う
         let errorMessage = 'Internal Server Error. Please try again later.'
         if (e instanceof Error) {
@@ -343,12 +388,14 @@ Deno.serve(async (req: Request) => {
           {
             status: 500,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          }
+          },
         )
       }
     } else {
       console.warn(
-        `[${new Date().toISOString()}] Supabase client not initialized. Skipping database save for ${fileName}.`
+        `[${
+          new Date().toISOString()
+        }] Supabase client not initialized. Skipping database save for ${fileName}.`,
       )
       // 開発中はDB接続なしでも動くようにしておくか、エラーにするか選択
       // 今回は警告のみで進めるが、本番では client が null ならエラーにすべき
@@ -384,7 +431,7 @@ Deno.serve(async (req: Request) => {
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      },
     )
   }
 })

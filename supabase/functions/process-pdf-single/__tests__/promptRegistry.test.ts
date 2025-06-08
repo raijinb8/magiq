@@ -1,26 +1,26 @@
 // promptRegistry のテスト
 import { assertEquals, assertExists, assertNotEquals } from '@std/testing/asserts'
-import { describe, it } from '@std/testing/mod'
-import { getPrompt, PROMPT_REGISTRY, type PromptFunction } from './promptRegistry.ts'
+import { describe, it } from '@std/testing'
+import { getPrompt, PROMPT_REGISTRY, type PromptFunction } from '../promptRegistry.ts'
 
 describe('promptRegistry', () => {
   describe('PROMPT_REGISTRY', () => {
     it('NOHARA_Gエントリが正しく設定されている', () => {
       const entry = PROMPT_REGISTRY['NOHARA_G']
       assertExists(entry)
-      assertEquals(entry?.companyName, '野原G住環境')
-      assertEquals(entry?.version, 'V20250526')
-      assertExists(entry?.promptFunction)
-      assertEquals(typeof entry?.promptFunction, 'function')
+      assertEquals(entry.companyName, '野原G住環境')
+      assertEquals(entry.version, 'V20250526')
+      assertExists(entry.promptFunction)
+      assertEquals(typeof entry.promptFunction, 'function')
     })
 
     it('KATOUBENIYA_MISAWAエントリが正しく設定されている', () => {
       const entry = PROMPT_REGISTRY['KATOUBENIYA_MISAWA']
       assertExists(entry)
-      assertEquals(entry?.companyName, '加藤ベニヤ池袋_ミサワホーム')
-      assertEquals(entry?.version, 'V20250526')
-      assertExists(entry?.promptFunction)
-      assertEquals(typeof entry?.promptFunction, 'function')
+      assertEquals(entry.companyName, '加藤ベニヤ池袋_ミサワホーム')
+      assertEquals(entry.version, 'V20250526')
+      assertExists(entry.promptFunction)
+      assertEquals(typeof entry.promptFunction, 'function')
     })
 
     it('各エントリが必要なプロパティを持っている', () => {
@@ -29,7 +29,11 @@ describe('promptRegistry', () => {
           assertExists(entry.companyName, `${key} に companyName が必要です`)
           assertExists(entry.version, `${key} に version が必要です`)
           assertExists(entry.promptFunction, `${key} に promptFunction が必要です`)
-          assertEquals(typeof entry.promptFunction, 'function', `${key} の promptFunction は関数である必要があります`)
+          assertEquals(
+            typeof entry.promptFunction,
+            'function',
+            `${key} の promptFunction は関数である必要があります`,
+          )
         }
       })
     })
