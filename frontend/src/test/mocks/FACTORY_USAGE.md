@@ -16,10 +16,10 @@
 ### 単一データの生成
 
 ```typescript
-import { 
-  createMockUser, 
-  createMockWorkOrder, 
-  createMockShift 
+import {
+  createMockUser,
+  createMockWorkOrder,
+  createMockShift,
 } from './mocks/factories';
 
 // デフォルト値でユーザーを作成
@@ -29,38 +29,38 @@ const user = createMockUser();
 // 特定の値をオーバーライド
 const adminUser = createMockUser({
   email: 'admin@company.com',
-  role: 'admin'
+  role: 'admin',
 });
 
 // ワークオーダーの作成
 const workOrder = createMockWorkOrder({
   status: 'processing',
-  company_name: '野原G住環境'
+  company_name: '野原G住環境',
 });
 ```
 
 ### 複数データの生成
 
 ```typescript
-import { 
-  createMockUsers, 
+import {
+  createMockUsers,
   createMockWorkOrders,
-  createMockShifts 
+  createMockShifts,
 } from './mocks/factories';
 
 // 5人のユーザーを作成
 const users = createMockUsers(5);
 
 // 3つのエラー状態のワークオーダーを作成
-const errorWorkOrders = createMockWorkOrders(3, { 
+const errorWorkOrders = createMockWorkOrders(3, {
   status: 'error',
-  error_message: 'テスト用エラー' 
+  error_message: 'テスト用エラー',
 });
 
 // 週間シフトの生成
-const weeklyShifts = createMockShifts(7, { 
+const weeklyShifts = createMockShifts(7, {
   user_id: 'user-123',
-  shift_type: 'morning' 
+  shift_type: 'morning',
 });
 ```
 
@@ -81,9 +81,9 @@ const katouWorkOrder = createMockWorkOrderForCompany('KATOUBENIYA_MISAWA');
 ### エラー状態データ
 
 ```typescript
-import { 
+import {
   createMockWorkOrderWithError,
-  createMockWorkOrderProcessing 
+  createMockWorkOrderProcessing,
 } from './mocks/factories';
 
 // エラー状態のワークオーダー
@@ -96,14 +96,14 @@ const processingOrder = createMockWorkOrderProcessing();
 ### 関連データセット
 
 ```typescript
-import { 
+import {
   createMockUserWithRelatedData,
-  createMockWeeklyShifts 
+  createMockWeeklyShifts,
 } from './mocks/factories';
 
 // ユーザーとその関連データを一括生成
 const { user, workOrders, shifts } = createMockUserWithRelatedData({
-  role: 'admin'
+  role: 'admin',
 });
 
 // 特定の週のシフトスケジュール
@@ -133,13 +133,13 @@ import { createMockPdfProcessingResponse } from './mocks/factories';
 // 成功レスポンス
 const successResponse = createMockPdfProcessingResponse({
   generatedText: 'カスタムテキスト',
-  processingTime: 2000
+  processingTime: 2000,
 });
 
 // 失敗レスポンス
 const errorResponse = createMockPdfProcessingResponse({
   success: false,
-  generatedText: ''
+  generatedText: '',
 });
 ```
 
@@ -168,7 +168,7 @@ export const handlers = [
   http.post('*/functions/v1/process-pdf-single', () => {
     const response = createMockPdfProcessingResponse({
       generatedText: 'モック処理結果',
-      processingTime: 1500
+      processingTime: 1500,
     });
     return HttpResponse.json(response);
   }),
@@ -191,7 +191,7 @@ describe('WorkOrderCard', () => {
     });
 
     render(<WorkOrderCard workOrder={workOrder} />);
-    
+
     expect(screen.getByText('テスト会社')).toBeInTheDocument();
     expect(screen.getByText('テスト内容')).toBeInTheDocument();
   });
@@ -200,7 +200,7 @@ describe('WorkOrderCard', () => {
     const errorOrder = createMockWorkOrderWithError('処理エラーが発生');
 
     render(<WorkOrderCard workOrder={errorOrder} />);
-    
+
     expect(screen.getByText('処理エラーが発生')).toBeInTheDocument();
   });
 });
@@ -214,23 +214,23 @@ import { createMockFullDataset, testPresets } from './mocks/factories';
 describe('ダッシュボード統合テスト', () => {
   it('完全なデータセットでダッシュボードが正常に動作する', () => {
     const dataset = createMockFullDataset();
-    
+
     // データセットをモックAPIに設定
     setupMockAPI(dataset);
-    
+
     render(<Dashboard />);
-    
+
     // ユーザー数の確認
     expect(screen.getByText(`${dataset.users.length}人のユーザー`)).toBeInTheDocument();
   });
 
   it('新規ユーザーの場合は空の状態を表示する', () => {
     const newUserData = testPresets.newUser();
-    
+
     setupMockAPI(newUserData);
-    
+
     render(<Dashboard />);
-    
+
     expect(screen.getByText('データがありません')).toBeInTheDocument();
   });
 });
@@ -269,7 +269,7 @@ import { testPresets } from './mocks/factories';
 describe('企業別機能テスト', () => {
   it('各企業のワークオーダー形式をテスト', () => {
     const companies = testPresets.companySpecificData();
-    
+
     expect(companies.noharaG.generated_text).toContain('グリーンマンション');
     expect(companies.katoubeniya.generated_text).toContain('池袋新築現場');
   });
@@ -308,7 +308,7 @@ const user = createMockUser();
 // ✅ 良い例：テストの意図が明確
 const adminUser = createMockUser({
   role: 'admin',
-  email: 'admin@company.com'
+  email: 'admin@company.com',
 });
 ```
 
@@ -326,7 +326,7 @@ const workOrder = createMockWorkOrder({
 // ✅ 良い例：テストに必要な部分のみ指定
 const errorWorkOrder = createMockWorkOrder({
   status: 'error',
-  error_message: 'テスト用エラー'
+  error_message: 'テスト用エラー',
 });
 ```
 
@@ -338,7 +338,7 @@ describe('ワークオーダー処理', () => {
     // Given: 正常なワークオーダー
     const workOrder = createMockWorkOrder({
       status: 'pending',
-      file_name: 'valid-document.pdf'
+      file_name: 'valid-document.pdf',
     });
 
     // When: 処理を実行
@@ -360,7 +360,10 @@ import { randomHelpers } from './mocks/factories';
 // テスト用のランダムデータ生成
 const testEmail = randomHelpers.email();
 const testString = randomHelpers.string(12);
-const randomCompany = randomHelpers.arrayElement(['NOHARA_G', 'KATOUBENIYA_MISAWA']);
+const randomCompany = randomHelpers.arrayElement([
+  'NOHARA_G',
+  'KATOUBENIYA_MISAWA',
+]);
 ```
 
 ### 日付ヘルパー
@@ -389,8 +392,8 @@ function createProjectManager(projectName: string) {
     user_metadata: {
       projects: [projectName],
       joinedAt: dateHelpers.daysFromNow(-365), // 1年前に参加
-      isProjectManager: true
-    }
+      isProjectManager: true,
+    },
   });
 }
 
@@ -403,34 +406,40 @@ expect(manager.user_metadata.projects).toContain('グリーンマンション建
 ### 条件付きデータ生成
 
 ```typescript
-function createConditionalWorkOrders(count: number, condition: 'success' | 'error' | 'mixed') {
+function createConditionalWorkOrders(
+  count: number,
+  condition: 'success' | 'error' | 'mixed'
+) {
   const workOrders = [];
-  
+
   for (let i = 0; i < count; i++) {
     let workOrder;
-    
+
     switch (condition) {
       case 'success':
         workOrder = createMockWorkOrder({
           status: 'completed',
-          generated_text: `成功事例 ${i + 1}の処理結果`
+          generated_text: `成功事例 ${i + 1}の処理結果`,
         });
         break;
-        
+
       case 'error':
-        workOrder = createMockWorkOrderWithError(`エラー事例 ${i + 1}: 処理失敗`);
+        workOrder = createMockWorkOrderWithError(
+          `エラー事例 ${i + 1}: 処理失敗`
+        );
         break;
-        
+
       case 'mixed':
-        workOrder = i % 2 === 0 
-          ? createMockWorkOrder({ status: 'completed' })
-          : createMockWorkOrderWithError(`エラー事例 ${i + 1}`);
+        workOrder =
+          i % 2 === 0
+            ? createMockWorkOrder({ status: 'completed' })
+            : createMockWorkOrderWithError(`エラー事例 ${i + 1}`);
         break;
     }
-    
+
     workOrders.push(workOrder);
   }
-  
+
   return workOrders;
 }
 
@@ -438,8 +447,8 @@ function createConditionalWorkOrders(count: number, condition: 'success' | 'erro
 const successWorkOrders = createConditionalWorkOrders(5, 'success');
 const mixedWorkOrders = createConditionalWorkOrders(10, 'mixed');
 
-expect(successWorkOrders.every(wo => wo.status === 'completed')).toBe(true);
-expect(mixedWorkOrders.filter(wo => wo.status === 'error')).toHaveLength(5);
+expect(successWorkOrders.every((wo) => wo.status === 'completed')).toBe(true);
+expect(mixedWorkOrders.filter((wo) => wo.status === 'error')).toHaveLength(5);
 ```
 
 ### パフォーマンステスト用データ生成
@@ -448,21 +457,23 @@ expect(mixedWorkOrders.filter(wo => wo.status === 'error')).toHaveLength(5);
 describe('大量データパフォーマンステスト', () => {
   it('1000件のワークオーダーを効率的に処理できる', () => {
     const startTime = performance.now();
-    
+
     // 大量データの生成
     const largeDataset = createMockWorkOrders(1000, {
-      company_name: '野原G住環境'
+      company_name: '野原G住環境',
     });
-    
+
     const generationTime = performance.now() - startTime;
-    
+
     // データ生成が1秒以内であることを確認
     expect(generationTime).toBeLessThan(1000);
     expect(largeDataset).toHaveLength(1000);
-    
+
     // メモリ使用量の確認（ブラウザ環境では制限あり）
     const dataSize = JSON.stringify(largeDataset).length;
-    console.log(`Generated ${largeDataset.length} records in ${generationTime}ms, size: ${dataSize} bytes`);
+    console.log(
+      `Generated ${largeDataset.length} records in ${generationTime}ms, size: ${dataSize} bytes`
+    );
   });
 
   it('メモリ効率的なファクトリー使用', () => {
@@ -471,7 +482,7 @@ describe('大量データパフォーマンステスト', () => {
       // 必要最小限のデータのみ設定
       status: 'pending',
       generated_text: '', // 重いテキストデータは空に
-      edited_text: null
+      edited_text: null,
     });
 
     expect(lightweightOrders).toHaveLength(100);
@@ -488,28 +499,28 @@ function createOrganizationalData() {
   // 管理者ユーザー
   const admin = createMockUser({
     role: 'admin',
-    email: 'admin@company.com'
+    email: 'admin@company.com',
   });
 
   // マネージャーユーザー（複数）
   const managers = createMockUsers(3, {
     role: 'manager',
-    user_metadata: { reportsTo: admin.id }
+    user_metadata: { reportsTo: admin.id },
   });
 
   // 一般ユーザー（各マネージャーに3人ずつ）
-  const staffMembers = managers.flatMap(manager => 
+  const staffMembers = managers.flatMap((manager) =>
     createMockUsers(3, {
       role: 'user',
-      user_metadata: { reportsTo: manager.id }
+      user_metadata: { reportsTo: manager.id },
     })
   );
 
   // 各スタッフのワークオーダー
-  const allWorkOrders = staffMembers.flatMap(staff =>
+  const allWorkOrders = staffMembers.flatMap((staff) =>
     createMockWorkOrders(randomHelpers.arrayElement([2, 3, 4]), {
       user_id: staff.id,
-      company_name: '野原G住環境'
+      company_name: '野原G住環境',
     })
   );
 
@@ -518,7 +529,7 @@ function createOrganizationalData() {
     managers,
     staffMembers,
     workOrders: allWorkOrders,
-    totalUsers: 1 + managers.length + staffMembers.length
+    totalUsers: 1 + managers.length + staffMembers.length,
   };
 }
 
@@ -526,17 +537,19 @@ function createOrganizationalData() {
 describe('組織階層テスト', () => {
   it('組織全体のデータが正しく生成される', () => {
     const org = createOrganizationalData();
-    
+
     expect(org.admin.role).toBe('admin');
     expect(org.managers).toHaveLength(3);
     expect(org.staffMembers).toHaveLength(9); // 3 managers × 3 staff each
     expect(org.totalUsers).toBe(13); // 1 admin + 3 managers + 9 staff
-    
+
     // 各スタッフが管理者に紐づいている
-    org.staffMembers.forEach(staff => {
-      expect(org.managers.some(manager => 
-        manager.id === staff.user_metadata.reportsTo
-      )).toBe(true);
+    org.staffMembers.forEach((staff) => {
+      expect(
+        org.managers.some(
+          (manager) => manager.id === staff.user_metadata.reportsTo
+        )
+      ).toBe(true);
     });
   });
 });
@@ -551,17 +564,21 @@ const testScenarios = {
   freshInstall: () => ({
     users: [createMockUser({ role: 'admin', email: 'admin@newcompany.com' })],
     workOrders: [],
-    shifts: []
+    shifts: [],
   }),
 
   // 運用中のシステムテスト
   activeProduction: () => {
     const users = createMockUsers(20);
     const workOrders = createMockWorkOrders(50, {
-      status: randomHelpers.arrayElement(['completed', 'processing', 'pending'])
+      status: randomHelpers.arrayElement([
+        'completed',
+        'processing',
+        'pending',
+      ]),
     });
     const shifts = createMockShifts(100);
-    
+
     return { users, workOrders, shifts };
   },
 
@@ -570,10 +587,13 @@ const testScenarios = {
     const users = createMockUsers(10);
     const workOrders = [
       ...createMockWorkOrders(5, { status: 'completed' }), // 正常分
-      ...createMockWorkOrders(3, { status: 'error', error_message: '障害による処理失敗' }), // 障害分
-      ...createMockWorkOrders(2, { status: 'pending' }) // 再処理待ち
+      ...createMockWorkOrders(3, {
+        status: 'error',
+        error_message: '障害による処理失敗',
+      }), // 障害分
+      ...createMockWorkOrders(2, { status: 'pending' }), // 再処理待ち
     ];
-    
+
     return { users, workOrders, shifts: [] };
   },
 
@@ -582,17 +602,17 @@ const testScenarios = {
     users: createMockUsers(100),
     workOrders: createMockWorkOrders(500, {
       status: 'processing',
-      uploaded_at: dateHelpers.today() // 今日の日付に集中
+      uploaded_at: dateHelpers.today(), // 今日の日付に集中
     }),
-    shifts: createMockShifts(200)
-  })
+    shifts: createMockShifts(200),
+  }),
 };
 
 // 使用例
 describe('シナリオ別テスト', () => {
   it('新規導入環境で正しく動作する', () => {
     const scenario = testScenarios.freshInstall();
-    
+
     expect(scenario.users).toHaveLength(1);
     expect(scenario.users[0].role).toBe('admin');
     expect(scenario.workOrders).toHaveLength(0);
@@ -600,12 +620,12 @@ describe('シナリオ別テスト', () => {
 
   it('高負荷環境でも安定動作する', () => {
     const scenario = testScenarios.highLoad();
-    
+
     expect(scenario.users.length).toBeGreaterThan(50);
     expect(scenario.workOrders.length).toBeGreaterThan(400);
-    
+
     // 今日の日付のデータが多いことを確認
-    const todayOrders = scenario.workOrders.filter(wo => 
+    const todayOrders = scenario.workOrders.filter((wo) =>
       wo.uploaded_at.startsWith(dateHelpers.today().toISOString().split('T')[0])
     );
     expect(todayOrders.length).toBeGreaterThan(400);
@@ -618,9 +638,11 @@ describe('シナリオ別テスト', () => {
 ### よくある問題
 
 1. **型エラー**: TypeScriptの型定義と実際のデータ構造が合わない
+
    - 解決: `src/types/index.ts`の型定義を確認・更新
 
 2. **テスト間でのデータ混在**: 前のテストのデータが影響している
+
    - 解決: `beforeEach`で`resetFactorySequences()`を呼び出し
 
 3. **非現実的なテストデータ**: 実際のデータと乖離したテストデータ

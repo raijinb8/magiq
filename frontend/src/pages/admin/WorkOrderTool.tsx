@@ -87,7 +87,7 @@ const WorkOrderTool: React.FC = () => {
       );
       const companyLabel =
         ALL_COMPANY_OPTIONS.find((opt) => opt.value === data.identifiedCompany)
-          ?.label || (data.identifiedCompany as string);
+          ?.label || String(data.identifiedCompany);
       setProcessedCompanyInfo({ file, companyLabel });
       toast.success(
         `「${file.name}」のAI処理が完了しました！ (会社: ${companyLabel})`

@@ -8,13 +8,13 @@ export * from './test-helpers/gemini-mock.ts'
 export function createFormData(
   companyId: string,
   pdfContent: string = 'test pdf content',
-  fileName: string = 'test.pdf'
+  fileName: string = 'test.pdf',
 ): FormData {
   const formData = new FormData()
   formData.append('companyId', companyId)
   formData.append(
     'pdfFile',
-    new File([pdfContent], fileName, { type: 'application/pdf' })
+    new File([pdfContent], fileName, { type: 'application/pdf' }),
   )
   return formData
 }
@@ -25,7 +25,7 @@ export function createFormData(
 export function createRequest(
   method: string = 'POST',
   body?: BodyInit,
-  headers?: HeadersInit
+  headers?: HeadersInit,
 ): Request {
   return new Request('http://localhost:8000', {
     method,
@@ -39,24 +39,26 @@ export function createRequest(
  */
 export function createMockSupabaseClient(
   insertData: any = { id: 'test-record-id' },
-  error: any = null
+  error: any = null,
 ) {
   return {
     from: (table: string) => ({
       insert: (data: any[]) => ({
         select: (columns: string) => ({
-          single: () => Promise.resolve({
-            data: insertData,
-            error,
-          }),
+          single: () =>
+            Promise.resolve({
+              data: insertData,
+              error,
+            }),
         }),
       }),
       select: () => ({
         eq: () => ({
-          single: () => Promise.resolve({
-            data: insertData,
-            error,
-          }),
+          single: () =>
+            Promise.resolve({
+              data: insertData,
+              error,
+            }),
         }),
       }),
     }),
@@ -68,7 +70,7 @@ export function createMockSupabaseClient(
  */
 export function createMockGeminiResponse(
   text: string = 'モック生成されたテキスト',
-  usageMetadata?: any
+  usageMetadata?: any,
 ) {
   return {
     text,
@@ -117,12 +119,12 @@ export function assertCorsHeaders(response: Response) {
 export async function assertErrorResponse(
   response: Response,
   expectedStatus: number,
-  expectedError: string
+  expectedError: string,
 ) {
   if (response.status !== expectedStatus) {
     throw new Error(`Expected status ${expectedStatus}, but got ${response.status}`)
   }
-  
+
   const body = await response.json()
   if (body.error !== expectedError) {
     throw new Error(`Expected error "${expectedError}", but got "${body.error}"`)
@@ -135,12 +137,12 @@ export async function assertErrorResponse(
 export async function assertSuccessResponse(
   response: Response,
   companyId: string,
-  fileName: string
+  fileName: string,
 ) {
   if (response.status !== 200) {
     throw new Error(`Expected status 200, but got ${response.status}`)
   }
-  
+
   const body = await response.json()
   if (!body.generatedText) {
     throw new Error('generatedText is missing in response')

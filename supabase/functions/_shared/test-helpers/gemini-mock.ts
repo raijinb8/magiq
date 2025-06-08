@@ -1,5 +1,5 @@
 // Gemini API用のモック実装
-import { stub, Stub } from '@std/testing/mock'
+import { Stub, stub } from '@std/testing/mock'
 
 /**
  * GoogleGenAI モデルのレスポンス型
@@ -68,7 +68,7 @@ export class MockGoogleGenAI {
     this.generateContentStub = stub(
       this.models,
       'generateContent',
-      () => Promise.reject(error)
+      () => Promise.reject(error),
     )
   }
 
@@ -77,7 +77,7 @@ export class MockGoogleGenAI {
    */
   setConditionalResponse(
     condition: (request: any) => boolean,
-    response: MockGeminiResponse | Error
+    response: MockGeminiResponse | Error,
   ) {
     this.generateContentStub = stub(
       this.models,
@@ -90,7 +90,7 @@ export class MockGoogleGenAI {
           return response
         }
         return this.defaultResponse
-      }
+      },
     )
   }
 
@@ -173,7 +173,7 @@ export const GEMINI_MOCK_RESPONSES = {
  */
 export function createCompanySpecificMock(): MockGoogleGenAI {
   const mock = createMockGeminiAI()
-  
+
   mock.setConditionalResponse(
     (request) => {
       // リクエストの内容から会社IDを推測（実際の実装に合わせて調整）
@@ -183,7 +183,7 @@ export function createCompanySpecificMock(): MockGoogleGenAI {
       }
       return false
     },
-    GEMINI_MOCK_RESPONSES.NOHARA_G
+    GEMINI_MOCK_RESPONSES.NOHARA_G,
   )
 
   return mock
@@ -198,7 +198,7 @@ export class TrackingMockGeminiAI extends MockGoogleGenAI {
 
   constructor({ apiKey }: { apiKey: string }) {
     super({ apiKey })
-    
+
     // generateContent をオーバーライド
     const originalGenerateContent = this.models.generateContent
     this.models.generateContent = async (request: any) => {

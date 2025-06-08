@@ -1,11 +1,14 @@
 /**
  * テストデータファクトリー
- * 
+ *
  * 一貫性のあるテストデータを簡単に生成するためのファクトリー関数群。
  * 各ファクトリーはデフォルト値を提供し、必要に応じてオーバーライド可能。
  */
 
 import { COMPANY_OPTIONS_CONST, type CompanyOptionValue } from '../../types';
+
+// 型を再エクスポート
+export type { CompanyOptionValue };
 
 // シーケンス管理（一意なIDやインデックスの生成）
 let userIdSequence = 1;
@@ -25,8 +28,11 @@ export function resetFactorySequences() {
 export const randomHelpers = {
   // ランダムな文字列（指定した長さ）
   string: (length = 8): string => {
-    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    return Array.from({ length }, () => chars.charAt(Math.floor(Math.random() * chars.length))).join('');
+    const chars =
+      'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    return Array.from({ length }, () =>
+      chars.charAt(Math.floor(Math.random() * chars.length))
+    ).join('');
   },
 
   // ランダムなメールアドレス
@@ -55,7 +61,8 @@ export const randomHelpers = {
   boolean: (): boolean => Math.random() > 0.5,
 
   // ランダムな整数（範囲指定）
-  integer: (min = 0, max = 100): number => Math.floor(Math.random() * (max - min + 1)) + min,
+  integer: (min = 0, max = 100): number =>
+    Math.floor(Math.random() * (max - min + 1)) + min,
 };
 
 // 日時関連のヘルパー
@@ -106,6 +113,7 @@ export interface MockWorkOrder {
   user_id?: string;
   file_size?: number;
   processing_time_ms?: number;
+  updated_at?: string;
   token_usage?: {
     prompt: number;
     completion: number;
@@ -133,7 +141,7 @@ export interface MockShift {
 export function createMockUser(overrides?: Partial<MockUser>): MockUser {
   const now = dateHelpers.now();
   const id = `user-${userIdSequence++}`;
-  
+
   return {
     id,
     email: overrides?.email || randomHelpers.email(),
@@ -150,37 +158,39 @@ export function createMockUser(overrides?: Partial<MockUser>): MockUser {
 // テンプレート生成のヘルパー関数
 function generateSampleWorkOrderText(companyName: string): string {
   const templates = {
-    '野原G住環境': `物件名：グリーンマンション102号室
+    野原G住環境: `物件名：グリーンマンション102号室
 工事内容：内装リフォーム工事
 日付：${new Date().toLocaleDateString('ja-JP')}
 作業者：田中太郎
 作業時間：9:00〜17:00
 注意事項：床材保護シート設置必須`,
-    
-    '加藤ベニヤ池袋_ミサワホーム': `工事場所：池袋新築現場A-3
+
+    加藤ベニヤ池袋_ミサワホーム: `工事場所：池袋新築現場A-3
 作業内容：ベニヤ板設置作業
 作業日：${new Date().toLocaleDateString('ja-JP')}
 担当者：佐藤次郎
 予定時間：8:30〜16:30
 備考：雨天中止`,
-    
+
     default: `工事名：一般建設工事
 内容：${companyName}関連作業
 実施日：${new Date().toLocaleDateString('ja-JP')}
 作業員：山田花子
-時間：9:00〜17:00`
+時間：9:00〜17:00`,
   };
-  
+
   return templates[companyName as keyof typeof templates] || templates.default;
 }
 
 // 作業指示書データのファクトリー
-export function createMockWorkOrder(overrides?: Partial<MockWorkOrder>): MockWorkOrder {
+export function createMockWorkOrder(
+  overrides?: Partial<MockWorkOrder>
+): MockWorkOrder {
   const now = dateHelpers.now();
   const id = workOrderIdSequence++;
   const fileName = `work-order-${fileNameSequence++}.pdf`;
   const companyOption = randomHelpers.arrayElement(COMPANY_OPTIONS_CONST);
-  
+
   return {
     id,
     file_name: fileName,
@@ -206,8 +216,13 @@ export function createMockWorkOrder(overrides?: Partial<MockWorkOrder>): MockWor
 export function createMockShift(overrides?: Partial<MockShift>): MockShift {
   const now = dateHelpers.now();
   const id = shiftIdSequence++;
-  const shiftTypes: MockShift['shift_type'][] = ['morning', 'afternoon', 'night', 'custom'];
-  
+  const shiftTypes: MockShift['shift_type'][] = [
+    'morning',
+    'afternoon',
+    'night',
+    'custom',
+  ];
+
   return {
     id,
     user_id: `user-${randomHelpers.integer(1, 10)}`,
@@ -224,15 +239,24 @@ export function createMockShift(overrides?: Partial<MockShift>): MockShift {
 // 複数データ生成ヘルパー
 // ======================
 
-export function createMockUsers(count: number, overrides?: Partial<MockUser>): MockUser[] {
+export function createMockUsers(
+  count: number,
+  overrides?: Partial<MockUser>
+): MockUser[] {
   return Array.from({ length: count }, () => createMockUser(overrides));
 }
 
-export function createMockWorkOrders(count: number, overrides?: Partial<MockWorkOrder>): MockWorkOrder[] {
+export function createMockWorkOrders(
+  count: number,
+  overrides?: Partial<MockWorkOrder>
+): MockWorkOrder[] {
   return Array.from({ length: count }, () => createMockWorkOrder(overrides));
 }
 
-export function createMockShifts(count: number, overrides?: Partial<MockShift>): MockShift[] {
+export function createMockShifts(
+  count: number,
+  overrides?: Partial<MockShift>
+): MockShift[] {
   return Array.from({ length: count }, () => createMockShift(overrides));
 }
 
@@ -241,12 +265,17 @@ export function createMockShifts(count: number, overrides?: Partial<MockShift>):
 // ======================
 
 // 特定の会社用のワークオーダー
-export function createMockWorkOrderForCompany(companyValue: CompanyOptionValue, overrides?: Partial<MockWorkOrder>): MockWorkOrder {
-  const companyOption = COMPANY_OPTIONS_CONST.find(c => c.value === companyValue);
+export function createMockWorkOrderForCompany(
+  companyValue: CompanyOptionValue,
+  overrides?: Partial<MockWorkOrder>
+): MockWorkOrder {
+  const companyOption = COMPANY_OPTIONS_CONST.find(
+    (c) => c.value === companyValue
+  );
   if (!companyOption) {
     throw new Error(`Unknown company value: ${companyValue}`);
   }
-  
+
   return createMockWorkOrder({
     company_name: companyOption.label,
     prompt_identifier: `${companyValue}_V20250605`,
@@ -256,7 +285,10 @@ export function createMockWorkOrderForCompany(companyValue: CompanyOptionValue, 
 }
 
 // エラー状態のワークオーダー
-export function createMockWorkOrderWithError(errorMessage?: string, overrides?: Partial<MockWorkOrder>): MockWorkOrder {
+export function createMockWorkOrderWithError(
+  errorMessage?: string,
+  overrides?: Partial<MockWorkOrder>
+): MockWorkOrder {
   return createMockWorkOrder({
     status: 'error',
     error_message: errorMessage || 'PDF処理中にエラーが発生しました',
@@ -267,7 +299,9 @@ export function createMockWorkOrderWithError(errorMessage?: string, overrides?: 
 }
 
 // 処理中のワークオーダー
-export function createMockWorkOrderProcessing(overrides?: Partial<MockWorkOrder>): MockWorkOrder {
+export function createMockWorkOrderProcessing(
+  overrides?: Partial<MockWorkOrder>
+): MockWorkOrder {
   return createMockWorkOrder({
     status: 'processing',
     generated_text: '',
@@ -278,36 +312,49 @@ export function createMockWorkOrderProcessing(overrides?: Partial<MockWorkOrder>
 }
 
 // 特定のユーザーに関連するデータセット
-export function createMockUserWithRelatedData(userOverrides?: Partial<MockUser>) {
+export function createMockUserWithRelatedData(
+  userOverrides?: Partial<MockUser>
+) {
   const user = createMockUser(userOverrides);
-  const workOrders = createMockWorkOrders(randomHelpers.integer(1, 5), { user_id: user.id });
-  const shifts = createMockShifts(randomHelpers.integer(2, 10), { user_id: user.id });
-  
+  const workOrders = createMockWorkOrders(randomHelpers.integer(1, 5), {
+    user_id: user.id,
+  });
+  const shifts = createMockShifts(randomHelpers.integer(2, 10), {
+    user_id: user.id,
+  });
+
   return { user, workOrders, shifts };
 }
 
 // 週間シフトスケジュール
-export function createMockWeeklyShifts(userId: string, startDate?: string): MockShift[] {
+export function createMockWeeklyShifts(
+  userId: string,
+  startDate?: string
+): MockShift[] {
   const start = startDate ? new Date(startDate) : new Date();
   const shifts: MockShift[] = [];
-  
+
   for (let i = 0; i < 7; i++) {
     const date = new Date(start);
     date.setDate(start.getDate() + i);
-    
+
     // 土日は休みの可能性が高い
     const isWeekend = date.getDay() === 0 || date.getDay() === 6;
     if (isWeekend && randomHelpers.boolean()) {
       continue; // 50%の確率で休み
     }
-    
-    shifts.push(createMockShift({
-      user_id: userId,
-      date: date.toISOString().split('T')[0],
-      shift_type: isWeekend ? 'custom' : randomHelpers.arrayElement(['morning', 'afternoon']),
-    }));
+
+    shifts.push(
+      createMockShift({
+        user_id: userId,
+        date: date.toISOString().split('T')[0],
+        shift_type: isWeekend
+          ? 'custom'
+          : randomHelpers.arrayElement(['morning', 'afternoon']),
+      })
+    );
   }
-  
+
   return shifts;
 }
 
@@ -343,7 +390,9 @@ export interface MockPdfProcessingResponse {
   originalFileName?: string;
 }
 
-export function createMockPdfProcessingResponse(overrides?: Partial<MockPdfProcessingResponse>): MockPdfProcessingResponse {
+export function createMockPdfProcessingResponse(
+  overrides?: Partial<MockPdfProcessingResponse>
+): MockPdfProcessingResponse {
   const tokenUsage = (() => {
     const prompt = randomHelpers.integer(50, 200);
     const completion = randomHelpers.integer(25, 100);
@@ -371,7 +420,11 @@ export interface MockErrorResponse {
   path?: string;
 }
 
-export function createMockErrorResponse(message: string, status = 400, overrides?: Partial<MockErrorResponse>): MockErrorResponse {
+export function createMockErrorResponse(
+  message: string,
+  status = 400,
+  overrides?: Partial<MockErrorResponse>
+): MockErrorResponse {
   return {
     error: message,
     error_description: message,
@@ -382,7 +435,10 @@ export function createMockErrorResponse(message: string, status = 400, overrides
 }
 
 // Supabaseデータベースレスポンスのファクトリー
-export function createMockSupabaseResponse<T>(data: T[], error: boolean = false) {
+export function createMockSupabaseResponse<T>(
+  data: T[],
+  error: boolean = false
+) {
   if (error) {
     return {
       data: null,
@@ -414,21 +470,26 @@ export function createMockSupabaseResponse<T>(data: T[], error: boolean = false)
 // 完全なテストデータセット（デモ用）
 export function createMockFullDataset() {
   const users = createMockUsers(3, { role: 'user' });
-  const adminUser = createMockUser({ role: 'admin', email: 'admin@example.com' });
-  
+  const adminUser = createMockUser({
+    role: 'admin',
+    email: 'admin@example.com',
+  });
+
   const allUsers = [...users, adminUser];
   const allWorkOrders: MockWorkOrder[] = [];
   const allShifts: MockShift[] = [];
-  
+
   // 各ユーザーにデータを割り当て
-  allUsers.forEach(user => {
-    const userWorkOrders = createMockWorkOrders(randomHelpers.integer(1, 3), { user_id: user.id });
+  allUsers.forEach((user) => {
+    const userWorkOrders = createMockWorkOrders(randomHelpers.integer(1, 3), {
+      user_id: user.id,
+    });
     const userShifts = createMockWeeklyShifts(user.id);
-    
+
     allWorkOrders.push(...userWorkOrders);
     allShifts.push(...userShifts);
   });
-  
+
   return {
     users: allUsers,
     workOrders: allWorkOrders,
@@ -445,7 +506,7 @@ export const testPresets = {
     workOrders: [],
     shifts: [],
   }),
-  
+
   // アクティブユーザー（多くのデータ）
   activeUser: () => {
     const user = createMockUser();
@@ -455,25 +516,25 @@ export const testPresets = {
       shifts: createMockShifts(20, { user_id: user.id }),
     };
   },
-  
+
   // エラーが多いユーザー
   problematicUser: () => {
     const user = createMockUser();
-    const errorWorkOrders = Array.from({ length: 3 }, () => 
+    const errorWorkOrders = Array.from({ length: 3 }, () =>
       createMockWorkOrderWithError('処理エラー', { user_id: user.id })
     );
-    const cancelledShifts = createMockShifts(5, { 
-      user_id: user.id, 
-      status: 'cancelled' 
+    const cancelledShifts = createMockShifts(5, {
+      user_id: user.id,
+      status: 'cancelled',
     });
-    
+
     return {
       user,
       workOrders: errorWorkOrders,
       shifts: cancelledShifts,
     };
   },
-  
+
   // 企業別のワークオーダー
   companySpecificData: () => ({
     noharaG: createMockWorkOrderForCompany('NOHARA_G'),

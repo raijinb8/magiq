@@ -1,19 +1,19 @@
 // process-pdf-single 関数の統合テスト（Geminiモック使用）
 import { assertEquals, assertExists } from '@std/testing/asserts'
-import { describe, it, beforeEach, afterEach } from '@std/testing/mod'
+import { afterEach, beforeEach, describe, it } from '@std/testing'
 import {
-  createFormData,
-  createRequest,
-  createMockSupabaseClient,
-  setupTestEnv,
-  cleanupTestEnv,
   assertCorsHeaders,
   assertErrorResponse,
   assertSuccessResponse,
+  cleanupTestEnv,
+  createFormData,
   createMockGeminiAI,
+  createMockSupabaseClient,
+  createRequest,
   createTrackingMockGeminiAI,
   GEMINI_MOCK_RESPONSES,
   MockGoogleGenAI,
+  setupTestEnv,
   TrackingMockGeminiAI,
 } from '../../_shared/test-helpers.ts'
 
@@ -49,7 +49,7 @@ describe('process-pdf-single Edge Function with Gemini Mock', () => {
 
       // APIコールが実行されたことを確認
       assertEquals(trackingMock.callCount, 0)
-      
+
       // モックでAPIを呼び出し
       const response = await trackingMock.models.generateContent({
         model: 'gemini-2.5-flash-preview-04-17',
@@ -63,7 +63,7 @@ describe('process-pdf-single Edge Function with Gemini Mock', () => {
 
     it('NOHARA_G用のプロンプトで正しいレスポンスが返される', async () => {
       mockGeminiAI.setCustomResponse(GEMINI_MOCK_RESPONSES.NOHARA_G)
-      
+
       const response = await mockGeminiAI.models.generateContent({
         model: 'gemini-2.5-flash-preview-04-17',
         contents: [{ role: 'user', parts: [] }],
@@ -75,7 +75,7 @@ describe('process-pdf-single Edge Function with Gemini Mock', () => {
 
     it('KATOUBENIYA_MISAWA用のプロンプトで正しいレスポンスが返される', async () => {
       mockGeminiAI.setCustomResponse(GEMINI_MOCK_RESPONSES.KATOUBENIYA_MISAWA)
-      
+
       const response = await mockGeminiAI.models.generateContent({
         model: 'gemini-2.5-flash-preview-04-17',
         contents: [{ role: 'user', parts: [] }],
@@ -87,7 +87,7 @@ describe('process-pdf-single Edge Function with Gemini Mock', () => {
 
     it('Gemini APIがエラーを返した場合の処理', async () => {
       mockGeminiAI.setErrorResponse(new Error('API rate limit exceeded'))
-      
+
       try {
         await mockGeminiAI.models.generateContent({
           model: 'gemini-2.5-flash-preview-04-17',
@@ -95,13 +95,13 @@ describe('process-pdf-single Edge Function with Gemini Mock', () => {
         })
         throw new Error('エラーが発生するはずでした')
       } catch (error) {
-        assertEquals(error.message, 'API rate limit exceeded')
+        assertEquals((error as Error).message, 'API rate limit exceeded')
       }
     })
 
     it('APIキーが設定されていない場合のエラー', async () => {
       const mockWithoutKey = createMockGeminiAI('')
-      
+
       try {
         await mockWithoutKey.models.generateContent({
           model: 'gemini-2.5-flash-preview-04-17',
@@ -109,13 +109,13 @@ describe('process-pdf-single Edge Function with Gemini Mock', () => {
         })
         throw new Error('エラーが発生するはずでした')
       } catch (error) {
-        assertEquals(error.message, 'API key is required')
+        assertEquals((error as Error).message, 'API key is required')
       }
     })
 
     it('PDFのBase64エンコーディングが正しく処理される', async () => {
       const trackingMock = createTrackingMockGeminiAI()
-      
+
       const pdfBase64 = 'bW9ja2VkLWJhc2U2NC1lbmNvZGVkLXBkZi1jb250ZW50'
       const request = {
         model: 'gemini-2.5-flash-preview-04-17',
@@ -134,7 +134,7 @@ describe('process-pdf-single Edge Function with Gemini Mock', () => {
       }
 
       await trackingMock.models.generateContent(request)
-      
+
       // リクエストが正しく記録されていることを確認
       assertExists(trackingMock.lastRequest)
       assertEquals(trackingMock.lastRequest.contents[0].parts[1].inlineData.data, pdfBase64)
@@ -150,9 +150,9 @@ describe('process-pdf-single Edge Function with Gemini Mock', () => {
           cachedContentTokenCount: 100,
         },
       }
-      
+
       mockGeminiAI.setCustomResponse(customResponse)
-      
+
       const response = await mockGeminiAI.models.generateContent({
         model: 'gemini-2.5-flash-preview-04-17',
         contents: [{ role: 'user', parts: [] }],
@@ -171,7 +171,7 @@ describe('process-pdf-single Edge Function with Gemini Mock', () => {
           const requestStr = JSON.stringify(request)
           return requestStr.includes('special-condition')
         },
-        { text: '特別な条件のレスポンス', usageMetadata: { totalTokenCount: 999 } }
+        { text: '特別な条件のレスポンス', usageMetadata: { totalTokenCount: 999 } },
       )
 
       // 条件に一致しない場合
@@ -192,7 +192,7 @@ describe('process-pdf-single Edge Function with Gemini Mock', () => {
 
     it('複数回のAPI呼び出しがトラッキングされる', async () => {
       const trackingMock = createTrackingMockGeminiAI()
-      
+
       // 1回目の呼び出し
       await trackingMock.models.generateContent({
         model: 'gemini-2.5-flash-preview-04-17',

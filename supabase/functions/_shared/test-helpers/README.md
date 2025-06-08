@@ -44,7 +44,7 @@ const response = await mockGeminiAI.models.generateContent({
 mockGeminiAI.setErrorResponse(new Error('Rate limit exceeded'))
 
 try {
-  await mockGeminiAI.models.generateContent({ /* ... */ })
+  await mockGeminiAI.models.generateContent({/* ... */})
 } catch (error) {
   console.log(error.message) // "Rate limit exceeded"
 }
@@ -59,7 +59,7 @@ mockGeminiAI.setConditionalResponse(
     const requestStr = JSON.stringify(request)
     return requestStr.includes('NOHARA_G')
   },
-  { text: '野原G専用のレスポンス', usageMetadata: { totalTokenCount: 1000 } }
+  { text: '野原G専用のレスポンス', usageMetadata: { totalTokenCount: 1000 } },
 )
 ```
 
@@ -90,8 +90,8 @@ import { createTrackingMockGeminiAI } from '../test-helpers.ts'
 const trackingMock = createTrackingMockGeminiAI()
 
 // API を複数回呼び出し
-await trackingMock.models.generateContent({ /* ... */ })
-await trackingMock.models.generateContent({ /* ... */ })
+await trackingMock.models.generateContent({/* ... */})
+await trackingMock.models.generateContent({/* ... */})
 
 console.log(trackingMock.callCount) // 2
 console.log(trackingMock.lastRequest) // 最後のリクエスト内容
@@ -113,8 +113,8 @@ deno test --import-map=import_map.test.json
 ### 方法2: テストファイル内でモックを設定
 
 ```typescript
-import { beforeEach, afterEach } from '@std/testing/mod'
-import { createMockGeminiAI, setupTestEnv, cleanupTestEnv } from '../test-helpers.ts'
+import { afterEach, beforeEach } from '@std/testing/mod'
+import { cleanupTestEnv, createMockGeminiAI, setupTestEnv } from '../test-helpers.ts'
 
 describe('Edge Function テスト', () => {
   let mockGeminiAI
@@ -145,14 +145,14 @@ mockGeminiAI.setConditionalResponse(
     const parts = request.contents[0].parts
     const hasFile = parts.some((p) => p.inlineData)
     const textContent = parts.find((p) => p.text)?.text || ''
-    
+
     // ファイルがあり、かつ特定のキーワードを含む場合
     return hasFile && textContent.includes('urgent')
   },
   {
     text: '緊急対応が必要な案件です',
     usageMetadata: { totalTokenCount: 999 },
-  }
+  },
 )
 ```
 
@@ -173,8 +173,8 @@ for (const { promptTokens, outputTokens } of responses) {
       totalTokenCount: promptTokens + outputTokens,
     },
   })
-  
-  const response = await mockGeminiAI.models.generateContent({ /* ... */ })
+
+  const response = await mockGeminiAI.models.generateContent({/* ... */})
   // トークン使用量を集計
 }
 ```
