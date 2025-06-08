@@ -1,6 +1,6 @@
 // process-pdf-single 関数の統合テスト（Geminiモック使用）
 import { assertEquals, assertExists } from '@std/testing/asserts'
-import { afterEach, beforeEach, describe, it } from '@std/testing'
+import { afterEach, beforeEach, describe, it } from '@std/testing/bdd'
 import {
   assertCorsHeaders,
   assertErrorResponse,
