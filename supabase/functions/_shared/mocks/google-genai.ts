@@ -3,9 +3,9 @@
 // 実際のGemini APIの代わりにモックを使用できます
 
 import {
-  MockGoogleGenAI,
   createMockGeminiAI,
   GEMINI_MOCK_RESPONSES,
+  MockGoogleGenAI,
 } from '../test-helpers/gemini-mock.ts'
 
 // グローバルなモックインスタンス
@@ -38,7 +38,7 @@ export class GoogleGenAI {
  * モックの動作をカスタマイズするために使用
  */
 export function configureMockGeminiAI(
-  configFn: (mock: MockGoogleGenAI) => void
+  configFn: (mock: MockGoogleGenAI) => void,
 ): void {
   if (!globalMockInstance) {
     globalMockInstance = createMockGeminiAI()

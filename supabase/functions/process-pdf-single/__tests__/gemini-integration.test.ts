@@ -1,13 +1,13 @@
 // Gemini APIモックを使用したEdge Function統合テストのデモンストレーション
 import { assertEquals, assertExists } from '@std/testing/asserts'
-import { describe, it, beforeEach, afterEach } from '@std/testing'
+import { afterEach, beforeEach, describe, it } from '@std/testing'
 import {
-  setupTestEnv,
   cleanupTestEnv,
   createMockGeminiAI,
   createTrackingMockGeminiAI,
   GEMINI_MOCK_RESPONSES,
   MockGoogleGenAI,
+  setupTestEnv,
 } from '../../_shared/test-helpers.ts'
 
 describe('Gemini API モック統合デモ', () => {
@@ -27,7 +27,7 @@ describe('Gemini API モック統合デモ', () => {
   describe('基本的なモック使用例', () => {
     it('シンプルなレスポンスのモック', async () => {
       mockGeminiAI = createMockGeminiAI()
-      
+
       // カスタムレスポンスを設定
       mockGeminiAI.setCustomResponse({
         text: 'カスタムレスポンステキスト',
@@ -50,7 +50,7 @@ describe('Gemini API モック統合デモ', () => {
 
     it('エラーケースのモック', async () => {
       mockGeminiAI = createMockGeminiAI()
-      
+
       // エラーレスポンスを設定
       mockGeminiAI.setErrorResponse(new Error('Rate limit exceeded'))
 
@@ -69,14 +69,14 @@ describe('Gemini API モック統合デモ', () => {
   describe('会社別レスポンスのモック', () => {
     it('NOHARA_G用のレスポンス', async () => {
       mockGeminiAI = createMockGeminiAI()
-      
+
       // 条件付きレスポンスを設定
       mockGeminiAI.setConditionalResponse(
         (request) => {
           const requestStr = JSON.stringify(request)
           return requestStr.includes('NOHARA_G') || requestStr.includes('野原')
         },
-        GEMINI_MOCK_RESPONSES.NOHARA_G
+        GEMINI_MOCK_RESPONSES.NOHARA_G,
       )
 
       // 野原G用のリクエスト
@@ -97,7 +97,7 @@ describe('Gemini API モック統合デモ', () => {
 
     it('KATOUBENIYA_MISAWA用のレスポンス', async () => {
       mockGeminiAI = createMockGeminiAI()
-      
+
       // プリセットレスポンスを使用
       mockGeminiAI.setCustomResponse(GEMINI_MOCK_RESPONSES.KATOUBENIYA_MISAWA)
 
@@ -120,7 +120,7 @@ describe('Gemini API モック統合デモ', () => {
   describe('API呼び出しのトラッキング', () => {
     it('API呼び出し回数とリクエスト内容の追跡', async () => {
       const trackingMock = createTrackingMockGeminiAI()
-      
+
       // 複数回のAPI呼び出し
       const requests = [
         { text: '1回目のリクエスト' },
@@ -133,13 +133,13 @@ describe('Gemini API モック統合デモ', () => {
           model: 'gemini-2.5-flash-preview-04-17',
           contents: [{ role: 'user', parts: [request] }],
         })
-        
+
         assertEquals(trackingMock.callCount, index + 1)
       }
 
       // 最後のリクエストが記録されていることを確認
       assertEquals(trackingMock.lastRequest.contents[0].parts[0].text, '3回目のリクエスト')
-      
+
       // リセット機能の確認
       trackingMock.resetTracking()
       assertEquals(trackingMock.callCount, 0)
@@ -150,7 +150,7 @@ describe('Gemini API モック統合デモ', () => {
   describe('実際のEdge Function処理フローのシミュレーション', () => {
     it('PDFアップロードから結果保存までの完全なフロー', async () => {
       mockGeminiAI = createMockGeminiAI()
-      
+
       // PDFファイルの準備
       const pdfContent = 'test pdf content'
       const pdfBase64 = btoa(pdfContent) // 実際のBase64エンコード
@@ -172,7 +172,7 @@ describe('Gemini API モック統合デモ', () => {
             candidatesTokenCount: 567,
             totalTokenCount: 1801,
           },
-        }
+        },
       )
 
       // Gemini APIを呼び出し
@@ -217,21 +217,21 @@ describe('Gemini API モック統合デモ', () => {
   describe('高度なモック機能', () => {
     it('複数の条件に基づく動的レスポンス', async () => {
       mockGeminiAI = createMockGeminiAI()
-      
+
       // 複雑な条件ロジック
       mockGeminiAI.setConditionalResponse(
         (request) => {
           const parts = request.contents[0].parts
           const hasFile = parts.some((p: any) => p.inlineData)
           const textContent = parts.find((p: any) => p.text)?.text || ''
-          
+
           // ファイルがあり、かつ特定のキーワードを含む場合
           return hasFile && textContent.includes('urgent')
         },
         {
           text: '緊急対応が必要な案件です',
           usageMetadata: { totalTokenCount: 999 },
-        }
+        },
       )
 
       // 条件に一致しないケース
@@ -257,7 +257,7 @@ describe('Gemini API モック統合デモ', () => {
 
     it('トークン使用量に基づくコスト計算のシミュレーション', async () => {
       const trackingMock = createTrackingMockGeminiAI()
-      
+
       // 異なるトークン使用量のレスポンスを設定
       const responses = [
         { promptTokens: 1000, outputTokens: 200 },

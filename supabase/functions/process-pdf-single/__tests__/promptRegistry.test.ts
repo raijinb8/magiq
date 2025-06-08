@@ -29,7 +29,11 @@ describe('promptRegistry', () => {
           assertExists(entry.companyName, `${key} に companyName が必要です`)
           assertExists(entry.version, `${key} に version が必要です`)
           assertExists(entry.promptFunction, `${key} に promptFunction が必要です`)
-          assertEquals(typeof entry.promptFunction, 'function', `${key} の promptFunction は関数である必要があります`)
+          assertEquals(
+            typeof entry.promptFunction,
+            'function',
+            `${key} の promptFunction は関数である必要があります`,
+          )
         }
       })
     })

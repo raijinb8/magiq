@@ -1,12 +1,12 @@
 // process-pdf-single 関数のテスト
 import { assertEquals, assertExists } from '@std/testing/asserts'
-import { describe, it, beforeEach, afterEach } from '@std/testing'
+import { afterEach, beforeEach, describe, it } from '@std/testing'
 import { stub } from '@std/testing/mock'
 import {
+  cleanupTestEnv,
   createMockGeminiAI,
   MockGoogleGenAI,
   setupTestEnv,
-  cleanupTestEnv,
 } from '../../_shared/test-helpers.ts'
 
 // テスト用のSupabaseクライアントモック
@@ -14,10 +14,11 @@ const mockSupabaseClient = {
   from: () => ({
     insert: () => ({
       select: () => ({
-        single: () => Promise.resolve({
-          data: { id: 'test-record-id' },
-          error: null,
-        }),
+        single: () =>
+          Promise.resolve({
+            data: { id: 'test-record-id' },
+            error: null,
+          }),
       }),
     }),
   }),
@@ -72,7 +73,7 @@ describe('process-pdf-single Edge Function', () => {
           'Access-Control-Allow-Origin': '*',
           'Content-Type': 'application/json',
         },
-      }
+      },
     )
 
     assertEquals(response.status, 405)
@@ -92,7 +93,8 @@ describe('process-pdf-single Edge Function', () => {
     // テスト用のモックレスポンス
     const response = new Response(
       JSON.stringify({
-        error: '不正なリクエスト形式です。Content-Type は multipart/form-data である必要があります。',
+        error:
+          '不正なリクエスト形式です。Content-Type は multipart/form-data である必要があります。',
       }),
       {
         status: 415,
@@ -100,7 +102,7 @@ describe('process-pdf-single Edge Function', () => {
           'Access-Control-Allow-Origin': '*',
           'Content-Type': 'application/json',
         },
-      }
+      },
     )
 
     assertEquals(response.status, 415)
@@ -108,7 +110,10 @@ describe('process-pdf-single Edge Function', () => {
 
   it('companyIdが提供されていない場合は400エラーを返す', async () => {
     const formData = new FormData()
-    formData.append('pdfFile', new File(['test pdf content'], 'test.pdf', { type: 'application/pdf' }))
+    formData.append(
+      'pdfFile',
+      new File(['test pdf content'], 'test.pdf', { type: 'application/pdf' }),
+    )
 
     const request = new Request('http://localhost:8000', {
       method: 'POST',
@@ -124,7 +129,7 @@ describe('process-pdf-single Edge Function', () => {
           'Access-Control-Allow-Origin': '*',
           'Content-Type': 'application/json',
         },
-      }
+      },
     )
 
     assertEquals(response.status, 400)
@@ -150,7 +155,7 @@ describe('process-pdf-single Edge Function', () => {
           'Access-Control-Allow-Origin': '*',
           'Content-Type': 'application/json',
         },
-      }
+      },
     )
 
     assertEquals(response.status, 400)
@@ -169,7 +174,10 @@ describe('process-pdf-single Edge Function', () => {
 
     const formData = new FormData()
     formData.append('companyId', 'NOHARA_G')
-    formData.append('pdfFile', new File(['test pdf content'], 'test.pdf', { type: 'application/pdf' }))
+    formData.append(
+      'pdfFile',
+      new File(['test pdf content'], 'test.pdf', { type: 'application/pdf' }),
+    )
 
     const request = new Request('http://localhost:8000', {
       method: 'POST',
@@ -212,7 +220,10 @@ describe('process-pdf-single Edge Function', () => {
 
     const formData = new FormData()
     formData.append('companyId', 'NOHARA_G')
-    formData.append('pdfFile', new File(['test pdf content'], 'test.pdf', { type: 'application/pdf' }))
+    formData.append(
+      'pdfFile',
+      new File(['test pdf content'], 'test.pdf', { type: 'application/pdf' }),
+    )
 
     const request = new Request('http://localhost:8000', {
       method: 'POST',
@@ -230,7 +241,7 @@ describe('process-pdf-single Edge Function', () => {
           'Access-Control-Allow-Origin': '*',
           'Content-Type': 'application/json',
         },
-      }
+      },
     )
 
     assertEquals(response.status, 500)
@@ -239,7 +250,10 @@ describe('process-pdf-single Edge Function', () => {
   it('サポートされていない会社IDの場合は400エラーを返す', async () => {
     const formData = new FormData()
     formData.append('companyId', 'UNKNOWN_COMPANY')
-    formData.append('pdfFile', new File(['test pdf content'], 'test.pdf', { type: 'application/pdf' }))
+    formData.append(
+      'pdfFile',
+      new File(['test pdf content'], 'test.pdf', { type: 'application/pdf' }),
+    )
 
     const request = new Request('http://localhost:8000', {
       method: 'POST',
@@ -257,7 +271,7 @@ describe('process-pdf-single Edge Function', () => {
           'Access-Control-Allow-Origin': '*',
           'Content-Type': 'application/json',
         },
-      }
+      },
     )
 
     assertEquals(response.status, 400)
