@@ -175,7 +175,7 @@ function generateSampleWorkOrderText(companyName: string): string {
 時間：9:00〜17:00`
   };
   
-  return templates[companyName in templates ? companyName : 'default'] || templates.default;
+  return templates[companyName as keyof typeof templates] || templates.default;
 }
 
 // 作業指示書データのファクトリー

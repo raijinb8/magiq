@@ -161,7 +161,12 @@ beforeAll(() => {
     readAsDataURL = vi.fn();
     readAsText = vi.fn();
     readAsArrayBuffer = vi.fn();
+    readAsBinaryString = vi.fn();
     abort = vi.fn();
+    
+    readonly EMPTY = 0;
+    readonly LOADING = 1;
+    readonly DONE = 2;
     result = null;
     error = null;
     onload = null;
@@ -171,7 +176,7 @@ beforeAll(() => {
     onloadend = null;
     onprogress = null;
     readyState = 0;
-  } as typeof FileReader;
+  } as unknown as typeof FileReader;
 
   // Geolocation API のモック
   const geolocationMock = {
@@ -216,10 +221,30 @@ beforeAll(() => {
     static permission = 'granted';
     static requestPermission = vi.fn().mockResolvedValue('granted');
     
+    badge?: string;
+    body?: string;
+    data?: unknown;
+    dir?: NotificationDirection;
+    icon?: string;
+    image?: string;
+    lang?: string;
+    onclick?: ((this: Notification, ev: Event) => unknown) | null;
+    onclose?: ((this: Notification, ev: Event) => unknown) | null;
+    onerror?: ((this: Notification, ev: Event) => unknown) | null;
+    onshow?: ((this: Notification, ev: Event) => unknown) | null;
+    renotify?: boolean;
+    requireInteraction?: boolean;
+    silent?: boolean;
+    tag?: string;
+    timestamp?: EpochTimeStamp;
+    title?: string;
+    vibrate?: VibratePattern;
+    
     close = vi.fn();
     addEventListener = vi.fn();
     removeEventListener = vi.fn();
-  } as typeof Notification;
+    dispatchEvent = vi.fn();
+  } as unknown as typeof Notification;
   Object.defineProperty(Notification, 'permission', {
     value: 'default',
     writable: true,
