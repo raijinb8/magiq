@@ -11,7 +11,7 @@ services:
     # working_dir: /app
     volumes:
       - .:/app 
-      - /app/frontend/node_modules # frontend内のnode_modulesを隔離
+      - node_modules_cache:/app/frontend/node_modules # frontend内のnode_modulesを隔離
       # 本来はssh-agentで自動共有されるはずだが、されないため記載
       # 下記手法のデメリットはユーザーが固定されること
       - ~/.ssh:/home/node/.ssh:cached # ここでSSHの秘密鍵を指定する
@@ -29,6 +29,10 @@ services:
   # ですが、Dev Containerの機能でカバーできることが多いです。
   # Supabaseのサービス (Postgres, Kongなど) は `supabase start` コマンドによって
   # 自動的にDockerコンテナとして起動・管理されるため、ここでは明示的に定義しません。
+
+# 名前付きボリュームを定義
+volumes:
+  node_modules_cache:
 
 # (オプション) Supabaseのネットワークに接続する場合
 # networks:
