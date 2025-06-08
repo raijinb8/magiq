@@ -52,9 +52,10 @@ MagIQは、建設業界特有のニーズに応える次世代の作業指示書
 本プロジェクトは、**テスト駆動開発**を採用しており、高品質なコードの継続的な開発をサポートします。
 
 **主要なテストツール:**
-- **Vitest** - 高速なユニット・統合テスト
-- **React Testing Library** - ユーザー中心のコンポーネントテスト
-- **@vitest/coverage-v8** - 高精度なカバレッジ測定
+- **Vitest 3.2.1** - 高速なユニット・統合テスト
+- **React Testing Library 16.3.0** - ユーザー中心のコンポーネントテスト
+- **MSW (Mock Service Worker) 2.8.6** - APIモックによる統合テスト
+- **@vitest/coverage-v8** - 高精度なカバレッジ測定（80%閾値設定済み）
 - **Happy DOM** - 軽量なブラウザ環境シミュレーション
 
 ### 📋 テスト実行方法
@@ -72,14 +73,28 @@ npm run test:coverage # カバレッジ付きテスト
 npm run test:ui       # ブラウザUIでテスト確認
 ```
 
-**コミット前の品質チェック:**
+**CI/CD統合:**
 ```bash
-npm run ci  # lint + type-check + build + test
+npm run ci            # lint + type-check + build + test
+npm run test:ci       # CI環境用テスト（JUnit出力付き）
+npm run test:coverage:ci # カバレッジレポート生成
 ```
 
+**バックエンドテスト:**
+```bash
+cd supabase/functions
+deno test             # Edge Functionsのテスト実行
+```
+
+### 📊 テストカバレッジ
+- **目標**: 全体80%以上（branches、functions、lines、statements）
+- **現在の状態**: 包括的なモック環境（130+のAPIモック）とMSW統合により、実際のAPIに依存しない高速で安定したテストが可能
+
 **詳細なガイド:**
+- [テストガイドライン](docs/TESTING.md) - TDD実践とベストプラクティス
 - [TDD開発ガイド](frontend/docs/TDD_GUIDE.md) - 開発フローとベストプラクティス
 - [テスト環境設定](frontend/src/test/README.md) - 技術的な設定詳細
+- [MSW統合ガイド](frontend/src/test/mocks/MSW_INTEGRATION_GUIDE.md) - APIモックの使用方法
 
 ## 🛠️ 技術スタック
 
