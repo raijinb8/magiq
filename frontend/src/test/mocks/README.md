@@ -24,7 +24,7 @@ src/test/mocks/
 it('ユーザー情報を取得', async () => {
   const response = await fetch('https://example.supabase.co/auth/v1/user');
   const data = await response.json();
-  
+
   expect(data.email).toBe('test@example.com');
 });
 ```
@@ -46,7 +46,7 @@ it('カスタムユーザーを返す', async () => {
       });
     })
   );
-  
+
   // テストコード
 });
 ```
@@ -56,10 +56,7 @@ it('カスタムユーザーを返す', async () => {
 ```typescript
 mockApiResponse(
   http.get('*/auth/v1/user', () => {
-    return HttpResponse.json(
-      { error: 'Unauthorized' },
-      { status: 401 }
-    );
+    return HttpResponse.json({ error: 'Unauthorized' }, { status: 401 });
   })
 );
 ```
@@ -69,32 +66,36 @@ mockApiResponse(
 ```typescript
 import { createMockUser, createMockWorkOrder } from '@/test/mocks';
 
-const user = createMockUser({ 
-  email: 'custom@example.com' 
+const user = createMockUser({
+  email: 'custom@example.com',
 });
 
 const workOrders = createMockWorkOrders(5, {
-  status: 'completed'
+  status: 'completed',
 });
 ```
 
 ## 定義済みのモックハンドラー
 
 ### 認証 (authHandlers)
+
 - `POST /auth/v1/token` - ログイン
 - `POST /auth/v1/signup` - サインアップ
 - `POST /auth/v1/logout` - ログアウト
 - `GET /auth/v1/user` - ユーザー情報取得
 
 ### ストレージ (storageHandlers)
+
 - `POST /storage/v1/object/:bucket/*` - ファイルアップロード
 - `GET /storage/v1/object/:bucket/*` - ファイルダウンロード
 - `DELETE /storage/v1/object/:bucket/*` - ファイル削除
 
 ### Edge Functions (edgeFunctionHandlers)
+
 - `POST /functions/v1/process-pdf-single` - PDF処理
 
 ### データベース (databaseHandlers)
+
 - `GET /rest/v1/work_orders` - 作業指示書一覧取得
 - `POST /rest/v1/work_orders` - 作業指示書作成
 - `PATCH /rest/v1/work_orders` - 作業指示書更新
@@ -117,7 +118,7 @@ mockApiResponse(
 
 // APIコール実行後
 expect(capturedRequest).toEqual({
-  expectedField: 'expectedValue'
+  expectedField: 'expectedValue',
 });
 ```
 
@@ -140,7 +141,7 @@ mockApiResponse(
 ```typescript
 mockApiResponse(
   http.get('*/api/slow', async () => {
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     return HttpResponse.json({ data: 'slow response' });
   })
 );
@@ -157,10 +158,13 @@ mockApiResponse(
 ## トラブルシューティング
 
 ### 未処理のリクエスト警告
+
 コンソールに「[MSW] Warning: captured a request without a matching handler」が表示される場合は、対応するハンドラーを`handlers.ts`に追加してください。
 
 ### TypeScriptエラー
+
 MSWの型定義を正しくインポートしているか確認：
+
 ```typescript
 import { http, HttpResponse } from 'msw';
 ```

@@ -32,7 +32,10 @@ function loadCoverageData() {
 /**
  * 閾値チェック
  */
-function checkThresholds(coverage, thresholds = { lines: 80, functions: 80, branches: 80, statements: 80 }) {
+function checkThresholds(
+  coverage,
+  thresholds = { lines: 80, functions: 80, branches: 80, statements: 80 }
+) {
   const { total } = coverage;
   const results = {};
   let allPassed = true;
@@ -40,14 +43,14 @@ function checkThresholds(coverage, thresholds = { lines: 80, functions: 80, bran
   Object.entries(thresholds).forEach(([metric, threshold]) => {
     const pct = total[metric]?.pct || 0;
     const passed = pct >= threshold;
-    
+
     results[metric] = {
       current: pct,
       threshold,
       passed,
-      status: passed ? '✅' : '❌'
+      status: passed ? '✅' : '❌',
     };
-    
+
     if (!passed) allPassed = false;
   });
 
@@ -60,25 +63,26 @@ function checkThresholds(coverage, thresholds = { lines: 80, functions: 80, bran
 function displayReport(coverage, thresholdResults) {
   console.log('\n📊 カバレッジレポート');
   console.log('='.repeat(50));
-  
+
   const { total } = coverage;
   const { results } = thresholdResults;
-  
+
   Object.entries(results).forEach(([metric, data]) => {
     const { current, threshold, status } = data;
-    console.log(`${status} ${metric.padEnd(12)}: ${current.toFixed(2)}% (閾値: ${threshold}%)`);
+    console.log(
+      `${status} ${metric.padEnd(12)}: ${current.toFixed(2)}% (閾値: ${threshold}%)`
+    );
   });
-  
+
   console.log('='.repeat(50));
-  
+
   // ファイル別で閾値を下回るものを表示
-  const failedFiles = Object.entries(coverage)
-    .filter(([key, value]) => {
-      if (key === 'total') return false;
-      return Object.entries(results).some(([metric, { threshold }]) => {
-        return (value[metric]?.pct || 0) < threshold;
-      });
+  const failedFiles = Object.entries(coverage).filter(([key, value]) => {
+    if (key === 'total') return false;
+    return Object.entries(results).some(([metric, { threshold }]) => {
+      return (value[metric]?.pct || 0) < threshold;
     });
+  });
 
   if (failedFiles.length > 0) {
     console.log('\n⚠️  閾値を下回るファイル:');
@@ -100,7 +104,7 @@ function displayReport(coverage, thresholdResults) {
 function generateGitHubOutput(coverage, thresholdResults) {
   const { total } = coverage;
   const { results, allPassed } = thresholdResults;
-  
+
   // GitHub Actionsの出力環境変数
   const outputs = [
     `coverage-lines=${total.lines.pct}`,
@@ -109,16 +113,16 @@ function generateGitHubOutput(coverage, thresholdResults) {
     `coverage-statements=${total.statements.pct}`,
     `coverage-passed=${allPassed}`,
   ];
-  
+
   // GITHUB_OUTPUTファイルに出力
   const githubOutput = process.env.GITHUB_OUTPUT;
   if (githubOutput) {
-    outputs.forEach(output => {
+    outputs.forEach((output) => {
       fs.appendFileSync(githubOutput, `${output}\n`);
     });
     console.log('\n📤 GitHub Actions出力を生成しました');
   }
-  
+
   // PRコメント用のマークダウンを生成
   const markdown = generateMarkdownReport(total, results);
   fs.writeFileSync(path.join(COVERAGE_DIR, 'pr-comment.md'), markdown);
@@ -129,8 +133,8 @@ function generateGitHubOutput(coverage, thresholdResults) {
  * PR用マークダウンレポートを生成
  */
 function generateMarkdownReport(total, results) {
-  const getEmoji = (pct, threshold) => pct >= threshold ? '✅' : '❌';
-  
+  const getEmoji = (pct, threshold) => (pct >= threshold ? '✅' : '❌');
+
   return `## 📊 カバレッジレポート
 
 | メトリック | カバレッジ | 閾値 | ステータス |
@@ -149,18 +153,20 @@ function generateMarkdownReport(total, results) {
  */
 function main() {
   console.log('🔍 カバレッジレポートを検証中...\n');
-  
+
   const coverage = loadCoverageData();
   const thresholdResults = checkThresholds(coverage);
-  
+
   displayReport(coverage, thresholdResults);
   generateGitHubOutput(coverage, thresholdResults);
-  
+
   if (thresholdResults.allPassed) {
     console.log('\n🎉 すべての閾値をクリアしました！');
     process.exit(0);
   } else {
-    console.log('\n💥 一部の閾値を下回っています。テストカバレッジを改善してください。');
+    console.log(
+      '\n💥 一部の閾値を下回っています。テストカバレッジを改善してください。'
+    );
     process.exit(1);
   }
 }

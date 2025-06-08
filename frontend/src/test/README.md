@@ -5,6 +5,7 @@
 ## テストスクリプト
 
 ### 基本コマンド
+
 ```bash
 # 通常のテスト実行（Watch モード）
 npm test
@@ -20,6 +21,7 @@ npm run test:ui
 ```
 
 ### カバレッジ関連
+
 ```bash
 # カバレッジ付きテスト実行
 npm run test:coverage
@@ -41,6 +43,7 @@ npm run test:coverage:threshold
 ```
 
 #### カバレッジレポート形式
+
 - **HTML**: `coverage/index.html` - ブラウザで閲覧可能な詳細レポート
 - **LCOV**: `coverage/lcov.info` - IDE統合用
 - **JSON**: `coverage/coverage-final.json` - プログラム処理用
@@ -48,6 +51,7 @@ npm run test:coverage:threshold
 - **Markdown**: `coverage/pr-comment.md` - PRコメント用
 
 ### CI/レポート関連
+
 ```bash
 # CI用（JUnitレポート付き）
 npm run test:ci
@@ -60,6 +64,7 @@ npm run test:debug
 ```
 
 ### フルCI実行
+
 ```bash
 # lint + type-check + build + test:ci
 npm run ci
@@ -68,15 +73,18 @@ npm run ci
 ## ファイル構成
 
 ### `setup.ts`
+
 グローバルテスト設定とモックが定義されています：
 
 **主要な設定:**
+
 - React Testing Libraryの設定
 - Vitestのタイマー設定
 - 自動クリーンアップ
 - 包括的なブラウザAPIモック
 
 **モックされているAPI:**
+
 - `localStorage` / `sessionStorage`
 - `fetch` API
 - `location` / `history` API
@@ -89,6 +97,7 @@ npm run ci
 - `Canvas` / `WebGL` API
 
 ### `matchers.ts`
+
 カスタムマッチャーを定義：
 
 ```typescript
@@ -99,6 +108,7 @@ expect(component).toBeLoadingState();
 ```
 
 ### `utils.tsx`
+
 テストユーティリティ関数：
 
 ```typescript
@@ -113,6 +123,7 @@ await user.click(button);
 ```
 
 ### `example.test.tsx`
+
 統合テストのサンプル実装
 
 ## 使用方法
@@ -133,7 +144,7 @@ describe('MyComponent', () => {
   it('ユーザーインタラクションを処理する', async () => {
     const user = userEvent.setup();
     render(<MyComponent />);
-    
+
     await user.click(screen.getByRole('button'));
     expect(screen.getByText('クリックされました')).toBeInTheDocument();
   });
@@ -146,7 +157,7 @@ describe('MyComponent', () => {
 // LocalStorageを使用するコンポーネントのテスト
 it('LocalStorageにデータを保存する', () => {
   render(<DataSaveComponent />);
-  
+
   // localStorage.setItemが呼ばれることを確認
   expect(localStorage.setItem).toHaveBeenCalledWith('key', 'value');
 });
@@ -173,13 +184,13 @@ import { waitFor, waitForElementToBeRemoved } from '@/test/utils';
 
 it('ローディング状態を正しく表示する', async () => {
   render(<AsyncComponent />);
-  
+
   // ローディングが表示される
   expect(screen.getByText('読み込み中...')).toBeInTheDocument();
-  
+
   // ローディングが消える
   await waitForElementToBeRemoved(() => screen.queryByText('読み込み中...'));
-  
+
   // 結果が表示される
   expect(screen.getByText('データ読み込み完了')).toBeInTheDocument();
 });

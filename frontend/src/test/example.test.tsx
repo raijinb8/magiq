@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 describe('React Testing Library & Jest-DOM Integration', () => {
   it('renders button component correctly', () => {
     render(<Button>Click me</Button>);
-    
+
     const button = screen.getByRole('button', { name: /click me/i });
     expect(button).toBeInTheDocument();
     expect(button).toHaveTextContent('Click me');
@@ -14,22 +14,26 @@ describe('React Testing Library & Jest-DOM Integration', () => {
   it('handles user interactions', async () => {
     const user = userEvent.setup();
     let clicked = false;
-    
+
     render(
-      <Button onClick={() => { clicked = true; }}>
+      <Button
+        onClick={() => {
+          clicked = true;
+        }}
+      >
         Click me
       </Button>
     );
-    
+
     const button = screen.getByRole('button');
     await user.click(button);
-    
+
     expect(clicked).toBe(true);
   });
 
   it('demonstrates custom matchers', () => {
     render(<div data-testid="empty-div"></div>);
-    
+
     const emptyDiv = screen.getByTestId('empty-div');
     expect(emptyDiv).toBeEmptyDOMElement();
   });
@@ -41,7 +45,7 @@ describe('React Testing Library & Jest-DOM Integration', () => {
         <input id="username" type="text" />
       </div>
     );
-    
+
     const input = screen.getByLabelText(/username/i);
     expect(input).toBeInTheDocument();
     expect(input).toHaveAttribute('type', 'text');
@@ -53,9 +57,9 @@ describe('React Testing Library & Jest-DOM Integration', () => {
         <div data-testid="loading">Loading...</div>
       </div>
     );
-    
+
     render(<LoadingComponent />);
-    
+
     const loadingElement = screen.getByTestId('loading');
     expect(loadingElement).toBeInTheDocument();
   });

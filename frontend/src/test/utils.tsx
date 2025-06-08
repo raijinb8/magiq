@@ -7,18 +7,11 @@ import { expect } from 'vitest';
 type CustomRenderOptions = Omit<RenderOptions, 'wrapper'>;
 
 // アプリケーション全体のプロバイダーを含むカスタムレンダー関数
-function customRender(
-  ui: ReactElement,
-  options: CustomRenderOptions = {}
-) {
+function customRender(ui: ReactElement, options: CustomRenderOptions = {}) {
   const { ...renderOptions } = options;
 
   function Wrapper({ children }: { children: React.ReactNode }) {
-    return (
-      <BrowserRouter>
-        {children}
-      </BrowserRouter>
-    );
+    return <BrowserRouter>{children}</BrowserRouter>;
   }
 
   return render(ui, { wrapper: Wrapper, ...renderOptions });
@@ -29,18 +22,24 @@ export function expectElementToBeInTheDocument(element: HTMLElement | null) {
   expect(element).toBeInTheDocument();
 }
 
-export function expectElementToHaveClass(element: HTMLElement | null, className: string) {
+export function expectElementToHaveClass(
+  element: HTMLElement | null,
+  className: string
+) {
   expect(element).toHaveClass(className);
 }
 
-export function expectElementToHaveTextContent(element: HTMLElement | null, text: string) {
+export function expectElementToHaveTextContent(
+  element: HTMLElement | null,
+  text: string
+) {
   expect(element).toHaveTextContent(text);
 }
 
 // よく使用されるテストユーティリティを個別にエクスポート
-export { 
-  screen, 
-  waitFor, 
+export {
+  screen,
+  waitFor,
   waitForElementToBeRemoved,
   fireEvent,
   act,
@@ -57,7 +56,7 @@ export {
   findByRole,
   findByText,
   findByLabelText,
-  findByTestId
+  findByTestId,
 } from '@testing-library/react';
 export { default as userEvent } from '@testing-library/user-event';
 

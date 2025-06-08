@@ -165,7 +165,8 @@ describe('MSW使用例', () => {
         const formData = await request.formData();
         capturedFile = formData.get('file');
         const companyIdValue = formData.get('companyId');
-        capturedCompanyId = typeof companyIdValue === 'string' ? companyIdValue : null;
+        capturedCompanyId =
+          typeof companyIdValue === 'string' ? companyIdValue : null;
 
         return HttpResponse.json({
           success: true,

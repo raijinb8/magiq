@@ -5,8 +5,8 @@ expect.extend({
   toBeEmptyDOMElement(received: HTMLElement) {
     const pass = received.innerHTML === '';
     return {
-      message: () => 
-        pass 
+      message: () =>
+        pass
           ? `Expected element not to be empty, but it was`
           : `Expected element to be empty, but it contained: ${received.innerHTML}`,
       pass,
@@ -14,9 +14,11 @@ expect.extend({
   },
 
   toHaveErrorMessage(received: HTMLElement, expectedMessage: string) {
-    const errorElement = received.querySelector('[role="alert"], .error-message, [data-testid="error"]');
+    const errorElement = received.querySelector(
+      '[role="alert"], .error-message, [data-testid="error"]'
+    );
     const pass = errorElement?.textContent?.includes(expectedMessage) ?? false;
-    
+
     return {
       message: () =>
         pass
@@ -31,13 +33,13 @@ expect.extend({
       '[data-testid="loading"]',
       '.loading',
       '[aria-busy="true"]',
-      '.spinner'
+      '.spinner',
     ];
-    
-    const hasLoadingIndicator = loadingIndicators.some(selector => 
-      received.querySelector(selector) !== null
+
+    const hasLoadingIndicator = loadingIndicators.some(
+      (selector) => received.querySelector(selector) !== null
     );
-    
+
     return {
       message: () =>
         hasLoadingIndicator
@@ -45,7 +47,7 @@ expect.extend({
           : `Expected element to be in loading state`,
       pass: hasLoadingIndicator,
     };
-  }
+  },
 });
 
 // TypeScript型定義の拡張（型の競合を避けるため、条件付きで拡張）

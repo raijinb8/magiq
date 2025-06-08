@@ -22,7 +22,7 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
   vi.clearAllTimers();
-  
+
   // MSWのモックデータをリセット（各テスト間での独立性を保証）
   mockUtils.resetAllData();
 });
@@ -31,21 +31,21 @@ afterEach(() => {
 beforeAll(() => {
   // MSWとファクトリーシステムの初期化確認
   console.log('🚀 MSW統合テスト環境を初期化中...');
-  
+
   // 初期データの確認
   const initialCounts = databaseUtils.getDataCounts();
   console.log('📊 初期データ状況:', initialCounts);
-  
+
   // Vitestのグローバル設定（FakeTimersは必要に応じて有効化）
   // vi.useFakeTimers(); // コメントアウト：デフォルトでは実時間を使用
-  
+
   // Node.jsのグローバル変数をブラウザ環境用にモック
   global.TextEncoder = TextEncoder;
   global.TextDecoder = TextDecoder;
-  
+
   // Fetch APIのモック
   global.fetch = vi.fn();
-  
+
   // Local Storage のモック
   const localStorageMock = {
     getItem: vi.fn(),
@@ -157,13 +157,13 @@ beforeAll(() => {
     static EMPTY = 0;
     static LOADING = 1;
     static DONE = 2;
-    
+
     readAsDataURL = vi.fn();
     readAsText = vi.fn();
     readAsArrayBuffer = vi.fn();
     readAsBinaryString = vi.fn();
     abort = vi.fn();
-    
+
     readonly EMPTY = 0;
     readonly LOADING = 1;
     readonly DONE = 2;
@@ -220,7 +220,7 @@ beforeAll(() => {
   global.Notification = class MockNotification {
     static permission = 'granted';
     static requestPermission = vi.fn().mockResolvedValue('granted');
-    
+
     badge?: string;
     body?: string;
     data?: unknown;
@@ -239,7 +239,7 @@ beforeAll(() => {
     timestamp?: EpochTimeStamp;
     title?: string;
     vibrate?: VibratePattern;
-    
+
     close = vi.fn();
     addEventListener = vi.fn();
     removeEventListener = vi.fn();
@@ -292,51 +292,57 @@ beforeAll(() => {
   }));
 
   // Canvas API のモック（既存のモックがない場合のみ）
-  if (!(HTMLCanvasElement.prototype.getContext as { mockImplementation?: unknown }).mockImplementation) {
-    HTMLCanvasElement.prototype.getContext = vi.fn().mockImplementation((contextType) => {
-      if (contextType === 'webgl' || contextType === 'webgl2') {
+  if (
+    !(
+      HTMLCanvasElement.prototype.getContext as { mockImplementation?: unknown }
+    ).mockImplementation
+  ) {
+    HTMLCanvasElement.prototype.getContext = vi
+      .fn()
+      .mockImplementation((contextType) => {
+        if (contextType === 'webgl' || contextType === 'webgl2') {
+          return {
+            getExtension: vi.fn(),
+            getParameter: vi.fn(),
+            createShader: vi.fn(),
+            shaderSource: vi.fn(),
+            compileShader: vi.fn(),
+            createProgram: vi.fn(),
+            attachShader: vi.fn(),
+            linkProgram: vi.fn(),
+            useProgram: vi.fn(),
+            createBuffer: vi.fn(),
+            bindBuffer: vi.fn(),
+            bufferData: vi.fn(),
+            enable: vi.fn(),
+            disable: vi.fn(),
+            clear: vi.fn(),
+            drawArrays: vi.fn(),
+            drawElements: vi.fn(),
+            viewport: vi.fn(),
+          };
+        }
+        // 2D Canvas Context
         return {
-          getExtension: vi.fn(),
-          getParameter: vi.fn(),
-          createShader: vi.fn(),
-          shaderSource: vi.fn(),
-          compileShader: vi.fn(),
-          createProgram: vi.fn(),
-          attachShader: vi.fn(),
-          linkProgram: vi.fn(),
-          useProgram: vi.fn(),
-          createBuffer: vi.fn(),
-          bindBuffer: vi.fn(),
-          bufferData: vi.fn(),
-          enable: vi.fn(),
-          disable: vi.fn(),
-          clear: vi.fn(),
-          drawArrays: vi.fn(),
-          drawElements: vi.fn(),
-          viewport: vi.fn(),
+          fillRect: vi.fn(),
+          clearRect: vi.fn(),
+          getImageData: vi.fn(() => ({ data: new Uint8ClampedArray() })),
+          putImageData: vi.fn(),
+          createImageData: vi.fn(),
+          setTransform: vi.fn(),
+          drawImage: vi.fn(),
+          save: vi.fn(),
+          restore: vi.fn(),
+          beginPath: vi.fn(),
+          moveTo: vi.fn(),
+          lineTo: vi.fn(),
+          closePath: vi.fn(),
+          stroke: vi.fn(),
+          fill: vi.fn(),
+          measureText: vi.fn(() => ({ width: 0 })),
+          canvas: {},
         };
-      }
-      // 2D Canvas Context
-      return {
-        fillRect: vi.fn(),
-        clearRect: vi.fn(),
-        getImageData: vi.fn(() => ({ data: new Uint8ClampedArray() })),
-        putImageData: vi.fn(),
-        createImageData: vi.fn(),
-        setTransform: vi.fn(),
-        drawImage: vi.fn(),
-        save: vi.fn(),
-        restore: vi.fn(),
-        beginPath: vi.fn(),
-        moveTo: vi.fn(),
-        lineTo: vi.fn(),
-        closePath: vi.fn(),
-        stroke: vi.fn(),
-        fill: vi.fn(),
-        measureText: vi.fn(() => ({ width: 0 })),
-        canvas: {},
-      };
-    });
+      });
   }
 });
 
@@ -348,7 +354,7 @@ beforeAll(() => {
   // React の既知の警告を抑制
   console.error = (...args: unknown[]) => {
     const message = String(args[0]);
-    
+
     // 抑制する警告のパターン
     const suppressedWarnings = [
       'Warning: ReactDOM.render',
@@ -360,7 +366,7 @@ beforeAll(() => {
       'Warning: Unsafe lifecycle methods',
     ];
 
-    if (suppressedWarnings.some(warning => message.includes(warning))) {
+    if (suppressedWarnings.some((warning) => message.includes(warning))) {
       return;
     }
 
@@ -369,14 +375,14 @@ beforeAll(() => {
 
   console.warn = (...args: unknown[]) => {
     const message = String(args[0]);
-    
+
     // 抑制する警告のパターン
     const suppressedWarnings = [
       'Warning: React.createFactory',
       'Warning: Legacy context API',
     ];
 
-    if (suppressedWarnings.some(warning => message.includes(warning))) {
+    if (suppressedWarnings.some((warning) => message.includes(warning))) {
       return;
     }
 
@@ -391,7 +397,7 @@ afterAll(() => {
   vi.clearAllMocks();
   vi.resetAllMocks();
   vi.restoreAllMocks();
-  
+
   // MSWの最終クリーンアップ
   mockUtils.resetAllData();
   console.log('🧹 MSW統合テスト環境をクリーンアップ完了');
