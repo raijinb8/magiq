@@ -1,13 +1,17 @@
 import { describe, it, expect } from 'vitest';
 import { http, HttpResponse } from 'msw';
-import { mockApiResponse, createMockUser, createMockWorkOrder } from '@/test/mocks';
+import {
+  mockApiResponse,
+  createMockUser,
+  createMockWorkOrder,
+} from '@/test/mocks';
 
 describe('MSW使用例', () => {
   it('デフォルトのモックハンドラーを使用する例', async () => {
     // デフォルトのハンドラーが自動的に適用されるため、追加設定不要
     const response = await fetch('https://example.supabase.co/auth/v1/user');
     const data = await response.json();
-    
+
     expect(data).toMatchObject({
       id: 'mock-user-id',
       email: 'test@example.com',
@@ -30,7 +34,7 @@ describe('MSW使用例', () => {
 
     const response = await fetch('https://example.supabase.co/auth/v1/user');
     const data = await response.json();
-    
+
     expect(data.id).toBe('custom-user-id');
     expect(data.email).toBe('custom@example.com');
   });
@@ -46,7 +50,7 @@ describe('MSW使用例', () => {
     );
 
     const response = await fetch('https://example.supabase.co/auth/v1/user');
-    
+
     expect(response.status).toBe(401);
     const data = await response.json();
     expect(data.error).toBe('Unauthorized');
@@ -58,23 +62,23 @@ describe('MSW使用例', () => {
       email: 'factory@example.com',
       email_confirmed_at: null, // 未確認ユーザー
     });
-    
+
     expect(user.email).toBe('factory@example.com');
     expect(user.email_confirmed_at).toBeNull();
-    
+
     // 作業指示書データの生成
     const workOrder = createMockWorkOrder({
       status: 'processing',
       company_name: 'カスタム会社',
     });
-    
+
     expect(workOrder.status).toBe('processing');
     expect(workOrder.company_name).toBe('カスタム会社');
   });
 
   it('リクエストボディを検証する例', async () => {
     let capturedBody: unknown = null;
-    
+
     mockApiResponse(
       http.post('*/auth/v1/token', async ({ request }) => {
         capturedBody = await request.json();
@@ -99,41 +103,54 @@ describe('MSW使用例', () => {
 
   it('複数のAPIコールを連携させる例', async () => {
     // 1. ログイン
-    const loginResponse = await fetch('https://example.supabase.co/auth/v1/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: 'test@example.com',
-        password: 'password123',
-      }),
-    });
+    const loginResponse = await fetch(
+      'https://example.supabase.co/auth/v1/token',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: 'test@example.com',
+          password: 'password123',
+        }),
+      }
+    );
     const loginData = await loginResponse.json();
-    
+
     expect(loginData.access_token).toBe('mock-access-token');
-    
+
     // 2. 認証トークンを使ってユーザー情報を取得
-    const userResponse = await fetch('https://example.supabase.co/auth/v1/user', {
-      headers: {
-        Authorization: `Bearer ${loginData.access_token}`,
-      },
-    });
+    const userResponse = await fetch(
+      'https://example.supabase.co/auth/v1/user',
+      {
+        headers: {
+          Authorization: `Bearer ${loginData.access_token}`,
+        },
+      }
+    );
     const userData = await userResponse.json();
-    
+
     expect(userData.email).toBe('test@example.com');
   });
 
   it('FormDataを使用したファイルアップロードの例', async () => {
     const formData = new FormData();
-    formData.append('file', new Blob(['PDF content'], { type: 'application/pdf' }), 'test.pdf');
+    formData.append(
+      'file',
+      new Blob(['PDF content'], { type: 'application/pdf' }),
+      'test.pdf'
+    );
     formData.append('companyId', 'NOHARA_G');
 
-    const response = await fetch('https://example.supabase.co/functions/v1/process-pdf-single', {
-      method: 'POST',
-      body: formData,
-    });
+    const response = await fetch(
+      'https://example.supabase.co/functions/v1/process-pdf-single',
+      {
+        method: 'POST',
+        body: formData,
+      }
+    );
 
     const data = await response.json();
-    
+
     expect(data.success).toBe(true);
     expect(data.promptIdentifier).toBe('NOHARA_G_V20250526');
     expect(data.generatedText).toContain('物件名：テストマンション');
@@ -148,22 +165,24 @@ describe('MSW使用例', () => {
         const formData = await request.formData();
         capturedFile = formData.get('file') as File;
         capturedCompanyId = formData.get('companyId') as string;
-        
+
         return HttpResponse.json({
           success: true,
-          data: { generated_text: 'Captured FormData' }
+          data: { generated_text: 'Captured FormData' },
         });
       })
     );
 
-    const testFile = new File(['test content'], 'test.pdf', { type: 'application/pdf' });
+    const testFile = new File(['test content'], 'test.pdf', {
+      type: 'application/pdf',
+    });
     const formData = new FormData();
     formData.append('file', testFile);
     formData.append('companyId', 'NOHARA_G');
 
     await fetch('https://example.supabase.co/functions/v1/process-pdf-single', {
       method: 'POST',
-      body: formData
+      body: formData,
     });
 
     expect(capturedFile?.name).toBe('test.pdf');
@@ -172,19 +191,21 @@ describe('MSW使用例', () => {
 
   it('遅延レスポンスとタイムアウトの例', async () => {
     const { delay } = await import('msw');
-    
+
     // 遅延レスポンスのテスト
     mockApiResponse(
       http.get('*/rest/v1/work_orders', async () => {
         await delay(2000); // 2秒の遅延
         return HttpResponse.json([
-          createMockWorkOrder({ status: 'delayed-response' })
+          createMockWorkOrder({ status: 'delayed-response' }),
         ]);
       })
     );
 
     const startTime = Date.now();
-    const response = await fetch('https://example.supabase.co/rest/v1/work_orders');
+    const response = await fetch(
+      'https://example.supabase.co/rest/v1/work_orders'
+    );
     const endTime = Date.now();
 
     expect(response.status).toBe(200);
@@ -193,7 +214,7 @@ describe('MSW使用例', () => {
     // タイムアウトのテスト
     mockApiResponse(
       http.post('*/functions/v1/process-pdf-single', async () => {
-        await delay('infinite'); // 無限遅延
+        await delay(5000); // 5秒の遅延（テスト用）
         return HttpResponse.json({ success: true });
       })
     );
@@ -202,13 +223,16 @@ describe('MSW使用例', () => {
     const timeoutId = setTimeout(() => controller.abort(), 1000);
 
     try {
-      await fetch('https://example.supabase.co/functions/v1/process-pdf-single', {
-        method: 'POST',
-        signal: controller.signal,
-        body: new FormData()
-      });
-      
-      fail('Should have timed out');
+      await fetch(
+        'https://example.supabase.co/functions/v1/process-pdf-single',
+        {
+          method: 'POST',
+          signal: controller.signal,
+          body: new FormData(),
+        }
+      );
+
+      expect.fail('Should have timed out');
     } catch (error) {
       expect(error).toBeInstanceOf(DOMException);
       expect((error as DOMException).name).toBe('AbortError');
