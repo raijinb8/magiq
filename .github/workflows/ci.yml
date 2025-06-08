@@ -27,10 +27,11 @@ jobs:
         working-directory: ./frontend
         run: npm run build
       
-      # TODO: テストフレームワーク設定後に有効化
+      # TODO: フロントエンドテストの環境設定完了後に有効化
+      # 現在はDocker環境での権限問題により無効化中
       # - name: Run frontend tests
       #   working-directory: ./frontend
-      #   run: npm test
+      #   run: npm run test:run
 
   # Supabase Edge Functionsのlint
   supabase:
