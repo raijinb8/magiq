@@ -1,6 +1,6 @@
 // process-pdf-single 関数のテスト
 import { assertEquals, assertExists } from '@std/testing/asserts'
-import { afterEach, beforeEach, describe, it } from '@std/testing'
+import { afterEach, beforeEach, describe, it } from '@std/testing/bdd'
 import { stub } from '@std/testing/mock'
 import {
   cleanupTestEnv,

@@ -1,6 +1,6 @@
 // Gemini APIモックを使用したEdge Function統合テストのデモンストレーション
 import { assertEquals, assertExists } from '@std/testing/asserts'
-import { afterEach, beforeEach, describe, it } from '@std/testing'
+import { afterEach, beforeEach, describe, it } from '@std/testing/bdd'
 import {
   cleanupTestEnv,
   createMockGeminiAI,

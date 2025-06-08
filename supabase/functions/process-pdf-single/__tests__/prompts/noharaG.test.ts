@@ -1,6 +1,6 @@
 // noharaG プロンプトのテスト
 import { assertEquals, assertStringIncludes } from '@std/testing/asserts'
-import { describe, it } from '@std/testing'
+import { describe, it } from '@std/testing/bdd'
 import { NOHARA_G_PROMPT } from '../../prompts/noharaG.ts'
 
 describe('NOHARA_G_PROMPT', () => {
