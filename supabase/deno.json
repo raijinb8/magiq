@@ -23,7 +23,6 @@
   },
   "compilerOptions": {
     "lib": ["deno.window"],
-    "allowJs": true,
     "strict": true
   },
   "imports": {
@@ -38,8 +37,8 @@
     "exclude": ["functions/*/node_modules"]
   },
   "tasks": {
-    "test": "deno test --allow-net=supabase.co,googleapis.com --allow-env --allow-read",
-    "test:watch": "deno test --allow-net=supabase.co,googleapis.com --allow-env --allow-read --watch",
-    "test:coverage": "deno test --allow-net=supabase.co,googleapis.com --allow-env --allow-read --coverage"
+    "test": "deno test --import-map=import_map.test.json --allow-net=supabase.co,googleapis.com --allow-env --allow-read",
+    "test:watch": "deno test --import-map=import_map.test.json --allow-net=supabase.co,googleapis.com --allow-env --allow-read --watch",
+    "test:coverage": "deno test --import-map=import_map.test.json --allow-net=supabase.co,googleapis.com --allow-env --allow-read --coverage"
   }
 }
