@@ -76,11 +76,11 @@ jobs:
       - name: Run Supabase Functions tests
         run: |
           cd supabase/functions
-          deno test
+          deno test --import-map ../import_map.test.json
 
       # バックエンドカバレッジ（オプション）
       - name: Generate backend coverage
         run: |
           cd supabase/functions
-          deno test --coverage=coverage
+          deno test --import-map ../import_map.test.json --coverage=coverage
           deno coverage coverage --lcov > coverage.lcov
