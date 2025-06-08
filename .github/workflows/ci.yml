@@ -52,3 +52,8 @@ jobs:
         run: |
           cd supabase/functions
           deno check **/*.ts || true
+      
+      - name: Run Supabase Functions tests
+        run: |
+          cd supabase/functions
+          deno test --import-map ../import_map.test.json
