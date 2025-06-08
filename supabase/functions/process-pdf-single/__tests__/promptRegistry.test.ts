@@ -8,19 +8,23 @@ describe('promptRegistry', () => {
     it('NOHARA_Gエントリが正しく設定されている', () => {
       const entry = PROMPT_REGISTRY['NOHARA_G']
       assertExists(entry)
-      assertEquals(entry.companyName, '野原G住環境')
-      assertEquals(entry.version, 'V20250526')
-      assertExists(entry.promptFunction)
-      assertEquals(typeof entry.promptFunction, 'function')
+      if (entry) {
+        assertEquals(entry.companyName, '野原G住環境')
+        assertEquals(entry.version, 'V20250526')
+        assertExists(entry.promptFunction)
+        assertEquals(typeof entry.promptFunction, 'function')
+      }
     })
 
     it('KATOUBENIYA_MISAWAエントリが正しく設定されている', () => {
       const entry = PROMPT_REGISTRY['KATOUBENIYA_MISAWA']
       assertExists(entry)
-      assertEquals(entry.companyName, '加藤ベニヤ池袋_ミサワホーム')
-      assertEquals(entry.version, 'V20250526')
-      assertExists(entry.promptFunction)
-      assertEquals(typeof entry.promptFunction, 'function')
+      if (entry) {
+        assertEquals(entry.companyName, '加藤ベニヤ池袋_ミサワホーム')
+        assertEquals(entry.version, 'V20250526')
+        assertExists(entry.promptFunction)
+        assertEquals(typeof entry.promptFunction, 'function')
+      }
     })
 
     it('各エントリが必要なプロパティを持っている', () => {
@@ -68,27 +72,33 @@ describe('promptRegistry', () => {
     it('NOHARA_Gのプロンプト関数がファイル名を受け取り文字列を返す', () => {
       const entry = getPrompt('NOHARA_G')
       assertExists(entry)
-      const result = entry.promptFunction('test.pdf')
-      assertEquals(typeof result, 'string')
-      assertNotEquals(result, '')
+      if (entry) {
+        const result = entry.promptFunction('test.pdf')
+        assertEquals(typeof result, 'string')
+        assertNotEquals(result, '')
+      }
     })
 
     it('KATOUBENIYA_MISAWAのプロンプト関数がファイル名を受け取り文字列を返す', () => {
       const entry = getPrompt('KATOUBENIYA_MISAWA')
       assertExists(entry)
-      const result = entry.promptFunction('test.pdf')
-      assertEquals(typeof result, 'string')
-      assertNotEquals(result, '')
+      if (entry) {
+        const result = entry.promptFunction('test.pdf')
+        assertEquals(typeof result, 'string')
+        assertNotEquals(result, '')
+      }
     })
 
     it('プロンプト関数にファイル名が含まれる', () => {
       const entry = getPrompt('NOHARA_G')
       assertExists(entry)
-      const fileName = 'specific_test_file.pdf'
-      const result = entry.promptFunction(fileName)
-      // プロンプトにファイル名が含まれることを確認
-      // （実際のプロンプト実装によっては調整が必要）
-      assertEquals(result.includes(fileName), true)
+      if (entry) {
+        const fileName = 'specific_test_file.pdf'
+        const result = entry.promptFunction(fileName)
+        // プロンプトにファイル名が含まれることを確認
+        // （実際のプロンプト実装によっては調整が必要）
+        assertEquals(result.includes(fileName), true)
+      }
     })
   })
 
