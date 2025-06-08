@@ -157,13 +157,13 @@ describe('MSW使用例', () => {
   });
 
   it('リクエストボディキャプチャとFormData検証の例', async () => {
-    let capturedFile: File | null = null;
+    let capturedFile: unknown = null;
     let capturedCompanyId: string | null = null;
 
     mockApiResponse(
       http.post('*/functions/v1/process-pdf-single', async ({ request }) => {
         const formData = await request.formData();
-        capturedFile = formData.get('file') as File;
+        capturedFile = formData.get('file');
         capturedCompanyId = formData.get('companyId') as string;
 
         return HttpResponse.json({
@@ -185,7 +185,7 @@ describe('MSW使用例', () => {
       body: formData,
     });
 
-    expect(capturedFile?.name).toBe('test.pdf');
+    expect((capturedFile as File)?.name).toBe('test.pdf');
     expect(capturedCompanyId).toBe('NOHARA_G');
   });
 
@@ -197,7 +197,7 @@ describe('MSW使用例', () => {
       http.get('*/rest/v1/work_orders', async () => {
         await delay(2000); // 2秒の遅延
         return HttpResponse.json([
-          createMockWorkOrder({ status: 'delayed-response' }),
+          createMockWorkOrder({ status: 'completed' }),
         ]);
       })
     );
@@ -250,7 +250,7 @@ describe('MSW使用例', () => {
 
     try {
       await fetch('https://example.supabase.co/rest/v1/work_orders');
-      fail('Should have thrown network error');
+      expect.fail('Should have thrown network error');
     } catch (error) {
       expect(error).toBeInstanceOf(TypeError);
       expect((error as TypeError).message).toContain('Failed to fetch');
