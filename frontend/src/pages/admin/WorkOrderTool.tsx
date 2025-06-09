@@ -173,6 +173,32 @@ const WorkOrderTool: React.FC = () => {
     },
   });
 
+  /**
+   * 2段階処理：OCR+会社判定 → 手配書作成
+   */
+  const handleTwoStageProcess = useCallback(async () => {
+    if (!processingFile) return;
+
+    try {
+      // Stage 1: OCR + 会社判定
+      toast.info(
+        `「${processingFile.name}」の会社判定を開始します...`,
+        { description: 'PDFから会社情報を抽出中' }
+      );
+
+      // OCR専用処理で会社判定を実行
+      await processFile(
+        processingFile,
+        '', // 会社IDは未選択
+        'OCR処理',
+        true, // enableAutoDetection = true
+        true  // ocrOnly = true
+      );
+    } catch (error) {
+      console.error('[Two Stage Process] Error in OCR stage:', error);
+      toast.error('会社判定中にエラーが発生しました');
+    }
+  }, [processingFile, processFile]);
 
   /**
    * 「AI実行」ボタンが押されたときの処理。
@@ -223,34 +249,8 @@ const WorkOrderTool: React.FC = () => {
     autoDetectEnabled,
     isLoading,
     processFile,
+    handleTwoStageProcess,
   ]);
-
-  /**
-   * 2段階処理：OCR+会社判定 → 手配書作成
-   */
-  const handleTwoStageProcess = useCallback(async () => {
-    if (!processingFile) return;
-
-    try {
-      // Stage 1: OCR + 会社判定
-      toast.info(
-        `「${processingFile.name}」の会社判定を開始します...`,
-        { description: 'PDFから会社情報を抽出中' }
-      );
-
-      // OCR専用処理で会社判定を実行
-      await processFile(
-        processingFile,
-        '', // 会社IDは未選択
-        'OCR処理',
-        true, // enableAutoDetection = true
-        true  // ocrOnly = true
-      );
-    } catch (error) {
-      console.error('[Two Stage Process] Error in OCR stage:', error);
-      toast.error('会社判定中にエラーが発生しました');
-    }
-  }, [processingFile, processFile]);
 
   // --- 連携ロジックとコールバック関数 ---
 

@@ -227,7 +227,7 @@ export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
                   className={`${getListItemClasses(file)} ${batchMode ? 'flex items-center gap-2' : ''}`}
                   onClick={(e) => {
                     // バッチモードの場合、チェックボックス領域のクリックは無視
-                    if (batchMode && (e.target as HTMLElement).type === 'checkbox') {
+                    if (batchMode && (e.target as HTMLInputElement).type === 'checkbox') {
                       return;
                     }
                     // バッチモードでも、チェックボックス以外の領域をクリックしたらプレビュー

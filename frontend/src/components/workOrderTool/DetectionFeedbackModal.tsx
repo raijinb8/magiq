@@ -82,7 +82,7 @@ export const DetectionFeedbackModal: React.FC<DetectionFeedbackModalProps> = ({
             <Label htmlFor="correct-company">正しい会社を選択</Label>
             <Select
               value={correctedCompanyId}
-              onValueChange={setCorrectedCompanyId}
+              onValueChange={(value) => setCorrectedCompanyId(value as CompanyOptionValue)}
             >
               <SelectTrigger id="correct-company">
                 <SelectValue placeholder="会社を選択してください" />

@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Trash2, Plus, Save } from 'lucide-react';
+import { Trash2, Plus } from 'lucide-react';
 import { ALL_COMPANY_OPTIONS } from '@/constants/company';
 
 interface DetectionRule {
@@ -143,10 +143,10 @@ const CompanyDetectionRules: React.FC = () => {
 
   const getRuleTypeBadge = (type: string) => {
     const colors = {
-      keyword: 'default',
-      pattern: 'secondary',
-      address: 'outline',
-      logo_text: 'default',
+      keyword: 'default' as const,
+      pattern: 'secondary' as const,
+      address: 'outline' as const,
+      logo_text: 'default' as const,
     };
     return <Badge variant={colors[type as keyof typeof colors] || 'default'}>{type}</Badge>;
   };
