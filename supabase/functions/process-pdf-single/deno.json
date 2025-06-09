@@ -2,5 +2,10 @@
   "imports": {
     "@google/genai": "npm:@google/genai@^0.14.0",
     "@supabase/supabase-js": "npm:@supabase/supabase-js@2"
+  },
+  "tasks": {
+    "test": "deno test --import-map=../../import_map.test.json --allow-net=supabase.co,googleapis.com --allow-env --allow-read __tests__/",
+    "test:watch": "deno test --import-map=../../import_map.test.json --allow-net=supabase.co,googleapis.com --allow-env --allow-read --watch __tests__/",
+    "test:coverage": "deno test --import-map=../../import_map.test.json --allow-net=supabase.co,googleapis.com --allow-env --allow-read --coverage __tests__/"
   }
 }

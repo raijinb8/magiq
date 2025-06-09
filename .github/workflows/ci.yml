@@ -14,41 +14,48 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-      
+
       - name: Install frontend dependencies
         working-directory: ./frontend
         run: npm ci
-      
+
       - name: Run frontend lint
         working-directory: ./frontend
         run: npm run lint
-      
+
       - name: Run frontend build
         working-directory: ./frontend
         run: npm run build
       
-      # TODO: テストフレームワーク設定後に有効化
+      # TODO: フロントエンドテストの環境設定完了後に有効化
+      # 現在はDocker環境での権限問題により無効化中
       # - name: Run frontend tests
       #   working-directory: ./frontend
-      #   run: npm test
+      #   run: npm run test:run
 
-  # Supabase Edge Functionsのlint
+  # Supabase Edge Functionsのlintとテスト
   supabase:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Deno
         uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-      
+
       - name: Run Supabase Functions lint
         run: |
           cd supabase/functions
           deno lint --config ../deno.json || true
-      
+
       - name: Type check Supabase Functions
         run: |
           cd supabase/functions
           deno check **/*.ts || true
+      
+      # TODO: Denoテストの実装完了後に有効化
+      # - name: Run Supabase Functions tests
+      #   run: |
+      #     cd supabase/functions
+      #     deno test --import-map ../import_map.test.json
