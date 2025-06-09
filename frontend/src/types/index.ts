@@ -62,6 +62,8 @@ export interface PdfProcessSuccessResponse {
   dbRecordId: string; // UUIDなど
   message?: string; // 成功メッセージなど
   detectionResult?: CompanyDetectionResult | null; // 自動判定結果
+  ocrOnly?: boolean; // OCR専用処理かどうか
+  fileName?: string; // ファイル名（OCR専用処理時に使用）
 }
 
 export interface PdfProcessErrorResponse {

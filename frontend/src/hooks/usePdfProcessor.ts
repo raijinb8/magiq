@@ -24,7 +24,8 @@ export interface UsePdfProcessorReturn {
     fileToProcess: File,
     companyId: CompanyOptionValue,
     companyLabelForError: string, // エラーメッセージ表示用の会社ラベル
-    enableAutoDetection?: boolean // 自動判定を有効にするかどうか
+    enableAutoDetection?: boolean, // 自動判定を有効にするかどうか
+    ocrOnly?: boolean // OCRと会社判定のみを実行するかどうか
   ) => Promise<void>;
 }
 
@@ -39,7 +40,8 @@ export const usePdfProcessor = ({
       fileToProcess: File,
       companyId: CompanyOptionValue,
       companyLabelForError: string, // エラーメッセージ用に会社ラベルを受け取る
-      enableAutoDetection = false // デフォルトは自動判定無効
+      enableAutoDetection = false, // デフォルトは自動判定無効
+      ocrOnly = false // デフォルトはOCRのみは無効
     ): Promise<void> => {
       // 自動判定が有効な場合は、会社IDが未選択でも処理を続行
       if (!enableAutoDetection && !companyId) {
@@ -76,6 +78,7 @@ export const usePdfProcessor = ({
         formData.append('pdfFile', fileToProcess, fileToProcess.name); // 第3引数でファイル名を指定
         formData.append('companyId', companyId || 'UNKNOWN_OR_NOT_SET'); // 会社IDが未選択の場合はデフォルト値
         formData.append('enableAutoDetection', String(enableAutoDetection)); // 自動判定フラグ
+        formData.append('ocrOnly', String(ocrOnly)); // OCRのみフラグ
         // 必要に応じて他のデータも formData.append() で追加できます
         // 例: formData.append('originalFileName', fileToProcess.name);
 

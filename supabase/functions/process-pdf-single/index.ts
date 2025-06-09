@@ -6,6 +6,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { getPrompt, PromptFunction } from './promptRegistry.ts'
 import { encodeBase64 } from 'https://deno.land/std@0.224.0/encoding/base64.ts' // Base64エンコード用
 import { CompanyDetector } from './companyDetector.ts'
+import { OCR_COMPANY_DETECTION_PROMPT, type OcrDetectionResponse } from './ocrPrompt.ts'
 
 console.log('process-pdf-single function (v2 - with Gen) has been invoked!')
 
@@ -41,6 +42,58 @@ try {
 }
 
 type CompanyIdentifier = 'NOHARA_G' | 'KATOUBENIYA_MISAWA' | 'UNKNOWN_OR_NOT_SET'
+
+/**
+ * OCR専用の会社判定処理
+ */
+async function performOcrCompanyDetection(
+  geminiApiKey: string,
+  pdfFile: File,
+  pdfBase64Data: string
+): Promise<OcrDetectionResponse> {
+  const genAI = new GoogleGenAI({ apiKey: geminiApiKey })
+  
+  try {
+    const response = await genAI.models.generateContent({
+      model: 'gemini-2.5-flash-preview-04-17',
+      contents: [{
+        role: 'user',
+        parts: [
+          { text: OCR_COMPANY_DETECTION_PROMPT },
+          {
+            inlineData: {
+              mimeType: pdfFile.type,
+              data: pdfBase64Data,
+            },
+          },
+        ]
+      }],
+    })
+
+    const responseText = response.text || ''
+    console.log('[OCR Detection] Gemini raw response:', responseText)
+
+    // JSONレスポンスをパース
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) {
+      throw new Error('No JSON found in OCR response')
+    }
+
+    const result = JSON.parse(jsonMatch[0]) as OcrDetectionResponse
+    
+    // バリデーション
+    return {
+      company_id: result.company_id || null,
+      confidence: typeof result.confidence === 'number' ? result.confidence : 0,
+      detected_text: result.detected_text || '',
+      found_keywords: Array.isArray(result.found_keywords) ? result.found_keywords : [],
+      reasoning: result.reasoning || ''
+    }
+  } catch (error) {
+    console.error('[OCR Detection] Error calling Gemini API:', error)
+    throw error
+  }
+}
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -90,9 +143,10 @@ Deno.serve(async (req: Request) => {
       })
     }
 
-    // 将来的にはここに実際のPDFの内容を渡す処理が入る（例: OCR結果など）
+    // パラメーター取得
     let companyIdFromFrontend = formData.get('companyId') as CompanyIdentifier // フロントエンドから会社IDを受け取る
     const enableAutoDetection = formData.get('enableAutoDetection') === 'true' // 自動判定を有効にするかどうか
+    const ocrOnly = formData.get('ocrOnly') === 'true' // OCRと会社判定のみを実行するかどうか
 
     const pdfFile = formData.get('pdfFile') // フロントエンドで append したキー名
     // バリデーション
@@ -157,7 +211,57 @@ Deno.serve(async (req: Request) => {
       )
     }
 
-    // 自動判定の実行
+    // OCR専用処理の場合
+    if (ocrOnly) {
+      console.log(`[${new Date().toISOString()}] Starting OCR-only company detection for ${fileName}`)
+      
+      try {
+        const ocrResult = await performOcrCompanyDetection(GEMINI_API_KEY, pdfFile, pdfBase64Data)
+        
+        return new Response(
+          JSON.stringify({
+            message: 'OCRフェーズ完了',
+            detectionResult: {
+              detectedCompanyId: ocrResult.company_id,
+              confidence: ocrResult.confidence,
+              method: 'ocr_gemini',
+              details: {
+                foundKeywords: ocrResult.found_keywords,
+                geminiReasoning: ocrResult.reasoning,
+                detectedText: ocrResult.detected_text
+              }
+            },
+            fileName: fileName,
+            ocrOnly: true
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          },
+        )
+      } catch (error) {
+        console.error('[OCR Detection] Error:', error)
+        return new Response(
+          JSON.stringify({
+            error: 'OCR処理中にエラーが発生しました',
+            detectionResult: {
+              detectedCompanyId: null,
+              confidence: 0,
+              method: 'ocr_gemini',
+              details: {
+                geminiReasoning: `エラー: ${error instanceof Error ? error.message : String(error)}`
+              }
+            }
+          }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          },
+        )
+      }
+    }
+
+    // 通常の自動判定と手配書作成の実行
     let detectionResult = null
     let detectionConfidence = 0
     let detectionMethod = 'manual'

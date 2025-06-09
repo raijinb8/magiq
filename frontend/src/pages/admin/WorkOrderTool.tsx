@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
-import { Button } from '@/components/ui/button';
+import { supabase } from '@/lib/supabase';
 
 // 型定義と定数
 import type {
@@ -12,8 +12,6 @@ import type {
   ProcessedCompanyInfo,
   PdfFile,
   PdfProcessSuccessResponse,
-  FileSelectionState,
-  BatchProcessResult,
   CompanyDetectionResult,
 } from '@/types';
 import { ALL_COMPANY_OPTIONS } from '@/constants/company'; // すべての会社情報 (ラベル取得用)
@@ -23,14 +21,12 @@ import { useFileHandler } from '@/hooks/useFileHandler';
 import { usePdfDocument } from '@/hooks/usePdfDocument';
 import { usePdfControls } from '@/hooks/usePdfControls';
 import { usePdfProcessor } from '@/hooks/usePdfProcessor';
-import { usePdfBatchProcessor } from '@/hooks/usePdfBatchProcessor';
 import { useDragAndDrop } from '@/hooks/useDragAndDrop';
 
 // 子コンポーネント
 import { FileManagementPanel } from '@/components/workOrderTool/FileManagementPanel';
 import { PdfPreviewPanel } from '@/components/workOrderTool/PdfPreviewPanel';
 import { GeneratedTextPanel } from '@/components/workOrderTool/GeneratedTextPanel';
-import { CompanyAutoDetectToggle } from '@/components/workOrderTool/CompanyAutoDetectToggle';
 import { DetectionFeedbackModal } from '@/components/workOrderTool/DetectionFeedbackModal';
 
 // PDFのレンダリングを効率的に行うための Web Worker を設定
@@ -50,11 +46,6 @@ const WorkOrderTool: React.FC = () => {
   const [processedCompanyInfo, setProcessedCompanyInfo] =
     useState<ProcessedCompanyInfo>({ file: null, companyLabel: '' });
   
-  // バッチ処理用の状態
-  const [batchMode, setBatchMode] = useState<boolean>(false);
-  const [selectedFiles, setSelectedFiles] = useState<FileSelectionState>({});
-  const [batchConsolidatedText, setBatchConsolidatedText] = useState<string>('');
-  const [batchProcessResult, setBatchProcessResult] = useState<BatchProcessResult | null>(null);
 
   // 自動判定用の状態
   const [autoDetectEnabled, setAutoDetectEnabled] = useState<boolean>(true); // デフォルトで有効
@@ -109,7 +100,40 @@ const WorkOrderTool: React.FC = () => {
       if (data.detectionResult) {
         setLastDetectionResult(data.detectionResult);
         
-        // 自動判定で会社が検出された場合、それを選択
+        // OCRのみの場合はStage 2へ進む
+        if (data.ocrOnly && data.detectionResult.detectedCompanyId) {
+          const detectedCompanyId = data.detectionResult.detectedCompanyId as CompanyOptionValue;
+          setSelectedCompanyId(detectedCompanyId);
+          
+          toast.success(
+            `会社を自動判定しました: ${detectedCompanyId}`,
+            { 
+              description: `信頼度: ${(data.detectionResult.confidence * 100).toFixed(0)}% - 手配書作成を開始します` 
+            }
+          );
+          
+          // Stage 2: 手配書作成
+          const companyLabel = ALL_COMPANY_OPTIONS.find((opt) => opt.value === detectedCompanyId)?.label || detectedCompanyId;
+          
+          setTimeout(async () => {
+            toast.info(
+              `「${file.name}」の手配書作成を開始します`,
+              { description: `会社: ${companyLabel}` }
+            );
+            
+            await processFile(
+              file,
+              detectedCompanyId,
+              companyLabel,
+              false, // enableAutoDetection = false (判定は完了済み)
+              false  // ocrOnly = false (手配書作成を実行)
+            );
+          }, 1000); // 1秒待ってからStage 2を実行
+          
+          return; // Stage 1完了、Stage 2は非同期で実行
+        }
+        
+        // 通常の自動判定結果処理
         if (data.detectionResult.detectedCompanyId && !selectedCompanyId) {
           setSelectedCompanyId(data.detectionResult.detectedCompanyId as CompanyOptionValue);
           toast.info(`会社を自動判定しました: ${data.detectionResult.detectedCompanyId} (信頼度: ${(data.detectionResult.confidence * 100).toFixed(0)}%)`);
@@ -149,40 +173,10 @@ const WorkOrderTool: React.FC = () => {
     },
   });
 
-  // バッチ処理用のフック
-  const { isLoading: isBatchLoading, processBatchFiles } = usePdfBatchProcessor({
-    onSuccess: (result: BatchProcessResult, files: File[]) => {
-      setBatchConsolidatedText(result.consolidatedText);
-      setBatchProcessResult(result);
-      setGeneratedText(result.consolidatedText); // 統合結果を表示
-      const companyLabel =
-        ALL_COMPANY_OPTIONS.find((opt) => opt.value === selectedCompanyId)
-          ?.label || selectedCompanyId;
-      setProcessedCompanyInfo({ 
-        file: null, // バッチ処理の場合は単一ファイルではない
-        companyLabel: `バッチ処理完了 (${companyLabel})` 
-      });
-      // ファイル選択状態をクリア
-      setSelectedFiles({});
-      setBatchMode(false); // バッチモードを終了
-    },
-    onError: (
-      errorMessage: string,
-      files: File[],
-      companyLabelForError: string
-    ) => {
-      setBatchConsolidatedText(
-        `バッチ処理エラーが発生しました:\n${errorMessage}\n\n処理対象の会社を正しく選択しているか確認してください。`
-      );
-      toast.error(`バッチ処理エラー: ${errorMessage}`, {
-        description: `${files.length}個のファイルの処理中に問題が発生しました。`,
-      });
-    },
-  });
 
   /**
    * 「AI実行」ボタンが押されたときの処理。
-   * 現在 processingFile としてマークされているファイルに対してAI処理を開始します。
+   * 自動判定が有効な場合は2段階処理。
    */
   const handleAiExecution = useCallback(async () => {
     if (!processingFile) {
@@ -207,28 +201,56 @@ const WorkOrderTool: React.FC = () => {
       return;
     }
 
-    // setGeneratedText(''); // AI処理開始時にクリアするかはUX次第 (processFileのコールバックで設定される)
-    // setProcessedCompanyInfo({ file: null, companyLabel: '' }); // 同上
     setLastDetectionResult(null); // 前回の判定結果をクリア
 
-    const companyLabelForToast =
-      selectedCompanyId
+    // 自動判定有効の場合は2段階処理
+    if (autoDetectEnabled) {
+      await handleTwoStageProcess();
+    } else {
+      // 自動判定無効の場合は従来通りの1段階処理
+      const companyLabelForToast = selectedCompanyId
         ? (ALL_COMPANY_OPTIONS.find((c) => c.value === selectedCompanyId)?.label || selectedCompanyId)
-        : '自動判定';
+        : '会社未選択';
 
-    toast.info(
-      `「${processingFile.name}」のAI処理を開始します (会社: ${companyLabelForToast})...`
-    );
-    await processFile(processingFile, selectedCompanyId, companyLabelForToast, autoDetectEnabled);
+      toast.info(
+        `「${processingFile.name}」の手配書作成を開始します (会社: ${companyLabelForToast})...`
+      );
+      await processFile(processingFile, selectedCompanyId, companyLabelForToast, false, false);
+    }
   }, [
     processingFile,
     selectedCompanyId,
     autoDetectEnabled,
     isLoading,
     processFile,
-    // setGeneratedText, // 実際には不要 (processFileのコールバックで設定)
-    // setProcessedCompanyInfo, // 実際には不要 (processFileのコールバックで設定)
   ]);
+
+  /**
+   * 2段階処理：OCR+会社判定 → 手配書作成
+   */
+  const handleTwoStageProcess = useCallback(async () => {
+    if (!processingFile) return;
+
+    try {
+      // Stage 1: OCR + 会社判定
+      toast.info(
+        `「${processingFile.name}」の会社判定を開始します...`,
+        { description: 'PDFから会社情報を抽出中' }
+      );
+
+      // OCR専用処理で会社判定を実行
+      await processFile(
+        processingFile,
+        '', // 会社IDは未選択
+        'OCR処理',
+        true, // enableAutoDetection = true
+        true  // ocrOnly = true
+      );
+    } catch (error) {
+      console.error('[Two Stage Process] Error in OCR stage:', error);
+      toast.error('会社判定中にエラーが発生しました');
+    }
+  }, [processingFile, processFile]);
 
   // --- 連携ロジックとコールバック関数 ---
 
@@ -298,63 +320,6 @@ const WorkOrderTool: React.FC = () => {
     // ★ ここでは自動プレビューや自動処理は行わない
   };
 
-  // --- バッチ処理関連のハンドラー ---
-  
-  /**
-   * ファイル選択状態の変更
-   */
-  const handleFileSelectionChange = useCallback(
-    (fileName: string, selected: boolean) => {
-      setSelectedFiles(prev => ({
-        ...prev,
-        [fileName]: selected
-      }));
-    },
-    []
-  );
-
-  /**
-   * 全選択
-   */
-  const handleSelectAll = useCallback(() => {
-    const newSelection: FileSelectionState = {};
-    uploadedFiles.forEach(file => {
-      newSelection[file.name] = true;
-    });
-    setSelectedFiles(newSelection);
-  }, [uploadedFiles]);
-
-  /**
-   * 全解除
-   */
-  const handleDeselectAll = useCallback(() => {
-    setSelectedFiles({});
-  }, []);
-
-  /**
-   * バッチ処理の実行
-   */
-  const handleBatchProcess = useCallback(async () => {
-    const selectedFileObjects = uploadedFiles.filter(file => selectedFiles[file.name]);
-    
-    if (selectedFileObjects.length === 0) {
-      toast.error('処理するファイルを選択してください。');
-      return;
-    }
-
-    if (!selectedCompanyId) {
-      toast.error('会社が選択されていません。', {
-        description: '処理を開始する前に、ドロップダウンから会社を選択してください。',
-      });
-      return;
-    }
-
-    const companyLabel =
-      ALL_COMPANY_OPTIONS.find((c) => c.value === selectedCompanyId)?.label ||
-      selectedCompanyId;
-
-    await processBatchFiles(selectedFileObjects, selectedCompanyId, companyLabel);
-  }, [uploadedFiles, selectedFiles, selectedCompanyId, processBatchFiles]);
 
   /**
    * 判定フィードバックの送信
@@ -406,24 +371,6 @@ const WorkOrderTool: React.FC = () => {
       {/* ツールヘッダー */}
       <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent">
         <h1 className="text-xl font-semibold">業務手配書 作成ツール</h1>
-        <div className="ml-auto">
-          <Button
-            variant={batchMode ? "default" : "outline"}
-            size="sm"
-            onClick={() => {
-              setBatchMode(!batchMode);
-              setSelectedFiles({});
-              if (!batchMode) {
-                // バッチモードに切り替える時は、既存の表示をクリア
-                setGeneratedText('');
-                setProcessedCompanyInfo({ file: null, companyLabel: '' });
-              }
-            }}
-            disabled={isLoading || isBatchLoading}
-          >
-            {batchMode ? "通常モードに戻る" : "複数ファイル一括処理"}
-          </Button>
-        </div>
       </header>
 
       {/* メインコンテンツエリア (3ペイン) */}
@@ -433,7 +380,7 @@ const WorkOrderTool: React.FC = () => {
           processingFile={processingFile}
           pdfFileToDisplay={pdfFileToDisplay}
           generatedText={generatedText}
-          isLoading={isLoading || isBatchLoading}
+          isLoading={isLoading}
           selectedCompanyId={selectedCompanyId}
           onCompanyChange={setSelectedCompanyId}
           onFileUploadClick={() => fileInputRef.current?.click()}
@@ -441,15 +388,7 @@ const WorkOrderTool: React.FC = () => {
           onFileSelect={handleFileInputChange} // input[type=file] の onChange
           onFilePreviewRequest={handleFilePreviewRequest} // リストアイテムクリック時
           processedCompanyInfo={processedCompanyInfo}
-          // バッチ処理用の新しいプロパティ
-          batchMode={batchMode}
-          selectedFiles={selectedFiles}
-          onFileSelectionChange={handleFileSelectionChange}
-          onSelectAll={handleSelectAll}
-          onDeselectAll={handleDeselectAll}
-          onBatchProcess={handleBatchProcess}
-          batchProcessing={isBatchLoading}
-          // 自動判定用の新しいプロパティ
+          // 自動判定用のプロパティ
           autoDetectEnabled={autoDetectEnabled}
           onAutoDetectToggle={() => setAutoDetectEnabled(!autoDetectEnabled)}
           lastDetectionResult={lastDetectionResult}
