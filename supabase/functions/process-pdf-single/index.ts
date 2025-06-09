@@ -5,6 +5,7 @@ import { GoogleGenAI } from '@google/genai'
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { getPrompt, PromptFunction } from './promptRegistry.ts'
 import { encodeBase64 } from 'https://deno.land/std@0.224.0/encoding/base64.ts' // Base64エンコード用
+import { CompanyDetector } from './companyDetector.ts'
 
 console.log('process-pdf-single function (v2 - with Gen) has been invoked!')
 
@@ -90,15 +91,8 @@ Deno.serve(async (req: Request) => {
     }
 
     // 将来的にはここに実際のPDFの内容を渡す処理が入る（例: OCR結果など）
-    const companyIdFromFrontend = formData.get('companyId') as CompanyIdentifier // フロントエンドから会社IDを受け取る
-
-    if (!companyIdFromFrontend || companyIdFromFrontend === 'UNKNOWN_OR_NOT_SET') {
-      // companyIdが送られてこない、または未選択の場合はエラーにするか、デフォルト処理をする
-      return new Response(JSON.stringify({ error: '会社IDが提供されていません。' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
+    let companyIdFromFrontend = formData.get('companyId') as CompanyIdentifier // フロントエンドから会社IDを受け取る
+    const enableAutoDetection = formData.get('enableAutoDetection') === 'true' // 自動判定を有効にするかどうか
 
     const pdfFile = formData.get('pdfFile') // フロントエンドで append したキー名
     // バリデーション
@@ -148,6 +142,63 @@ Deno.serve(async (req: Request) => {
     const pdfBase64Data = encodeBase64(fileArrayBuffer)
     console.log(`[PDF Processing] Successfully Base64 encoded PDF content for ${fileName}.`)
 
+    // 1. Gemini APIキーを環境変数から取得
+    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY')
+    if (!GEMINI_API_KEY) {
+      console.error('CRITICAL: GEMINI_API_KEY is not set in environment variables.')
+      return new Response(
+        JSON.stringify({
+          error: 'API key for AI service is not configured on the server.',
+        }),
+        {
+          status: 500, // Internal Server Error
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      )
+    }
+
+    // 自動判定の実行
+    let detectionResult = null
+    let detectionConfidence = 0
+    let detectionMethod = 'manual'
+    let detectionDetails = {}
+
+    if (enableAutoDetection || !companyIdFromFrontend || companyIdFromFrontend === 'UNKNOWN_OR_NOT_SET') {
+      console.log(`[${new Date().toISOString()}] Starting automatic company detection for ${fileName}`)
+      
+      const detector = new CompanyDetector(GEMINI_API_KEY, supabaseClient)
+      detectionResult = await detector.detectCompany(pdfFile, pdfBase64Data)
+      
+      if (detectionResult.detectedCompanyId) {
+        console.log(`[${new Date().toISOString()}] Auto-detected company: ${detectionResult.detectedCompanyId} with confidence ${detectionResult.confidence}`)
+        
+        // フロントエンドから会社IDが提供されていない場合、自動判定結果を使用
+        if (!companyIdFromFrontend || companyIdFromFrontend === 'UNKNOWN_OR_NOT_SET') {
+          companyIdFromFrontend = detectionResult.detectedCompanyId as CompanyIdentifier
+        }
+        
+        detectionConfidence = detectionResult.confidence
+        detectionMethod = detectionResult.method
+        detectionDetails = detectionResult.details
+      } else {
+        console.log(`[${new Date().toISOString()}] Could not auto-detect company for ${fileName}`)
+        
+        // 自動判定に失敗し、フロントエンドからも会社IDが提供されていない場合
+        if (!companyIdFromFrontend || companyIdFromFrontend === 'UNKNOWN_OR_NOT_SET') {
+          return new Response(
+            JSON.stringify({ 
+              error: '会社を自動判定できませんでした。手動で会社を選択してください。',
+              detectionResult: detectionResult 
+            }), 
+            {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            }
+          )
+        }
+      }
+    }
+
     // supabase/functions/process-pdf-single/promptRegistry.ts
     // から識別子とプロンプトのマッピング情報を取得
     const promptEntry = getPrompt(companyIdFromFrontend)
@@ -163,21 +214,6 @@ Deno.serve(async (req: Request) => {
           error: `Unsupported company or prompt configuration for: ${companyIdFromFrontend}`,
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      )
-    }
-
-    // 1. Gemini APIキーを環境変数から取得
-    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY')
-    if (!GEMINI_API_KEY) {
-      console.error('CRITICAL: GEMINI_API_KEY is not set in environment variables.')
-      return new Response(
-        JSON.stringify({
-          error: 'API key for AI service is not configured on the server.',
-        }),
-        {
-          status: 500, // Internal Server Error
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        },
       )
     }
 
@@ -331,6 +367,12 @@ Deno.serve(async (req: Request) => {
               prompt_identifier: promptIdentifier, // どのプロンプトを使ったか
               company_name: companyName, // 取引先_発注元
               gemini_processed_at: new Date().toISOString(), // Gemini処理完了時刻
+              // 自動判定関連のカラム
+              detected_company_id: detectionResult?.detectedCompanyId || null,
+              detection_confidence: detectionConfidence || null,
+              detection_method: detectionMethod,
+              detection_metadata: detectionDetails || null,
+              final_company_id: companyIdFromFrontend, // 最終的に使用された会社ID
             },
           ])
           .select('id') // 挿入されたレコードのIDを取得
@@ -361,6 +403,17 @@ Deno.serve(async (req: Request) => {
               new Date().toISOString()
             }] Successfully saved to database for ${fileName}, record ID: ${dbRecordId}`,
           )
+          
+          // 判定履歴を保存
+          if (detectionResult && enableAutoDetection) {
+            const detector = new CompanyDetector(GEMINI_API_KEY, supabaseClient)
+            await detector.saveDetectionHistory(
+              dbRecordId,
+              fileName,
+              detectionResult,
+              undefined // TODO: ユーザーIDを渡す場合はここで設定
+            )
+          }
         } else {
           console.warn(
             `[${
@@ -410,6 +463,13 @@ Deno.serve(async (req: Request) => {
       identifiedCompany: companyIdFromFrontend,
       usageMetadata: usageMetadata, // トークン使用量も返す
       dbRecordId: dbRecordId, // DBに保存されたレコードのIDも返す (オプション)
+      // 自動判定の結果を含める
+      detectionResult: detectionResult ? {
+        detectedCompanyId: detectionResult.detectedCompanyId,
+        confidence: detectionResult.confidence,
+        method: detectionResult.method,
+        details: detectionResult.details
+      } : null,
     }
 
     return new Response(JSON.stringify(responseData), {

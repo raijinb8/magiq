@@ -35,6 +35,24 @@ export interface ScrollPosition {
   top: number;
 }
 
+// 会社自動判定結果の型定義
+export interface CompanyDetectionResult {
+  detectedCompanyId: string | null;
+  confidence: number;
+  method: 'gemini_analysis' | 'rule_based' | 'unknown';
+  details: {
+    foundKeywords?: string[];
+    matchedPatterns?: string[];
+    geminiReasoning?: string;
+    rulesApplied?: Array<{
+      ruleId: string;
+      ruleType: string;
+      ruleValue: string;
+      matched: boolean;
+    }>;
+  };
+}
+
 // APIレスポンスの型 (例)
 export interface PdfProcessSuccessResponse {
   generatedText: string;
@@ -43,14 +61,57 @@ export interface PdfProcessSuccessResponse {
   promptUsedIdentifier: string;
   dbRecordId: string; // UUIDなど
   message?: string; // 成功メッセージなど
+  detectionResult?: CompanyDetectionResult | null; // 自動判定結果
 }
 
 export interface PdfProcessErrorResponse {
   error: string;
   message?: string; // エラーメッセージ詳細など
+  detectionResult?: CompanyDetectionResult | null; // エラー時でも判定結果を含む場合がある
   // 他のエラー関連情報
 }
 
 export type PdfProcessResponse =
   | PdfProcessSuccessResponse
   | PdfProcessErrorResponse;
+
+// バッチ処理関連の型定義
+export interface BatchProcessIndividualResult {
+  fileName: string;
+  success: boolean;
+  generatedText?: string;
+  workOrderId?: string;
+  error?: string;
+}
+
+export interface BatchProcessTokenUsage {
+  promptTokenCount: number;
+  candidatesTokenCount: number;
+  totalTokenCount: number;
+}
+
+export interface BatchProcessResult {
+  batchId: string;
+  individualResults: BatchProcessIndividualResult[];
+  consolidatedText: string;
+  totalTokenUsage: BatchProcessTokenUsage;
+}
+
+export interface PdfBatchProcessSuccessResponse {
+  message: string;
+  result: BatchProcessResult;
+}
+
+export interface PdfBatchProcessErrorResponse {
+  error: string;
+  details?: string;
+}
+
+export type PdfBatchProcessResponse =
+  | PdfBatchProcessSuccessResponse
+  | PdfBatchProcessErrorResponse;
+
+// ファイル選択状態の管理
+export interface FileSelectionState {
+  [fileName: string]: boolean;
+}
