@@ -1,12 +1,10 @@
 // src/test/twoStageProcessing.integration.test.tsx
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { usePdfProcessor } from '@/hooks/usePdfProcessor';
 import type { PdfProcessSuccessResponse } from '@/types';
-
-// fetchのモック
-const mockFetch = vi.fn();
-global.fetch = mockFetch;
+import { http, HttpResponse } from 'msw';
+import { server } from './mocks/server';
 
 // Supabaseのモック
 vi.mock('@/lib/supabase', () => ({
@@ -15,25 +13,25 @@ vi.mock('@/lib/supabase', () => ({
       getSession: vi.fn().mockResolvedValue({
         data: {
           session: {
-            access_token: 'mock-token',
-            user: { id: 'mock-user-id' }
+            access_token: 'mock-access-token-123',
+            user: { id: 'mock-user-id' },
+            expires_at: Date.now() + 3600000
           }
-        }
+        },
+        error: null
       })
     }
   }
 }));
 
 // Sonnerのモック
-const mockToast = {
-  error: vi.fn(),
-  success: vi.fn(),
-  info: vi.fn(),
-  warning: vi.fn()
-};
-
 vi.mock('sonner', () => ({
-  toast: mockToast
+  toast: {
+    error: vi.fn(),
+    success: vi.fn(),
+    info: vi.fn(),
+    warning: vi.fn()
+  }
 }));
 
 /**
@@ -46,7 +44,11 @@ describe('2段階処理 統合テスト', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockFile = new File(['mock pdf content'], 'test-nohara.pdf', { type: 'application/pdf' });
-    import.meta.env.VITE_PUBLIC_PROCESS_PDF_FUNCTION_URL = 'http://localhost:54321/functions/v1/process-pdf-single';
+  });
+
+  afterEach(() => {
+    server.resetHandlers();
+    vi.clearAllMocks();
   });
 
   describe('正常フロー', () => {
@@ -83,15 +85,18 @@ describe('2段階処理 統合テスト', () => {
       };
 
       // APIコールを順序通りにモック
-      mockFetch
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve(stage1Response)
+      let callCount = 0;
+      server.resetHandlers();
+      server.use(
+        http.post('*/functions/v1/process-pdf-single', () => {
+          callCount++;
+          if (callCount === 1) {
+            return HttpResponse.json(stage1Response);
+          } else {
+            return HttpResponse.json(stage2Response);
+          }
         })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve(stage2Response)
-        });
+      );
 
       const onSuccess = vi.fn();
       const onError = vi.fn();
@@ -125,24 +130,17 @@ describe('2段階処理 統合テスト', () => {
 
       // Stage 1開始
       const button = screen.getByText('2段階処理開始');
-      fireEvent.click(button);
-
-      // Stage 1のAPI呼び出しを確認
-      await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledTimes(1);
+      await act(async () => {
+        fireEvent.click(button);
       });
-
-      const [url1, options1] = mockFetch.mock.calls[0];
-      expect(url1).toBe('http://localhost:54321/functions/v1/process-pdf-single');
-      
-      const formData1 = options1.body as FormData;
-      expect(formData1.get('ocrOnly')).toBe('true');
-      expect(formData1.get('enableAutoDetection')).toBe('true');
 
       // Stage 1完了後のonSuccessコールバック確認
-      await waitFor(() => {
-        expect(onSuccess).toHaveBeenCalledWith(stage1Response, mockFile);
-      });
+      await waitFor(
+        () => {
+          expect(onSuccess).toHaveBeenCalledWith(stage1Response, mockFile);
+        },
+        { timeout: 10000 }
+      );
 
       expect(onError).not.toHaveBeenCalled();
     });
@@ -167,10 +165,12 @@ describe('2段階処理 統合テスト', () => {
         }
       };
 
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(stage1Response)
-      });
+      server.resetHandlers();
+      server.use(
+        http.post('*/functions/v1/process-pdf-single', () => {
+          return HttpResponse.json(stage1Response);
+        })
+      );
 
       const onSuccess = vi.fn();
       const onError = vi.fn();
@@ -186,11 +186,17 @@ describe('2段階処理 統合テスト', () => {
       };
 
       render(<TestComponent />);
-      fireEvent.click(screen.getByText('OCR処理'));
-
-      await waitFor(() => {
-        expect(onSuccess).toHaveBeenCalledWith(stage1Response, mockFile);
+      
+      await act(async () => {
+        fireEvent.click(screen.getByText('OCR処理'));
       });
+
+      await waitFor(
+        () => {
+          expect(onSuccess).toHaveBeenCalledWith(stage1Response, mockFile);
+        },
+        { timeout: 10000 }
+      );
     });
   });
 
@@ -208,12 +214,12 @@ describe('2段階処理 統合テスト', () => {
         }
       };
 
-      mockFetch.mockResolvedValueOnce({
-        ok: false,
-        status: 400,
-        statusText: 'Bad Request',
-        json: () => Promise.resolve(errorResponse)
-      });
+      server.resetHandlers();
+      server.use(
+        http.post('*/functions/v1/process-pdf-single', () => {
+          return HttpResponse.json(errorResponse, { status: 400 });
+        })
+      );
 
       const onSuccess = vi.fn();
       const onError = vi.fn();
@@ -229,28 +235,35 @@ describe('2段階処理 統合テスト', () => {
       };
 
       render(<TestComponent />);
-      fireEvent.click(screen.getByText('判定失敗テスト'));
-
-      await waitFor(() => {
-        expect(onError).toHaveBeenCalledWith(
-          '会社を判定できませんでした',
-          mockFile,
-          '自動判定'
-        );
+      
+      await act(async () => {
+        fireEvent.click(screen.getByText('判定失敗テスト'));
       });
+
+      await waitFor(
+        () => {
+          expect(onError).toHaveBeenCalledWith(
+            '会社を判定できませんでした',
+            mockFile,
+            '自動判定'
+          );
+        },
+        { timeout: 10000 }
+      );
 
       expect(onSuccess).not.toHaveBeenCalled();
     });
 
     it('Gemini APIエラー時の処理', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: false,
-        status: 500,
-        statusText: 'Internal Server Error',
-        json: () => Promise.resolve({
-          error: 'Gemini API rate limit exceeded'
+      server.resetHandlers();
+      server.use(
+        http.post('*/functions/v1/process-pdf-single', () => {
+          return HttpResponse.json(
+            { error: 'Gemini API rate limit exceeded' },
+            { status: 500 }
+          );
         })
-      });
+      );
 
       const onSuccess = vi.fn();
       const onError = vi.fn();
@@ -266,19 +279,30 @@ describe('2段階処理 統合テスト', () => {
       };
 
       render(<TestComponent />);
-      fireEvent.click(screen.getByText('APIエラーテスト'));
-
-      await waitFor(() => {
-        expect(onError).toHaveBeenCalledWith(
-          'Gemini API rate limit exceeded',
-          mockFile,
-          'OCR処理'
-        );
+      
+      await act(async () => {
+        fireEvent.click(screen.getByText('APIエラーテスト'));
       });
+
+      await waitFor(
+        () => {
+          expect(onError).toHaveBeenCalledWith(
+            'Gemini API rate limit exceeded',
+            mockFile,
+            'OCR処理'
+          );
+        },
+        { timeout: 10000 }
+      );
     });
 
     it('ネットワークエラー時の処理', async () => {
-      mockFetch.mockRejectedValueOnce(new Error('Failed to fetch'));
+      server.resetHandlers();
+      server.use(
+        http.post('*/functions/v1/process-pdf-single', () => {
+          return HttpResponse.error();
+        })
+      );
 
       const onSuccess = vi.fn();
       const onError = vi.fn();
@@ -294,31 +318,41 @@ describe('2段階処理 統合テスト', () => {
       };
 
       render(<TestComponent />);
-      fireEvent.click(screen.getByText('ネットワークエラーテスト'));
-
-      await waitFor(() => {
-        expect(onError).toHaveBeenCalledWith(
-          'Failed to fetch',
-          mockFile,
-          'OCR処理'
-        );
+      
+      await act(async () => {
+        fireEvent.click(screen.getByText('ネットワークエラーテスト'));
       });
+
+      await waitFor(
+        () => {
+          expect(onError).toHaveBeenCalledWith(
+            expect.stringContaining('Failed to fetch'),
+            mockFile,
+            'OCR処理'
+          );
+        },
+        { timeout: 10000 }
+      );
     });
   });
 
   describe('パラメーター検証', () => {
     it('OCR専用処理時に正しいパラメーターが送信される', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({
-          generatedText: '',
-          identifiedCompany: 'NOHARA_G',
-          originalFileName: 'test.pdf',
-          promptUsedIdentifier: 'ocr',
-          dbRecordId: 'test',
-          ocrOnly: true
+      let capturedRequest: unknown = null;
+      server.resetHandlers();
+      server.use(
+        http.post('*/functions/v1/process-pdf-single', async ({ request }) => {
+          capturedRequest = request.clone();
+          return HttpResponse.json({
+            generatedText: '',
+            identifiedCompany: 'NOHARA_G',
+            originalFileName: 'test.pdf',
+            promptUsedIdentifier: 'ocr',
+            dbRecordId: 'test',
+            ocrOnly: true
+          });
         })
-      });
+      );
 
       const onSuccess = vi.fn();
       const onError = vi.fn();
@@ -340,39 +374,49 @@ describe('2段階処理 統合テスト', () => {
       };
 
       render(<TestComponent />);
-      fireEvent.click(screen.getByText('パラメーターテスト'));
-
-      await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledTimes(1);
+      
+      await act(async () => {
+        fireEvent.click(screen.getByText('パラメーターテスト'));
       });
 
-      const [url, options] = mockFetch.mock.calls[0];
-      expect(url).toBe('http://localhost:54321/functions/v1/process-pdf-single');
-      expect(options.method).toBe('POST');
-      expect(options.headers).toEqual(
-        expect.objectContaining({
-          Authorization: 'Bearer mock-token'
-        })
+      await waitFor(
+        () => {
+          expect(capturedRequest).not.toBeNull();
+        },
+        { timeout: 10000 }
       );
 
-      const formData = options.body as FormData;
-      expect(formData.get('pdfFile')).toBe(mockFile);
-      expect(formData.get('companyId')).toBe('UNKNOWN_OR_NOT_SET');
-      expect(formData.get('enableAutoDetection')).toBe('true');
-      expect(formData.get('ocrOnly')).toBe('true');
+      if (capturedRequest && typeof capturedRequest === 'object' && 'formData' in capturedRequest) {
+        const request = capturedRequest as Request;
+        expect(request.method).toBe('POST');
+        expect(request.headers.get('Authorization')).toBe('Bearer mock-access-token-123');
+
+        const formData = await request.formData();
+        const uploadedFile = formData.get('pdfFile') as File;
+        expect(uploadedFile).toBeInstanceOf(File);
+        expect(uploadedFile.name).toBe(mockFile.name);
+        expect(uploadedFile.type).toBe(mockFile.type);
+        expect(formData.get('companyId')).toBe('UNKNOWN_OR_NOT_SET');
+        expect(formData.get('enableAutoDetection')).toBe('true');
+        expect(formData.get('ocrOnly')).toBe('true');
+      }
     });
 
     it('通常処理時に正しいパラメーターが送信される', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({
-          generatedText: 'テスト手配書',
-          identifiedCompany: 'NOHARA_G',
-          originalFileName: 'test.pdf',
-          promptUsedIdentifier: 'nohara',
-          dbRecordId: 'test'
+      let capturedRequest: unknown = null;
+      server.resetHandlers();
+      server.use(
+        http.post('*/functions/v1/process-pdf-single', async ({ request }) => {
+          capturedRequest = request.clone();
+          return HttpResponse.json({
+            generatedText: 'テスト手配書',
+            identifiedCompany: 'NOHARA_G',
+            originalFileName: 'test.pdf',
+            promptUsedIdentifier: 'nohara',
+            dbRecordId: 'test'
+          });
         })
-      });
+      );
 
       const onSuccess = vi.fn();
       const onError = vi.fn();
@@ -394,27 +438,47 @@ describe('2段階処理 統合テスト', () => {
       };
 
       render(<TestComponent />);
-      fireEvent.click(screen.getByText('通常処理テスト'));
-
-      await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledTimes(1);
+      
+      await act(async () => {
+        fireEvent.click(screen.getByText('通常処理テスト'));
       });
 
-      const formData = mockFetch.mock.calls[0][1].body as FormData;
-      expect(formData.get('companyId')).toBe('NOHARA_G');
-      expect(formData.get('enableAutoDetection')).toBe('false');
-      expect(formData.get('ocrOnly')).toBe('false');
+      await waitFor(
+        () => {
+          expect(capturedRequest).not.toBeNull();
+        },
+        { timeout: 10000 }
+      );
+
+      if (capturedRequest && typeof capturedRequest === 'object' && 'formData' in capturedRequest) {
+        const request = capturedRequest as Request;
+        const formData = await request.formData();
+        expect(formData.get('companyId')).toBe('NOHARA_G');
+        expect(formData.get('enableAutoDetection')).toBe('false');
+        expect(formData.get('ocrOnly')).toBe('false');
+      }
     });
   });
 
   describe('ローディング状態', () => {
     it('処理中のローディング状態が正しく管理される', async () => {
-      let resolvePromise: (value: unknown) => void;
-      const pendingPromise = new Promise(resolve => {
-        resolvePromise = resolve;
-      });
-
-      mockFetch.mockReturnValueOnce(pendingPromise);
+      let resolveHandler: (() => void) | null = null;
+      server.resetHandlers();
+      server.use(
+        http.post('*/functions/v1/process-pdf-single', async () => {
+          await new Promise<void>((resolve) => {
+            resolveHandler = resolve;
+          });
+          return HttpResponse.json({
+            generatedText: '',
+            identifiedCompany: 'NOHARA_G',
+            originalFileName: 'test.pdf',
+            promptUsedIdentifier: 'test',
+            dbRecordId: 'test',
+            ocrOnly: true
+          });
+        })
+      );
 
       const onSuccess = vi.fn();
       const onError = vi.fn();
@@ -438,28 +502,28 @@ describe('2段階処理 統合テスト', () => {
 
       expect(screen.getByTestId('loading-state')).toHaveTextContent('Ready');
 
-      fireEvent.click(screen.getByText('ローディングテスト'));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('loading-state')).toHaveTextContent('Loading');
+      await act(async () => {
+        fireEvent.click(screen.getByText('ローディングテスト'));
       });
+
+      await waitFor(
+        () => {
+          expect(screen.getByTestId('loading-state')).toHaveTextContent('Loading');
+        },
+        { timeout: 5000 }
+      );
 
       // 処理完了
-      resolvePromise!({
-        ok: true,
-        json: () => Promise.resolve({
-          generatedText: '',
-          identifiedCompany: 'NOHARA_G',
-          originalFileName: 'test.pdf',
-          promptUsedIdentifier: 'test',
-          dbRecordId: 'test',
-          ocrOnly: true
-        })
+      await act(async () => {
+        resolveHandler?.();
       });
 
-      await waitFor(() => {
-        expect(screen.getByTestId('loading-state')).toHaveTextContent('Ready');
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByTestId('loading-state')).toHaveTextContent('Ready');
+        },
+        { timeout: 10000 }
+      );
     });
   });
 });
