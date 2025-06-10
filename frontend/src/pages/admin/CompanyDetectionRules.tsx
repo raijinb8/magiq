@@ -148,7 +148,11 @@ const CompanyDetectionRules: React.FC = () => {
       address: 'outline' as const,
       logo_text: 'default' as const,
     };
-    return <Badge variant={colors[type as keyof typeof colors] || 'default'}>{type}</Badge>;
+    return (
+      <Badge variant={colors[type as keyof typeof colors] || 'default'}>
+        {type}
+      </Badge>
+    );
   };
 
   return (
@@ -163,13 +167,17 @@ const CompanyDetectionRules: React.FC = () => {
             <Label htmlFor="company">会社</Label>
             <Select
               value={editingRule.company_id}
-              onValueChange={(value) => setEditingRule({ ...editingRule, company_id: value })}
+              onValueChange={(value) =>
+                setEditingRule({ ...editingRule, company_id: value })
+              }
             >
               <SelectTrigger id="company">
                 <SelectValue placeholder="会社を選択" />
               </SelectTrigger>
               <SelectContent>
-                {ALL_COMPANY_OPTIONS.filter(opt => opt.value !== 'UNKNOWN_OR_NOT_SET').map(company => (
+                {ALL_COMPANY_OPTIONS.filter(
+                  (opt) => opt.value !== 'UNKNOWN_OR_NOT_SET'
+                ).map((company) => (
                   <SelectItem key={company.value} value={company.value}>
                     {company.label}
                   </SelectItem>
@@ -182,9 +190,9 @@ const CompanyDetectionRules: React.FC = () => {
             <Label htmlFor="type">ルールタイプ</Label>
             <Select
               value={editingRule.rule_type}
-              onValueChange={(value: 'keyword' | 'pattern' | 'address' | 'logo_text') => 
-                setEditingRule({ ...editingRule, rule_type: value })
-              }
+              onValueChange={(
+                value: 'keyword' | 'pattern' | 'address' | 'logo_text'
+              ) => setEditingRule({ ...editingRule, rule_type: value })}
             >
               <SelectTrigger id="type">
                 <SelectValue />
@@ -203,8 +211,12 @@ const CompanyDetectionRules: React.FC = () => {
             <Input
               id="value"
               value={editingRule.rule_value || ''}
-              onChange={(e) => setEditingRule({ ...editingRule, rule_value: e.target.value })}
-              placeholder={editingRule.rule_type === 'pattern' ? '正規表現' : 'キーワード'}
+              onChange={(e) =>
+                setEditingRule({ ...editingRule, rule_value: e.target.value })
+              }
+              placeholder={
+                editingRule.rule_type === 'pattern' ? '正規表現' : 'キーワード'
+              }
             />
           </div>
 
@@ -216,7 +228,12 @@ const CompanyDetectionRules: React.FC = () => {
               min="0"
               max="100"
               value={editingRule.priority || 50}
-              onChange={(e) => setEditingRule({ ...editingRule, priority: parseInt(e.target.value) || 50 })}
+              onChange={(e) =>
+                setEditingRule({
+                  ...editingRule,
+                  priority: parseInt(e.target.value) || 50,
+                })
+              }
             />
           </div>
 
@@ -225,7 +242,9 @@ const CompanyDetectionRules: React.FC = () => {
             <Input
               id="description"
               value={editingRule.description || ''}
-              onChange={(e) => setEditingRule({ ...editingRule, description: e.target.value })}
+              onChange={(e) =>
+                setEditingRule({ ...editingRule, description: e.target.value })
+              }
               placeholder="このルールの説明"
             />
           </div>
@@ -234,7 +253,9 @@ const CompanyDetectionRules: React.FC = () => {
         <Button
           className="mt-4"
           onClick={handleAddRule}
-          disabled={isLoading || !editingRule.company_id || !editingRule.rule_value}
+          disabled={
+            isLoading || !editingRule.company_id || !editingRule.rule_value
+          }
         >
           <Plus className="w-4 h-4 mr-2" />
           ルールを追加
@@ -247,7 +268,9 @@ const CompanyDetectionRules: React.FC = () => {
         {isLoading ? (
           <div className="text-center py-8">読み込み中...</div>
         ) : rules.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">ルールがありません</div>
+          <div className="text-center py-8 text-gray-500">
+            ルールがありません
+          </div>
         ) : (
           <div className="space-y-2">
             {rules.map((rule) => (
@@ -260,15 +283,21 @@ const CompanyDetectionRules: React.FC = () => {
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-1">
                     <span className="font-medium">
-                      {ALL_COMPANY_OPTIONS.find(c => c.value === rule.company_id)?.label || rule.company_id}
+                      {ALL_COMPANY_OPTIONS.find(
+                        (c) => c.value === rule.company_id
+                      )?.label || rule.company_id}
                     </span>
                     {getRuleTypeBadge(rule.rule_type)}
                     <Badge variant="outline">優先度: {rule.priority}</Badge>
                   </div>
                   <div className="text-sm text-gray-600">
-                    <code className="bg-gray-100 px-2 py-1 rounded">{rule.rule_value}</code>
+                    <code className="bg-gray-100 px-2 py-1 rounded">
+                      {rule.rule_value}
+                    </code>
                     {rule.description && (
-                      <span className="ml-2 text-gray-500">- {rule.description}</span>
+                      <span className="ml-2 text-gray-500">
+                        - {rule.description}
+                      </span>
                     )}
                   </div>
                 </div>
@@ -276,7 +305,7 @@ const CompanyDetectionRules: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <Button
                     size="sm"
-                    variant={rule.is_active ? "outline" : "default"}
+                    variant={rule.is_active ? 'outline' : 'default'}
                     onClick={() => handleToggleActive(rule.id, rule.is_active)}
                     disabled={isLoading}
                   >

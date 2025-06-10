@@ -17,42 +17,45 @@ describe('会社自動判定機能', () => {
           input: '野原グループ株式会社の作業指示書',
           expected: 'NOHARA_G',
           confidence: 0.95,
-          description: '野原グループ株式会社の直接記載'
+          description: '野原グループ株式会社の直接記載',
         },
         {
           input: '発注元：野原グループ株式会社\n施工：加藤ベニヤ',
           expected: 'NOHARA_G',
           confidence: 0.95,
-          description: '複数会社名があっても野原グループ株式会社を優先'
+          description: '複数会社名があっても野原グループ株式会社を優先',
         },
         {
           input: '加藤ベニヤ池袋 ミサワホーム 工事',
           expected: 'KATOUBENIYA_MISAWA',
           confidence: 0.85,
-          description: '加藤ベニヤ + ミサワホームの組み合わせ'
+          description: '加藤ベニヤ + ミサワホームの組み合わせ',
         },
         {
           input: '一般的な建設会社の作業指示書',
           expected: null,
           confidence: 0.1,
-          description: '判定不可能なケース'
-        }
+          description: '判定不可能なケース',
+        },
       ];
 
       testCases.forEach(({ input, expected, confidence, description }) => {
         const result = simulateOcrDetection(input);
         expect(result.company_id, description).toBe(expected);
         if (expected) {
-          expect(result.confidence, description).toBeGreaterThanOrEqual(confidence - 0.05);
+          expect(result.confidence, description).toBeGreaterThanOrEqual(
+            confidence - 0.05
+          );
         }
       });
     });
 
     it('確定キーワードの優先順位が正しく動作する', () => {
       // 優先順位テスト
-      const testText = '発注：野原グループ株式会社\n施工：加藤ベニヤ池袋\n協力：ミサワホーム';
+      const testText =
+        '発注：野原グループ株式会社\n施工：加藤ベニヤ池袋\n協力：ミサワホーム';
       const result = simulateOcrDetection(testText);
-      
+
       // 野原グループ株式会社が最優先で判定される
       expect(result.company_id).toBe('NOHARA_G');
       expect(result.confidence).toBeGreaterThanOrEqual(0.95);
@@ -76,18 +79,18 @@ describe('会社自動判定機能', () => {
         {
           text: '加藤ベニヤ ミサワホーム',
           expectedCompany: 'KATOUBENIYA_MISAWA',
-          minConfidence: 0.8
+          minConfidence: 0.8,
         },
         {
           text: '加藤ベニヤ',
           expectedCompany: 'KATOUBENIYA_MISAWA',
-          minConfidence: 0.6
+          minConfidence: 0.6,
         },
         {
           text: 'ミサワホーム',
           expectedCompany: 'KATOUBENIYA_MISAWA',
-          minConfidence: 0.6
-        }
+          minConfidence: 0.6,
+        },
       ];
 
       testCases.forEach(({ text, expectedCompany, minConfidence }) => {
@@ -118,7 +121,7 @@ describe('会社自動判定機能', () => {
         - 内装工事
         - 外装補修
       `;
-      
+
       const result = simulateOcrDetection(complexText);
       expect(result.company_id).toBe('NOHARA_G');
       expect(result.found_keywords).toContain('野原グループ株式会社');
@@ -155,8 +158,7 @@ function simulateOcrDetection(text: string): {
     detectedCompany = 'NOHARA_G';
     confidence = 0.85;
     reasoning = '野原G住環境キーワードを検出';
-  }
-  else if (text.includes('野原G')) {
+  } else if (text.includes('野原G')) {
     foundKeywords.push('野原G');
     detectedCompany = 'NOHARA_G';
     confidence = 0.75;
@@ -175,20 +177,17 @@ function simulateOcrDetection(text: string): {
     detectedCompany = 'KATOUBENIYA_MISAWA';
     confidence = 0.8;
     reasoning = '加藤ベニヤ池袋キーワードを検出';
-  }
-  else if (text.includes('加藤ベニヤ')) {
+  } else if (text.includes('加藤ベニヤ')) {
     foundKeywords.push('加藤ベニヤ');
     detectedCompany = 'KATOUBENIYA_MISAWA';
     confidence = 0.7;
     reasoning = '加藤ベニヤキーワードを検出';
-  }
-  else if (text.includes('ミサワホーム')) {
+  } else if (text.includes('ミサワホーム')) {
     foundKeywords.push('ミサワホーム');
     detectedCompany = 'KATOUBENIYA_MISAWA';
     confidence = 0.6;
     reasoning = 'ミサワホームキーワードを検出';
-  }
-  else {
+  } else {
     confidence = 0;
     reasoning = '判定可能なキーワードが見つかりませんでした';
   }
@@ -198,6 +197,6 @@ function simulateOcrDetection(text: string): {
     confidence,
     detected_text: text,
     found_keywords: foundKeywords,
-    reasoning
+    reasoning,
   };
 }

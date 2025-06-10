@@ -74,7 +74,7 @@ export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
   onAutoDetectToggle,
   lastDetectionResult,
 }) => {
-  const selectedCount = Object.values(selectedFiles).filter(v => v).length;
+  const selectedCount = Object.values(selectedFiles).filter((v) => v).length;
   // リストアイテムのスタイルを決定するヘルパー関数 (元のclassNameロジックを参考に)
   const getListItemClasses = (file: PdfFile): string => {
     const baseClasses =
@@ -124,13 +124,17 @@ export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
         >
           処理対象の会社:
         </label>
-        <Select 
-          value={selectedCompanyId} 
+        <Select
+          value={selectedCompanyId}
           onValueChange={onCompanyChange}
           disabled={autoDetectEnabled && !batchMode}
         >
           <SelectTrigger id="company-select" className="w-full">
-            <SelectValue placeholder={autoDetectEnabled ? "自動判定中..." : "会社を選択してください"} />
+            <SelectValue
+              placeholder={
+                autoDetectEnabled ? '自動判定中...' : '会社を選択してください'
+              }
+            />
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
@@ -153,7 +157,7 @@ export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
           </SelectContent>
         </Select>
       </div>
-      
+
       {/* 自動判定トグル */}
       {!batchMode && (
         <div className="mb-4">
@@ -165,7 +169,7 @@ export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
           />
         </div>
       )}
-      
+
       <Button
         className="w-full mb-4"
         variant="outline"
@@ -173,7 +177,7 @@ export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
       >
         PDFを選択してアップロード
       </Button>
-      
+
       {/* バッチ処理モードの場合のコントロール */}
       {batchMode && uploadedFiles.length > 0 && (
         <div className="mb-4 space-y-2">
@@ -182,7 +186,9 @@ export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
               size="sm"
               variant="outline"
               onClick={onSelectAll}
-              disabled={selectedCount === uploadedFiles.length || batchProcessing}
+              disabled={
+                selectedCount === uploadedFiles.length || batchProcessing
+              }
               className="flex-1"
             >
               全選択
@@ -200,12 +206,13 @@ export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
           <Button
             className="w-full"
             onClick={onBatchProcess}
-            disabled={selectedCount === 0 || !selectedCompanyId || batchProcessing}
-          >
-            {batchProcessing 
-              ? `処理中... (${selectedCount}個のファイル)`
-              : `選択したファイルを一括処理 (${selectedCount}個)`
+            disabled={
+              selectedCount === 0 || !selectedCompanyId || batchProcessing
             }
+          >
+            {batchProcessing
+              ? `処理中... (${selectedCount}個のファイル)`
+              : `選択したファイルを一括処理 (${selectedCount}個)`}
           </Button>
         </div>
       )}
@@ -227,7 +234,10 @@ export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
                   className={`${getListItemClasses(file)} ${batchMode ? 'flex items-center gap-2' : ''}`}
                   onClick={(e) => {
                     // バッチモードの場合、チェックボックス領域のクリックは無視
-                    if (batchMode && (e.target as HTMLInputElement).type === 'checkbox') {
+                    if (
+                      batchMode &&
+                      (e.target as HTMLInputElement).type === 'checkbox'
+                    ) {
                       return;
                     }
                     // バッチモードでも、チェックボックス以外の領域をクリックしたらプレビュー

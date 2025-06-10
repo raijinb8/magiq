@@ -1,7 +1,10 @@
 // src/test/usePdfProcessor.test.ts
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
-import { usePdfProcessor, type UsePdfProcessorProps } from '@/hooks/usePdfProcessor';
+import {
+  usePdfProcessor,
+  type UsePdfProcessorProps,
+} from '@/hooks/usePdfProcessor';
 import type { CompanyOptionValue, PdfProcessSuccessResponse } from '@/types';
 import { http, HttpResponse } from 'msw';
 import { server } from './mocks/server';
@@ -15,13 +18,13 @@ vi.mock('@/lib/supabase', () => ({
           session: {
             access_token: 'mock-access-token-123',
             user: { id: 'mock-user-id' },
-            expires_at: Date.now() + 3600000
-          }
+            expires_at: Date.now() + 3600000,
+          },
         },
-        error: null
-      })
-    }
-  }
+        error: null,
+      }),
+    },
+  },
 }));
 
 // Sonnerのモック
@@ -30,8 +33,8 @@ vi.mock('sonner', () => ({
     error: vi.fn(),
     success: vi.fn(),
     info: vi.fn(),
-    warning: vi.fn()
-  }
+    warning: vi.fn(),
+  },
 }));
 
 describe('usePdfProcessor Hook', () => {
@@ -43,8 +46,10 @@ describe('usePdfProcessor Hook', () => {
     vi.clearAllMocks();
     onSuccess = vi.fn();
     onError = vi.fn();
-    mockFile = new File(['mock pdf content'], 'test.pdf', { type: 'application/pdf' });
-    
+    mockFile = new File(['mock pdf content'], 'test.pdf', {
+      type: 'application/pdf',
+    });
+
     // モックファイルの作成
   });
 
@@ -72,10 +77,14 @@ describe('usePdfProcessor Hook', () => {
         '' as CompanyOptionValue,
         'テスト会社',
         false, // enableAutoDetection = false
-        false  // ocrOnly = false
+        false // ocrOnly = false
       );
 
-      expect(onError).toHaveBeenCalledWith('会社未選択', mockFile, 'テスト会社');
+      expect(onError).toHaveBeenCalledWith(
+        '会社未選択',
+        mockFile,
+        'テスト会社'
+      );
     });
 
     it('自動判定が有効な場合は会社未選択でも処理が継続される', async () => {
@@ -91,19 +100,25 @@ describe('usePdfProcessor Hook', () => {
           method: 'ocr_gemini',
           details: {
             foundKeywords: ['野原グループ株式会社'],
-            geminiReasoning: 'テスト判定理由'
-          }
-        }
+            geminiReasoning: 'テスト判定理由',
+          },
+        },
       };
 
       // 既存のハンドラーをリセットして新しいハンドラーを追加
       server.resetHandlers();
       server.use(
-        http.post('http://localhost:54321/functions/v1/process-pdf-single', ({ request }) => {
-          console.log('MSW intercepted request:', request.url);
-          console.log('Authorization header:', request.headers.get('Authorization'));
-          return HttpResponse.json(mockResponse);
-        })
+        http.post(
+          'http://localhost:54321/functions/v1/process-pdf-single',
+          ({ request }) => {
+            console.log('MSW intercepted request:', request.url);
+            console.log(
+              'Authorization header:',
+              request.headers.get('Authorization')
+            );
+            return HttpResponse.json(mockResponse);
+          }
+        )
       );
 
       const props: UsePdfProcessorProps = { onSuccess, onError };
@@ -123,7 +138,9 @@ describe('usePdfProcessor Hook', () => {
         () => {
           if (onError.mock.calls.length > 0) {
             console.log('onError was called with:', onError.mock.calls);
-            throw new Error(`onError was called instead of onSuccess: ${JSON.stringify(onError.mock.calls)}`);
+            throw new Error(
+              `onError was called instead of onSuccess: ${JSON.stringify(onError.mock.calls)}`
+            );
           }
           expect(onSuccess).toHaveBeenCalledWith(mockResponse, mockFile);
         },
@@ -148,9 +165,9 @@ describe('usePdfProcessor Hook', () => {
           method: 'ocr_gemini',
           details: {
             foundKeywords: ['野原グループ株式会社'],
-            geminiReasoning: 'OCR判定結果'
-          }
-        }
+            geminiReasoning: 'OCR判定結果',
+          },
+        },
       };
 
       let capturedRequest: unknown = null;
@@ -170,13 +187,17 @@ describe('usePdfProcessor Hook', () => {
           '' as CompanyOptionValue,
           'OCR処理',
           true, // enableAutoDetection = true
-          true  // ocrOnly = true
+          true // ocrOnly = true
         );
       });
 
       // リクエストの確認
       expect(capturedRequest).not.toBeNull();
-      if (capturedRequest && typeof capturedRequest === 'object' && 'formData' in capturedRequest) {
+      if (
+        capturedRequest &&
+        typeof capturedRequest === 'object' &&
+        'formData' in capturedRequest
+      ) {
         const request = capturedRequest as Request;
         const formData = await request.formData();
         expect(formData.get('ocrOnly')).toBe('true');
@@ -204,9 +225,9 @@ describe('usePdfProcessor Hook', () => {
           method: 'ocr_gemini',
           details: {
             foundKeywords: ['加藤ベニヤ', 'ミサワホーム'],
-            geminiReasoning: '加藤ベニヤとミサワホームのキーワードを検出'
-          }
-        }
+            geminiReasoning: '加藤ベニヤとミサワホームのキーワードを検出',
+          },
+        },
       };
 
       server.use(
@@ -307,9 +328,9 @@ describe('usePdfProcessor Hook', () => {
                 confidence: 0.3,
                 method: 'ocr_gemini',
                 details: {
-                  geminiReasoning: '判定可能なキーワードが見つかりませんでした'
-                }
-              }
+                  geminiReasoning: '判定可能なキーワードが見つかりませんでした',
+                },
+              },
             },
             { status: 400 }
           );
@@ -353,7 +374,7 @@ describe('usePdfProcessor Hook', () => {
             identifiedCompany: 'NOHARA_G',
             originalFileName: 'test.pdf',
             promptUsedIdentifier: 'test',
-            dbRecordId: 'test'
+            dbRecordId: 'test',
           });
         })
       );

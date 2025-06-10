@@ -31,7 +31,8 @@ export const DetectionFeedbackModal: React.FC<DetectionFeedbackModalProps> = ({
   currentFileName,
   onSubmitFeedback,
 }) => {
-  const [correctedCompanyId, setCorrectedCompanyId] = useState<CompanyOptionValue>('');
+  const [correctedCompanyId, setCorrectedCompanyId] =
+    useState<CompanyOptionValue>('');
   const [correctionReason, setCorrectionReason] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -60,13 +61,14 @@ export const DetectionFeedbackModal: React.FC<DetectionFeedbackModalProps> = ({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
         <h2 className="text-lg font-semibold mb-4">会社判定の修正</h2>
-        
+
         <div className="mb-4">
           <p className="text-sm text-gray-600 mb-2">
             ファイル: <span className="font-medium">{currentFileName}</span>
           </p>
           <p className="text-sm text-gray-600">
-            自動判定結果: <span className="font-medium">
+            自動判定結果:{' '}
+            <span className="font-medium">
               {detectionResult.detectedCompanyId || '判定できませんでした'}
             </span>
             {detectionResult.confidence > 0 && (
@@ -82,15 +84,19 @@ export const DetectionFeedbackModal: React.FC<DetectionFeedbackModalProps> = ({
             <Label htmlFor="correct-company">正しい会社を選択</Label>
             <Select
               value={correctedCompanyId}
-              onValueChange={(value) => setCorrectedCompanyId(value as CompanyOptionValue)}
+              onValueChange={(value) =>
+                setCorrectedCompanyId(value as CompanyOptionValue)
+              }
             >
               <SelectTrigger id="correct-company">
                 <SelectValue placeholder="会社を選択してください" />
               </SelectTrigger>
               <SelectContent>
                 {ALL_COMPANY_OPTIONS.filter(
-                  opt => opt.value !== 'UNKNOWN_OR_NOT_SET' && opt.value !== detectionResult.detectedCompanyId
-                ).map(company => (
+                  (opt) =>
+                    opt.value !== 'UNKNOWN_OR_NOT_SET' &&
+                    opt.value !== detectionResult.detectedCompanyId
+                ).map((company) => (
                   <SelectItem key={company.value} value={company.value}>
                     {company.label}
                   </SelectItem>
@@ -112,11 +118,7 @@ export const DetectionFeedbackModal: React.FC<DetectionFeedbackModalProps> = ({
         </div>
 
         <div className="flex justify-end gap-2 mt-6">
-          <Button
-            variant="outline"
-            onClick={onClose}
-            disabled={isSubmitting}
-          >
+          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
             キャンセル
           </Button>
           <Button

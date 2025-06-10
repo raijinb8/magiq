@@ -22,7 +22,9 @@ describe('CompanyAutoDetectToggle', () => {
 
       expect(screen.getByText('会社自動判定')).toBeInTheDocument();
       expect(screen.getByText('無効')).toBeInTheDocument();
-      expect(screen.queryByText('PDFの内容から会社を自動判定します')).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('PDFの内容から会社を自動判定します')
+      ).not.toBeInTheDocument();
     });
 
     it('自動判定が有効の場合の表示が正しい', () => {
@@ -35,7 +37,11 @@ describe('CompanyAutoDetectToggle', () => {
 
       expect(screen.getByText('会社自動判定')).toBeInTheDocument();
       expect(screen.getByText('有効')).toBeInTheDocument();
-      expect(screen.getByText('PDFの内容から会社を自動判定します。判定できない場合は手動選択が必要です。')).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          'PDFの内容から会社を自動判定します。判定できない場合は手動選択が必要です。'
+        )
+      ).toBeInTheDocument();
     });
 
     it('ローディング中はボタンが無効化される', () => {
@@ -60,8 +66,8 @@ describe('CompanyAutoDetectToggle', () => {
         method: 'ocr_gemini',
         details: {
           foundKeywords: ['野原グループ株式会社'],
-          geminiReasoning: '確定キーワードを検出しました'
-        }
+          geminiReasoning: '確定キーワードを検出しました',
+        },
       };
 
       render(
@@ -75,8 +81,12 @@ describe('CompanyAutoDetectToggle', () => {
       expect(screen.getByText('判定結果:')).toBeInTheDocument();
       expect(screen.getByText('NOHARA_G')).toBeInTheDocument();
       expect(screen.getByText('高信頼度 95%')).toBeInTheDocument();
-      expect(screen.getByText('検出キーワード: 野原グループ株式会社')).toBeInTheDocument();
-      expect(screen.getByText('理由: 確定キーワードを検出しました')).toBeInTheDocument();
+      expect(
+        screen.getByText('検出キーワード: 野原グループ株式会社')
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText('理由: 確定キーワードを検出しました')
+      ).toBeInTheDocument();
     });
 
     it('判定失敗の場合が正しく表示される', () => {
@@ -85,8 +95,8 @@ describe('CompanyAutoDetectToggle', () => {
         confidence: 0.2,
         method: 'ocr_gemini',
         details: {
-          geminiReasoning: '判定可能なキーワードが見つかりませんでした'
-        }
+          geminiReasoning: '判定可能なキーワードが見つかりませんでした',
+        },
       };
 
       render(
@@ -99,7 +109,9 @@ describe('CompanyAutoDetectToggle', () => {
 
       expect(screen.getByText('判定結果:')).toBeInTheDocument();
       expect(screen.getByText('判定できませんでした')).toBeInTheDocument();
-      expect(screen.getByText('理由: 判定可能なキーワードが見つかりませんでした')).toBeInTheDocument();
+      expect(
+        screen.getByText('理由: 判定可能なキーワードが見つかりませんでした')
+      ).toBeInTheDocument();
     });
 
     it('中信頼度の判定結果が正しく表示される', () => {
@@ -109,8 +121,8 @@ describe('CompanyAutoDetectToggle', () => {
         method: 'ocr_gemini',
         details: {
           foundKeywords: ['加藤ベニヤ'],
-          geminiReasoning: '部分的なキーワードを検出'
-        }
+          geminiReasoning: '部分的なキーワードを検出',
+        },
       };
 
       render(
@@ -123,7 +135,9 @@ describe('CompanyAutoDetectToggle', () => {
 
       expect(screen.getByText('KATOUBENIYA_MISAWA')).toBeInTheDocument();
       expect(screen.getByText('中信頼度 75%')).toBeInTheDocument();
-      expect(screen.getByText('検出キーワード: 加藤ベニヤ')).toBeInTheDocument();
+      expect(
+        screen.getByText('検出キーワード: 加藤ベニヤ')
+      ).toBeInTheDocument();
     });
 
     it('低信頼度の判定結果が正しく表示される', () => {
@@ -133,8 +147,8 @@ describe('CompanyAutoDetectToggle', () => {
         method: 'rule_based',
         details: {
           foundKeywords: ['野原'],
-          geminiReasoning: '曖昧なキーワードのみ検出'
-        }
+          geminiReasoning: '曖昧なキーワードのみ検出',
+        },
       };
 
       render(
@@ -184,12 +198,36 @@ describe('CompanyAutoDetectToggle', () => {
   describe('信頼度バッジ', () => {
     it('信頼度に応じて適切なバッジが表示される', () => {
       const testCases = [
-        { confidence: 0.95, expectedText: '高信頼度 95%', expectedClass: 'default' },
-        { confidence: 0.85, expectedText: '高信頼度 85%', expectedClass: 'default' },
-        { confidence: 0.75, expectedText: '中信頼度 75%', expectedClass: 'secondary' },
-        { confidence: 0.60, expectedText: '中信頼度 60%', expectedClass: 'secondary' },
-        { confidence: 0.45, expectedText: '低信頼度 45%', expectedClass: 'outline' },
-        { confidence: 0.25, expectedText: '低信頼度 25%', expectedClass: 'outline' }
+        {
+          confidence: 0.95,
+          expectedText: '高信頼度 95%',
+          expectedClass: 'default',
+        },
+        {
+          confidence: 0.85,
+          expectedText: '高信頼度 85%',
+          expectedClass: 'default',
+        },
+        {
+          confidence: 0.75,
+          expectedText: '中信頼度 75%',
+          expectedClass: 'secondary',
+        },
+        {
+          confidence: 0.6,
+          expectedText: '中信頼度 60%',
+          expectedClass: 'secondary',
+        },
+        {
+          confidence: 0.45,
+          expectedText: '低信頼度 45%',
+          expectedClass: 'outline',
+        },
+        {
+          confidence: 0.25,
+          expectedText: '低信頼度 25%',
+          expectedClass: 'outline',
+        },
       ];
 
       testCases.forEach(({ confidence, expectedText }) => {
@@ -197,7 +235,7 @@ describe('CompanyAutoDetectToggle', () => {
           detectedCompanyId: 'NOHARA_G',
           confidence,
           method: 'ocr_gemini',
-          details: {}
+          details: {},
         };
 
         const { unmount } = render(
@@ -220,7 +258,7 @@ describe('CompanyAutoDetectToggle', () => {
         detectedCompanyId: 'NOHARA_G',
         confidence: 0.95,
         method: 'ocr_gemini',
-        details: {}
+        details: {},
       };
 
       render(
@@ -252,8 +290,8 @@ describe('CompanyAutoDetectToggle', () => {
         confidence: 0.95,
         method: 'ocr_gemini',
         details: {
-          geminiReasoning: 'テスト理由'
-        }
+          geminiReasoning: 'テスト理由',
+        },
       };
 
       render(
@@ -273,8 +311,8 @@ describe('CompanyAutoDetectToggle', () => {
         confidence: 0.95,
         method: 'ocr_gemini',
         details: {
-          foundKeywords: ['野原グループ株式会社']
-        }
+          foundKeywords: ['野原グループ株式会社'],
+        },
       };
 
       render(

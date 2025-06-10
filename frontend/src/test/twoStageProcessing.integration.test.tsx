@@ -1,6 +1,12 @@
 // src/test/twoStageProcessing.integration.test.tsx
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+} from '@testing-library/react';
 import { usePdfProcessor } from '@/hooks/usePdfProcessor';
 import type { PdfProcessSuccessResponse } from '@/types';
 import { http, HttpResponse } from 'msw';
@@ -15,13 +21,13 @@ vi.mock('@/lib/supabase', () => ({
           session: {
             access_token: 'mock-access-token-123',
             user: { id: 'mock-user-id' },
-            expires_at: Date.now() + 3600000
-          }
+            expires_at: Date.now() + 3600000,
+          },
         },
-        error: null
-      })
-    }
-  }
+        error: null,
+      }),
+    },
+  },
 }));
 
 // Sonnerのモック
@@ -30,8 +36,8 @@ vi.mock('sonner', () => ({
     error: vi.fn(),
     success: vi.fn(),
     info: vi.fn(),
-    warning: vi.fn()
-  }
+    warning: vi.fn(),
+  },
 }));
 
 /**
@@ -43,7 +49,9 @@ describe('2段階処理 統合テスト', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockFile = new File(['mock pdf content'], 'test-nohara.pdf', { type: 'application/pdf' });
+    mockFile = new File(['mock pdf content'], 'test-nohara.pdf', {
+      type: 'application/pdf',
+    });
   });
 
   afterEach(() => {
@@ -69,9 +77,9 @@ describe('2段階処理 統合テスト', () => {
           details: {
             foundKeywords: ['野原グループ株式会社'],
             geminiReasoning: '確定キーワード「野原グループ株式会社」を検出',
-            detectedText: '野原グループ株式会社 作業指示書'
-          }
-        }
+            detectedText: '野原グループ株式会社 作業指示書',
+          },
+        },
       };
 
       // Stage 2: 手配書作成のレスポンス
@@ -81,7 +89,7 @@ describe('2段階処理 統合テスト', () => {
         originalFileName: 'test-nohara.pdf',
         promptUsedIdentifier: 'nohara-prompt-v20250526',
         dbRecordId: 'stage2-uuid',
-        detectionResult: null
+        detectionResult: null,
       };
 
       // APIコールを順序通りにモック
@@ -103,7 +111,10 @@ describe('2段階処理 統合テスト', () => {
 
       // 2段階処理のシミュレーション
       const TestComponent = () => {
-        const { processFile, isLoading } = usePdfProcessor({ onSuccess, onError });
+        const { processFile, isLoading } = usePdfProcessor({
+          onSuccess,
+          onError,
+        });
 
         const handleTwoStageProcess = async () => {
           // Stage 1: OCR処理
@@ -112,7 +123,7 @@ describe('2段階処理 統合テスト', () => {
             '',
             'OCR処理',
             true, // enableAutoDetection = true
-            true  // ocrOnly = true
+            true // ocrOnly = true
           );
         };
 
@@ -160,9 +171,9 @@ describe('2段階処理 統合テスト', () => {
           method: 'ocr_gemini',
           details: {
             foundKeywords: ['加藤ベニヤ', 'ミサワホーム'],
-            geminiReasoning: '加藤ベニヤとミサワホームの複合キーワードを検出'
-          }
-        }
+            geminiReasoning: '加藤ベニヤとミサワホームの複合キーワードを検出',
+          },
+        },
       };
 
       server.resetHandlers();
@@ -186,7 +197,7 @@ describe('2段階処理 統合テスト', () => {
       };
 
       render(<TestComponent />);
-      
+
       await act(async () => {
         fireEvent.click(screen.getByText('OCR処理'));
       });
@@ -209,9 +220,9 @@ describe('2段階処理 統合テスト', () => {
           confidence: 0.2,
           method: 'ocr_gemini',
           details: {
-            geminiReasoning: '判定可能なキーワードが見つかりませんでした'
-          }
-        }
+            geminiReasoning: '判定可能なキーワードが見つかりませんでした',
+          },
+        },
       };
 
       server.resetHandlers();
@@ -235,7 +246,7 @@ describe('2段階処理 統合テスト', () => {
       };
 
       render(<TestComponent />);
-      
+
       await act(async () => {
         fireEvent.click(screen.getByText('判定失敗テスト'));
       });
@@ -279,7 +290,7 @@ describe('2段階処理 統合テスト', () => {
       };
 
       render(<TestComponent />);
-      
+
       await act(async () => {
         fireEvent.click(screen.getByText('APIエラーテスト'));
       });
@@ -314,11 +325,13 @@ describe('2段階処理 統合テスト', () => {
           await processFile(mockFile, '', 'OCR処理', true, true);
         };
 
-        return <button onClick={handleNetworkError}>ネットワークエラーテスト</button>;
+        return (
+          <button onClick={handleNetworkError}>ネットワークエラーテスト</button>
+        );
       };
 
       render(<TestComponent />);
-      
+
       await act(async () => {
         fireEvent.click(screen.getByText('ネットワークエラーテスト'));
       });
@@ -349,7 +362,7 @@ describe('2段階処理 統合テスト', () => {
             originalFileName: 'test.pdf',
             promptUsedIdentifier: 'ocr',
             dbRecordId: 'test',
-            ocrOnly: true
+            ocrOnly: true,
           });
         })
       );
@@ -366,7 +379,7 @@ describe('2段階処理 統合テスト', () => {
             '', // 空の会社ID
             'OCR処理',
             true, // enableAutoDetection = true
-            true  // ocrOnly = true
+            true // ocrOnly = true
           );
         };
 
@@ -374,7 +387,7 @@ describe('2段階処理 統合テスト', () => {
       };
 
       render(<TestComponent />);
-      
+
       await act(async () => {
         fireEvent.click(screen.getByText('パラメーターテスト'));
       });
@@ -386,10 +399,16 @@ describe('2段階処理 統合テスト', () => {
         { timeout: 10000 }
       );
 
-      if (capturedRequest && typeof capturedRequest === 'object' && 'formData' in capturedRequest) {
+      if (
+        capturedRequest &&
+        typeof capturedRequest === 'object' &&
+        'formData' in capturedRequest
+      ) {
         const request = capturedRequest as Request;
         expect(request.method).toBe('POST');
-        expect(request.headers.get('Authorization')).toBe('Bearer mock-access-token-123');
+        expect(request.headers.get('Authorization')).toBe(
+          'Bearer mock-access-token-123'
+        );
 
         const formData = await request.formData();
         const uploadedFile = formData.get('pdfFile') as File;
@@ -413,7 +432,7 @@ describe('2段階処理 統合テスト', () => {
             identifiedCompany: 'NOHARA_G',
             originalFileName: 'test.pdf',
             promptUsedIdentifier: 'nohara',
-            dbRecordId: 'test'
+            dbRecordId: 'test',
           });
         })
       );
@@ -430,7 +449,7 @@ describe('2段階処理 統合テスト', () => {
             'NOHARA_G',
             '野原G住環境',
             false, // enableAutoDetection = false
-            false  // ocrOnly = false
+            false // ocrOnly = false
           );
         };
 
@@ -438,7 +457,7 @@ describe('2段階処理 統合テスト', () => {
       };
 
       render(<TestComponent />);
-      
+
       await act(async () => {
         fireEvent.click(screen.getByText('通常処理テスト'));
       });
@@ -450,7 +469,11 @@ describe('2段階処理 統合テスト', () => {
         { timeout: 10000 }
       );
 
-      if (capturedRequest && typeof capturedRequest === 'object' && 'formData' in capturedRequest) {
+      if (
+        capturedRequest &&
+        typeof capturedRequest === 'object' &&
+        'formData' in capturedRequest
+      ) {
         const request = capturedRequest as Request;
         const formData = await request.formData();
         expect(formData.get('companyId')).toBe('NOHARA_G');
@@ -475,7 +498,7 @@ describe('2段階処理 統合テスト', () => {
             originalFileName: 'test.pdf',
             promptUsedIdentifier: 'test',
             dbRecordId: 'test',
-            ocrOnly: true
+            ocrOnly: true,
           });
         })
       );
@@ -484,7 +507,10 @@ describe('2段階処理 統合テスト', () => {
       const onError = vi.fn();
 
       const TestComponent = () => {
-        const { processFile, isLoading } = usePdfProcessor({ onSuccess, onError });
+        const { processFile, isLoading } = usePdfProcessor({
+          onSuccess,
+          onError,
+        });
 
         const handleLoadingTest = async () => {
           await processFile(mockFile, '', 'OCR処理', true, true);
@@ -493,7 +519,9 @@ describe('2段階処理 統合テスト', () => {
         return (
           <div>
             <button onClick={handleLoadingTest}>ローディングテスト</button>
-            <div data-testid="loading-state">{isLoading ? 'Loading' : 'Ready'}</div>
+            <div data-testid="loading-state">
+              {isLoading ? 'Loading' : 'Ready'}
+            </div>
           </div>
         );
       };
@@ -508,7 +536,9 @@ describe('2段階処理 統合テスト', () => {
 
       await waitFor(
         () => {
-          expect(screen.getByTestId('loading-state')).toHaveTextContent('Loading');
+          expect(screen.getByTestId('loading-state')).toHaveTextContent(
+            'Loading'
+          );
         },
         { timeout: 5000 }
       );
@@ -520,7 +550,9 @@ describe('2段階処理 統合テスト', () => {
 
       await waitFor(
         () => {
-          expect(screen.getByTestId('loading-state')).toHaveTextContent('Ready');
+          expect(screen.getByTestId('loading-state')).toHaveTextContent(
+            'Ready'
+          );
         },
         { timeout: 10000 }
       );

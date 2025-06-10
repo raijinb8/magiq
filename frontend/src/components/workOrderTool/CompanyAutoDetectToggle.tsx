@@ -12,19 +12,28 @@ interface CompanyAutoDetectToggleProps {
   isLoading?: boolean;
 }
 
-export const CompanyAutoDetectToggle: React.FC<CompanyAutoDetectToggleProps> = ({
-  autoDetectEnabled,
-  onToggle,
-  detectionResult,
-  isLoading = false,
-}) => {
+export const CompanyAutoDetectToggle: React.FC<
+  CompanyAutoDetectToggleProps
+> = ({ autoDetectEnabled, onToggle, detectionResult, isLoading = false }) => {
   const getConfidenceBadge = (confidence: number) => {
     if (confidence >= 0.85) {
-      return <Badge variant="default">高信頼度 {(confidence * 100).toFixed(0)}%</Badge>;
+      return (
+        <Badge variant="default">
+          高信頼度 {(confidence * 100).toFixed(0)}%
+        </Badge>
+      );
     } else if (confidence >= 0.6) {
-      return <Badge variant="secondary">中信頼度 {(confidence * 100).toFixed(0)}%</Badge>;
+      return (
+        <Badge variant="secondary">
+          中信頼度 {(confidence * 100).toFixed(0)}%
+        </Badge>
+      );
     } else {
-      return <Badge variant="outline">低信頼度 {(confidence * 100).toFixed(0)}%</Badge>;
+      return (
+        <Badge variant="outline">
+          低信頼度 {(confidence * 100).toFixed(0)}%
+        </Badge>
+      );
     }
   };
 
@@ -36,14 +45,14 @@ export const CompanyAutoDetectToggle: React.FC<CompanyAutoDetectToggleProps> = (
         </label>
         <Button
           size="sm"
-          variant={autoDetectEnabled ? "default" : "outline"}
+          variant={autoDetectEnabled ? 'default' : 'outline'}
           onClick={onToggle}
           disabled={isLoading}
         >
-          {autoDetectEnabled ? "有効" : "無効"}
+          {autoDetectEnabled ? '有効' : '無効'}
         </Button>
       </div>
-      
+
       {autoDetectEnabled && (
         <div className="text-xs text-gray-500 flex items-start gap-1">
           <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
@@ -59,20 +68,26 @@ export const CompanyAutoDetectToggle: React.FC<CompanyAutoDetectToggleProps> = (
             <span className="text-xs font-medium">判定結果:</span>
             {detectionResult.detectedCompanyId ? (
               <>
-                <span className="text-xs">{detectionResult.detectedCompanyId}</span>
+                <span className="text-xs">
+                  {detectionResult.detectedCompanyId}
+                </span>
                 {getConfidenceBadge(detectionResult.confidence)}
               </>
             ) : (
-              <span className="text-xs text-gray-500">判定できませんでした</span>
+              <span className="text-xs text-gray-500">
+                判定できませんでした
+              </span>
             )}
           </div>
-          
-          {detectionResult.details?.foundKeywords && detectionResult.details.foundKeywords.length > 0 && (
-            <div className="text-xs text-gray-600">
-              検出キーワード: {detectionResult.details.foundKeywords.join(', ')}
-            </div>
-          )}
-          
+
+          {detectionResult.details?.foundKeywords &&
+            detectionResult.details.foundKeywords.length > 0 && (
+              <div className="text-xs text-gray-600">
+                検出キーワード:{' '}
+                {detectionResult.details.foundKeywords.join(', ')}
+              </div>
+            )}
+
           {detectionResult.details?.geminiReasoning && (
             <div className="text-xs text-gray-600 line-clamp-2">
               理由: {detectionResult.details.geminiReasoning}

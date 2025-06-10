@@ -100,12 +100,18 @@ export const usePdfProcessor = ({
           try {
             errorData = (await response.json()) as PdfProcessErrorResponse;
             errorMsg = errorData?.error || errorMsg; // APIが返すエラーメッセージを優先
-            
+
             // 自動判定に失敗した場合の特別な処理
-            if (errorData?.detectionResult && !errorData.detectionResult.detectedCompanyId) {
-              toast.warning('会社を自動判定できませんでした。手動で選択してください。', {
-                description: `信頼度: ${(errorData.detectionResult.confidence * 100).toFixed(0)}%`
-              });
+            if (
+              errorData?.detectionResult &&
+              !errorData.detectionResult.detectedCompanyId
+            ) {
+              toast.warning(
+                '会社を自動判定できませんでした。手動で選択してください。',
+                {
+                  description: `信頼度: ${(errorData.detectionResult.confidence * 100).toFixed(0)}%`,
+                }
+              );
             }
           } catch (jsonError) {
             // JSONパースに失敗した場合など
