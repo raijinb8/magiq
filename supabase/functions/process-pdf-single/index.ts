@@ -52,6 +52,104 @@ type CompanyIdentifier =
   | "KATOUBENIYA_MISAWA"
   | "UNKNOWN_OR_NOT_SET";
 
+// PDF処理の進捗ステータス定義
+type ProcessStatus = 
+  | 'waiting'           // 待機中（処理開始前）
+  | 'ocr_processing'    // OCR実行中（会社判定含む）
+  | 'document_creating' // 手配書作成中
+  | 'completed'         // 完了
+  | 'error';            // エラー
+
+// ステータス更新用のヘルパー関数群
+/**
+ * 初期ステータスでwork_orderレコードを作成
+ */
+async function createWorkOrderWithInitialStatus(
+  client: SupabaseClient,
+  fileName: string,
+  status: ProcessStatus = 'waiting'
+): Promise<string | null> {
+  try {
+    const { data, error } = await client
+      .from("work_orders")
+      .insert([{
+        file_name: fileName,
+        status: status,
+        uploaded_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }])
+      .select("id")
+      .single();
+
+    if (error) {
+      console.error(`[DB] Error creating work_order for ${fileName}:`, error);
+      return null;
+    }
+
+    console.log(`[DB] Created work_order record for ${fileName}, ID: ${data.id}, status: ${status}`);
+    return data.id;
+  } catch (e) {
+    console.error(`[DB] Exception creating work_order for ${fileName}:`, e);
+    return null;
+  }
+}
+
+/**
+ * work_orderのステータスを更新
+ */
+async function updateWorkOrderStatus(
+  client: SupabaseClient,
+  recordId: string,
+  status: ProcessStatus,
+  additionalFields?: Record<string, any>
+): Promise<boolean> {
+  try {
+    const updateData = {
+      status: status,
+      updated_at: new Date().toISOString(),
+      ...additionalFields,
+    };
+
+    const { error } = await client
+      .from("work_orders")
+      .update(updateData)
+      .eq("id", recordId);
+
+    if (error) {
+      console.error(`[DB] Error updating work_order ${recordId} to status ${status}:`, error);
+      return false;
+    }
+
+    console.log(`[DB] Updated work_order ${recordId} to status: ${status}`);
+    return true;
+  } catch (e) {
+    console.error(`[DB] Exception updating work_order ${recordId}:`, e);
+    return false;
+  }
+}
+
+/**
+ * エラー発生時のwork_order更新
+ */
+async function updateWorkOrderWithError(
+  client: SupabaseClient,
+  recordId: string,
+  errorMessage: string,
+  errorDetails?: string
+): Promise<boolean> {
+  // エラー詳細がある場合は、メッセージに追加
+  const fullErrorMessage = errorDetails 
+    ? `${errorMessage}\n詳細: ${errorDetails}`
+    : errorMessage;
+
+  const additionalFields: Record<string, any> = {
+    error_message: fullErrorMessage,
+  };
+
+  return await updateWorkOrderStatus(client, recordId, 'error', additionalFields);
+}
+
 /**
  * OCR専用の会社判定処理
  */
