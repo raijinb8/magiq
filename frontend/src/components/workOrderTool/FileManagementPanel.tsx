@@ -12,10 +12,13 @@ import {
   SelectLabel,
 } from '@/components/ui/select';
 import { COMPANY_OPTIONS } from '@/constants/company';
+import { CompanyAutoDetectToggle } from './CompanyAutoDetectToggle';
 import type {
   CompanyOptionValue,
   PdfFile,
   ProcessedCompanyInfo,
+  FileSelectionState,
+  CompanyDetectionResult,
 } from '@/types';
 
 interface FileManagementPanelProps {
@@ -31,6 +34,18 @@ interface FileManagementPanelProps {
   onFileSelect: (event: React.ChangeEvent<HTMLInputElement>) => void; // input[type=file] の onChange ハンドラ
   onFilePreviewRequest: (file: PdfFile) => void; // リスト内のファイルクリック時のプレビュー要求
   processedCompanyInfo: ProcessedCompanyInfo; // リストアイテムのスタイル用
+  // バッチ処理用の新しいプロパティ
+  batchMode?: boolean; // バッチモードの有効/無効
+  selectedFiles?: FileSelectionState; // 選択されたファイルの状態
+  onFileSelectionChange?: (fileName: string, selected: boolean) => void; // ファイル選択の変更
+  onSelectAll?: () => void; // 全選択
+  onDeselectAll?: () => void; // 全解除
+  onBatchProcess?: () => void; // バッチ処理実行
+  batchProcessing?: boolean; // バッチ処理中フラグ
+  // 自動判定用の新しいプロパティ
+  autoDetectEnabled?: boolean;
+  onAutoDetectToggle?: () => void;
+  lastDetectionResult?: CompanyDetectionResult | null;
 }
 
 export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
@@ -46,7 +61,20 @@ export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
   onFileSelect,
   onFilePreviewRequest,
   processedCompanyInfo,
+  // バッチ処理用の新しいプロパティ
+  batchMode = false,
+  selectedFiles = {},
+  onFileSelectionChange,
+  onSelectAll,
+  onDeselectAll,
+  onBatchProcess,
+  batchProcessing = false,
+  // 自動判定用
+  autoDetectEnabled = false,
+  onAutoDetectToggle,
+  lastDetectionResult,
 }) => {
+  const selectedCount = Object.values(selectedFiles).filter((v) => v).length;
   // リストアイテムのスタイルを決定するヘルパー関数 (元のclassNameロジックを参考に)
   const getListItemClasses = (file: PdfFile): string => {
     const baseClasses =
@@ -96,9 +124,17 @@ export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
         >
           処理対象の会社:
         </label>
-        <Select value={selectedCompanyId} onValueChange={onCompanyChange}>
+        <Select
+          value={selectedCompanyId}
+          onValueChange={onCompanyChange}
+          disabled={autoDetectEnabled && !batchMode}
+        >
           <SelectTrigger id="company-select" className="w-full">
-            <SelectValue placeholder="会社を選択してください" />
+            <SelectValue
+              placeholder={
+                autoDetectEnabled ? '自動判定中...' : '会社を選択してください'
+              }
+            />
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
@@ -121,6 +157,19 @@ export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
           </SelectContent>
         </Select>
       </div>
+
+      {/* 自動判定トグル */}
+      {!batchMode && (
+        <div className="mb-4">
+          <CompanyAutoDetectToggle
+            autoDetectEnabled={autoDetectEnabled}
+            onToggle={onAutoDetectToggle || (() => {})}
+            detectionResult={lastDetectionResult}
+            isLoading={isLoading}
+          />
+        </div>
+      )}
+
       <Button
         className="w-full mb-4"
         variant="outline"
@@ -128,6 +177,45 @@ export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
       >
         PDFを選択してアップロード
       </Button>
+
+      {/* バッチ処理モードの場合のコントロール */}
+      {batchMode && uploadedFiles.length > 0 && (
+        <div className="mb-4 space-y-2">
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onSelectAll}
+              disabled={
+                selectedCount === uploadedFiles.length || batchProcessing
+              }
+              className="flex-1"
+            >
+              全選択
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onDeselectAll}
+              disabled={selectedCount === 0 || batchProcessing}
+              className="flex-1"
+            >
+              全解除
+            </Button>
+          </div>
+          <Button
+            className="w-full"
+            onClick={onBatchProcess}
+            disabled={
+              selectedCount === 0 || !selectedCompanyId || batchProcessing
+            }
+          >
+            {batchProcessing
+              ? `処理中... (${selectedCount}個のファイル)`
+              : `選択したファイルを一括処理 (${selectedCount}個)`}
+          </Button>
+        </div>
+      )}
       <input
         type="file"
         ref={fileInputRef}
@@ -143,10 +231,37 @@ export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
               {uploadedFiles.map((file, index) => (
                 <li
                   key={`${file.name}-${file.lastModified}-${index}`} // lastModified をキーに含めることで同名別ファイルに対応
-                  className={getListItemClasses(file)}
-                  onClick={() => onFilePreviewRequest(file)}
+                  className={`${getListItemClasses(file)} ${batchMode ? 'flex items-center gap-2' : ''}`}
+                  onClick={(e) => {
+                    // バッチモードの場合、チェックボックス領域のクリックは無視
+                    if (
+                      batchMode &&
+                      (e.target as HTMLInputElement).type === 'checkbox'
+                    ) {
+                      return;
+                    }
+                    // バッチモードでも、チェックボックス以外の領域をクリックしたらプレビュー
+                    if (!batchProcessing) {
+                      onFilePreviewRequest(file);
+                    }
+                  }}
                 >
-                  {file.name} ({(file.size / 1024).toFixed(2)} KB)
+                  {/* バッチモードの場合はチェックボックスを表示 */}
+                  {batchMode && (
+                    <input
+                      type="checkbox"
+                      checked={selectedFiles[file.name] || false}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        onFileSelectionChange?.(file.name, e.target.checked);
+                      }}
+                      disabled={batchProcessing}
+                      className="cursor-pointer"
+                    />
+                  )}
+                  <span className="flex-1">
+                    {file.name} ({(file.size / 1024).toFixed(2)} KB)
+                  </span>
                   {/* ステータス表示 (元のロジックを参考に) */}
                   {processingFile?.name === file.name && isLoading && (
                     <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">

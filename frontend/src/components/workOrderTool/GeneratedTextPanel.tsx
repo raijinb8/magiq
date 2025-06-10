@@ -6,6 +6,7 @@ import type {
   ProcessedCompanyInfo,
   PdfFile,
   CompanyOptionValue,
+  CompanyDetectionResult,
 } from '@/types';
 
 interface GeneratedTextPanelProps {
@@ -15,6 +16,8 @@ interface GeneratedTextPanelProps {
   pdfFileToDisplayForPlaceholder: PdfFile | null; // プレビュー中のファイル (プレースホルダー用)
   selectedCompanyIdForPlaceholder: CompanyOptionValue; // 選択中の会社 (プレースホルダー用)
   processedCompanyInfo: ProcessedCompanyInfo; // 表示ヘッダー用 (ファイル名、会社名)
+  lastDetectionResult?: CompanyDetectionResult | null; // 自動判定結果
+  onRequestFeedback?: () => void; // フィードバックモーダルを開く
 }
 
 export const GeneratedTextPanel: React.FC<GeneratedTextPanelProps> = ({
@@ -24,6 +27,8 @@ export const GeneratedTextPanel: React.FC<GeneratedTextPanelProps> = ({
   pdfFileToDisplayForPlaceholder,
   selectedCompanyIdForPlaceholder,
   processedCompanyInfo,
+  lastDetectionResult,
+  onRequestFeedback,
 }) => {
   const getPlaceholderText = (): string => {
     if (isLoading && processingFile) {
@@ -58,12 +63,21 @@ export const GeneratedTextPanel: React.FC<GeneratedTextPanelProps> = ({
             </>
           )}
         </h2>
-        <div>
+        <div className="flex gap-2">
+          {/* 自動判定結果がある場合、フィードバックボタンを表示 */}
+          {lastDetectionResult &&
+            onRequestFeedback &&
+            generatedText &&
+            !generatedText.startsWith('エラー') && (
+              <Button variant="outline" size="sm" onClick={onRequestFeedback}>
+                判定を修正
+              </Button>
+            )}
           {/* これらのボタンは現状ダミーなので、機能実装時にprops経由でハンドラを受け取る */}
-          <Button variant="outline" size="sm" className="mr-2" disabled>
+          <Button variant="outline" size="sm" disabled>
             戻る (仮)
           </Button>
-          <Button variant="outline" size="sm" className="mr-2" disabled>
+          <Button variant="outline" size="sm" disabled>
             次へ (仮)
           </Button>
           <Button size="sm" disabled>

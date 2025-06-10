@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
+import { supabase } from '@/lib/supabase';
 
 // 型定義と定数
 import type {
@@ -11,6 +12,7 @@ import type {
   ProcessedCompanyInfo,
   PdfFile,
   PdfProcessSuccessResponse,
+  CompanyDetectionResult,
 } from '@/types';
 import { ALL_COMPANY_OPTIONS } from '@/constants/company'; // すべての会社情報 (ラベル取得用)
 
@@ -25,6 +27,7 @@ import { useDragAndDrop } from '@/hooks/useDragAndDrop';
 import { FileManagementPanel } from '@/components/workOrderTool/FileManagementPanel';
 import { PdfPreviewPanel } from '@/components/workOrderTool/PdfPreviewPanel';
 import { GeneratedTextPanel } from '@/components/workOrderTool/GeneratedTextPanel';
+import { DetectionFeedbackModal } from '@/components/workOrderTool/DetectionFeedbackModal';
 
 // PDFのレンダリングを効率的に行うための Web Worker を設定
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -42,6 +45,13 @@ const WorkOrderTool: React.FC = () => {
   // AI処理結果に関する情報 (ファイル名、会社ラベル)
   const [processedCompanyInfo, setProcessedCompanyInfo] =
     useState<ProcessedCompanyInfo>({ file: null, companyLabel: '' });
+
+  // 自動判定用の状態
+  const [autoDetectEnabled, setAutoDetectEnabled] = useState<boolean>(true); // デフォルトで有効
+  const [lastDetectionResult, setLastDetectionResult] =
+    useState<CompanyDetectionResult | null>(null);
+  const [showFeedbackModal, setShowFeedbackModal] = useState<boolean>(false);
+  const [lastWorkOrderId, setLastWorkOrderId] = useState<string | null>(null);
 
   // --- カスタムフックの利用 ---
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -85,6 +95,59 @@ const WorkOrderTool: React.FC = () => {
       setGeneratedText(
         data.generatedText || 'テキストが生成されませんでした。'
       );
+
+      // 自動判定結果を保存
+      if (data.detectionResult) {
+        setLastDetectionResult(data.detectionResult);
+
+        // OCRのみの場合はStage 2へ進む
+        if (data.ocrOnly && data.detectionResult.detectedCompanyId) {
+          const detectedCompanyId = data.detectionResult
+            .detectedCompanyId as CompanyOptionValue;
+          setSelectedCompanyId(detectedCompanyId);
+
+          toast.success(`会社を自動判定しました: ${detectedCompanyId}`, {
+            description: `信頼度: ${(data.detectionResult.confidence * 100).toFixed(0)}% - 手配書作成を開始します`,
+          });
+
+          // Stage 2: 手配書作成
+          const companyLabel =
+            ALL_COMPANY_OPTIONS.find((opt) => opt.value === detectedCompanyId)
+              ?.label || detectedCompanyId;
+
+          setTimeout(async () => {
+            toast.info(`「${file.name}」の手配書作成を開始します`, {
+              description: `会社: ${companyLabel}`,
+            });
+
+            await processFile(
+              file,
+              detectedCompanyId,
+              companyLabel,
+              false, // enableAutoDetection = false (判定は完了済み)
+              false // ocrOnly = false (手配書作成を実行)
+            );
+          }, 1000); // 1秒待ってからStage 2を実行
+
+          return; // Stage 1完了、Stage 2は非同期で実行
+        }
+
+        // 通常の自動判定結果処理
+        if (data.detectionResult.detectedCompanyId && !selectedCompanyId) {
+          setSelectedCompanyId(
+            data.detectionResult.detectedCompanyId as CompanyOptionValue
+          );
+          toast.info(
+            `会社を自動判定しました: ${data.detectionResult.detectedCompanyId} (信頼度: ${(data.detectionResult.confidence * 100).toFixed(0)}%)`
+          );
+        }
+      }
+
+      // Work Order IDを保存（フィードバック用）
+      if (data.dbRecordId) {
+        setLastWorkOrderId(data.dbRecordId);
+      }
+
       const companyLabel =
         ALL_COMPANY_OPTIONS.find((opt) => opt.value === data.identifiedCompany)
           ?.label || String(data.identifiedCompany);
@@ -114,8 +177,34 @@ const WorkOrderTool: React.FC = () => {
   });
 
   /**
+   * 2段階処理：OCR+会社判定 → 手配書作成
+   */
+  const handleTwoStageProcess = useCallback(async () => {
+    if (!processingFile) return;
+
+    try {
+      // Stage 1: OCR + 会社判定
+      toast.info(`「${processingFile.name}」の会社判定を開始します...`, {
+        description: 'PDFから会社情報を抽出中',
+      });
+
+      // OCR専用処理で会社判定を実行
+      await processFile(
+        processingFile,
+        '', // 会社IDは未選択
+        'OCR処理',
+        true, // enableAutoDetection = true
+        true // ocrOnly = true
+      );
+    } catch (error) {
+      console.error('[Two Stage Process] Error in OCR stage:', error);
+      toast.error('会社判定中にエラーが発生しました');
+    }
+  }, [processingFile, processFile]);
+
+  /**
    * 「AI実行」ボタンが押されたときの処理。
-   * 現在 processingFile としてマークされているファイルに対してAI処理を開始します。
+   * 自動判定が有効な場合は2段階処理。
    */
   const handleAiExecution = useCallback(async () => {
     if (!processingFile) {
@@ -125,36 +214,51 @@ const WorkOrderTool: React.FC = () => {
       });
       return;
     }
-    if (!selectedCompanyId) {
+
+    // 自動判定が無効で、会社が選択されていない場合のみエラー
+    if (!autoDetectEnabled && !selectedCompanyId) {
       toast.error('会社が選択されていません。', {
         description:
           '処理を開始する前に、ドロップダウンから会社を選択してください。',
       });
       return;
     }
+
     if (isLoading) {
       toast.info('現在別のファイルを処理中です。少々お待ちください。');
       return;
     }
 
-    // setGeneratedText(''); // AI処理開始時にクリアするかはUX次第 (processFileのコールバックで設定される)
-    // setProcessedCompanyInfo({ file: null, companyLabel: '' }); // 同上
+    setLastDetectionResult(null); // 前回の判定結果をクリア
 
-    const companyLabelForToast =
-      ALL_COMPANY_OPTIONS.find((c) => c.value === selectedCompanyId)?.label ||
-      selectedCompanyId;
+    // 自動判定有効の場合は2段階処理
+    if (autoDetectEnabled) {
+      await handleTwoStageProcess();
+    } else {
+      // 自動判定無効の場合は従来通りの1段階処理
+      const companyLabelForToast = selectedCompanyId
+        ? ALL_COMPANY_OPTIONS.find((c) => c.value === selectedCompanyId)
+            ?.label || selectedCompanyId
+        : '会社未選択';
 
-    toast.info(
-      `「${processingFile.name}」のAI処理を開始します (会社: ${companyLabelForToast})...`
-    );
-    await processFile(processingFile, selectedCompanyId, companyLabelForToast);
+      toast.info(
+        `「${processingFile.name}」の手配書作成を開始します (会社: ${companyLabelForToast})...`
+      );
+      await processFile(
+        processingFile,
+        selectedCompanyId,
+        companyLabelForToast,
+        false,
+        false
+      );
+    }
   }, [
     processingFile,
     selectedCompanyId,
+    autoDetectEnabled,
     isLoading,
     processFile,
-    // setGeneratedText, // 実際には不要 (processFileのコールバックで設定)
-    // setProcessedCompanyInfo, // 実際には不要 (processFileのコールバックで設定)
+    handleTwoStageProcess,
   ]);
 
   // --- 連携ロジックとコールバック関数 ---
@@ -188,6 +292,7 @@ const WorkOrderTool: React.FC = () => {
       setProcessingFile(file); // ★ プレビュー中のファイルを「次にAI実行する対象」としてマーク
       setGeneratedText(''); // プレビュー変更時は生成テキストをクリア
       setProcessedCompanyInfo({ file: null, companyLabel: '' }); // 処理情報もクリア
+      setLastDetectionResult(null); // 前回の判定結果もクリア
       // ページ数などは Document の onLoadSuccess でリセットされる (handleDocumentLoadSuccess経由)
       toast.dismiss(); // 既存の通知があれば消す
       toast.info(`「${file.name}」をプレビュー中です。`);
@@ -224,6 +329,47 @@ const WorkOrderTool: React.FC = () => {
     // ★ ここでは自動プレビューや自動処理は行わない
   };
 
+  /**
+   * 判定フィードバックの送信
+   */
+  const handleDetectionFeedback = async (
+    correctedCompanyId: string,
+    correctionReason: string
+  ) => {
+    if (!lastWorkOrderId || !lastDetectionResult) {
+      toast.error('フィードバック送信に必要な情報がありません');
+      return;
+    }
+
+    try {
+      const session = await supabase.auth.getSession();
+      const userId = session.data.session?.user?.id;
+
+      const { error } = await supabase
+        .from('company_detection_history')
+        .insert({
+          work_order_id: lastWorkOrderId,
+          file_name: processingFile?.name || '',
+          detected_company_id: lastDetectionResult.detectedCompanyId,
+          detection_confidence: lastDetectionResult.confidence,
+          detection_details: lastDetectionResult.details,
+          user_corrected_company_id: correctedCompanyId,
+          correction_reason: correctionReason,
+          created_by: userId,
+        });
+
+      if (error) throw error;
+
+      toast.success(
+        'フィードバックを送信しました。今後の判定精度向上に活用されます。'
+      );
+      setShowFeedbackModal(false);
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
+      toast.error('フィードバックの送信に失敗しました');
+    }
+  };
+
   // --- JSXレンダリング ---
   return (
     <div
@@ -252,6 +398,10 @@ const WorkOrderTool: React.FC = () => {
           onFileSelect={handleFileInputChange} // input[type=file] の onChange
           onFilePreviewRequest={handleFilePreviewRequest} // リストアイテムクリック時
           processedCompanyInfo={processedCompanyInfo}
+          // 自動判定用のプロパティ
+          autoDetectEnabled={autoDetectEnabled}
+          onAutoDetectToggle={() => setAutoDetectEnabled(!autoDetectEnabled)}
+          lastDetectionResult={lastDetectionResult}
         />
 
         <main className="flex-1 flex flex-row overflow-hidden">
@@ -273,7 +423,9 @@ const WorkOrderTool: React.FC = () => {
             isLoading={isLoading && !!processingFile} // AI処理中かつ対象ファイルがある場合
             processingFileForHeader={pdfFileToDisplay} // ヘッダー表示用 (プレビュー中のファイル)
             onExecuteAi={handleAiExecution} // AI実行関数を渡す
-            canExecuteAi={!!processingFile && !!selectedCompanyId} // 実行可能条件を渡す (isLoadingはPanel内で考慮も可)
+            canExecuteAi={
+              !!processingFile && (!!selectedCompanyId || autoDetectEnabled)
+            } // 実行可能条件を渡す (自動判定有効時は会社未選択でもOK)
           />
 
           <GeneratedTextPanel
@@ -283,9 +435,27 @@ const WorkOrderTool: React.FC = () => {
             pdfFileToDisplayForPlaceholder={pdfFileToDisplay} // プレースホルダー用 (プレビュー中のファイル)
             selectedCompanyIdForPlaceholder={selectedCompanyId} // プレースホルダー用
             processedCompanyInfo={processedCompanyInfo}
+            lastDetectionResult={lastDetectionResult}
+            onRequestFeedback={() => setShowFeedbackModal(true)}
           />
         </main>
       </div>
+
+      {/* フィードバックモーダル */}
+      <DetectionFeedbackModal
+        isOpen={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
+        detectionResult={
+          lastDetectionResult || {
+            detectedCompanyId: null,
+            confidence: 0,
+            method: 'unknown',
+            details: {},
+          }
+        }
+        currentFileName={processingFile?.name || ''}
+        onSubmitFeedback={handleDetectionFeedback}
+      />
     </div>
   );
 };
