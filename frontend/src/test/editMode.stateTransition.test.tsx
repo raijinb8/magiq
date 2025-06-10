@@ -1,7 +1,6 @@
 // src/test/editMode.stateTransition.test.tsx
-import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { GeneratedTextPanel } from '@/components/workOrderTool/GeneratedTextPanel';
 import { updateWorkOrderEditedText } from '@/lib/api';
@@ -149,7 +148,7 @@ describe('GeneratedTextPanel - 編集モード状態遷移', () => {
 
     it('保存中はボタンが無効化される', async () => {
       const user = userEvent.setup();
-      let resolveUpdate: (value: any) => void;
+      let resolveUpdate: (value: Awaited<ReturnType<typeof updateWorkOrderEditedText>>) => void;
       const updatePromise = new Promise((resolve) => {
         resolveUpdate = resolve;
       });

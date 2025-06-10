@@ -1,5 +1,4 @@
 // src/test/editSave.errorHandling.test.tsx
-import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -205,7 +204,7 @@ describe('GeneratedTextPanel - 編集保存エラーハンドリング', () => {
   describe('保存中の状態制御', () => {
     it('保存中にキャンセルボタンが無効化される', async () => {
       const user = userEvent.setup();
-      let resolveUpdate: (value: any) => void;
+      let resolveUpdate: (value: Awaited<ReturnType<typeof updateWorkOrderEditedText>>) => void;
       const updatePromise = new Promise((resolve) => {
         resolveUpdate = resolve;
       });
