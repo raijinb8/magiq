@@ -1,37 +1,33 @@
 // supabase/functions/process-pdf-single/index.ts
 
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI } from '@google/genai'
 // Supabaseクライアントをインポート (Deno用)
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import { getPrompt, PromptFunction } from "./promptRegistry.ts";
-import { encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts"; // Base64エンコード用
-import { CompanyDetector } from "./companyDetector.ts";
-import {
-  OCR_COMPANY_DETECTION_PROMPT,
-  type OcrDetectionResponse,
-} from "./ocrPrompt.ts";
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { getPrompt, PromptFunction } from './promptRegistry.ts'
+import { encodeBase64 } from 'https://deno.land/std@0.224.0/encoding/base64.ts' // Base64エンコード用
+import { CompanyDetector } from './companyDetector.ts'
+import { OCR_COMPANY_DETECTION_PROMPT, type OcrDetectionResponse } from './ocrPrompt.ts'
 
-console.log("process-pdf-single function (v2 - with Gen) has been invoked!");
+console.log('process-pdf-single function (v2 - with Gen) has been invoked!')
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*", // 開発中は '*'、本番ではReactアプリのオリジン
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+  'Access-Control-Allow-Origin': '*', // 開発中は '*'、本番ではReactアプリのオリジン
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+}
 
 // グローバルスコープでSupabaseクライアントを一度だけ初期化 (パフォーマンスのため)
 // 環境変数は関数の呼び出しごとにDeno.env.getで取得するのがより安全・確実な場合もある
 // ここでは起動時に一度取得する例
-let supabaseClient: SupabaseClient | null = null;
+let supabaseClient: SupabaseClient | null = null
 try {
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
   if (!supabaseUrl || !supabaseServiceKey) {
     console.error(
-      "CRITICAL: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is not set.",
-    );
+      'CRITICAL: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is not set.',
+    )
   } else {
     supabaseClient = createClient(supabaseUrl, supabaseServiceKey, {
       auth: {
@@ -40,25 +36,25 @@ try {
         persistSession: false,
         detectSessionInUrl: false,
       },
-    });
-    console.log("Supabase client initialized for server-side use.");
+    })
+    console.log('Supabase client initialized for server-side use.')
   }
 } catch (e) {
-  console.error("Error initializing Supabase client:", e);
+  console.error('Error initializing Supabase client:', e)
 }
 
 type CompanyIdentifier =
-  | "NOHARA_G"
-  | "KATOUBENIYA_MISAWA"
-  | "UNKNOWN_OR_NOT_SET";
+  | 'NOHARA_G'
+  | 'KATOUBENIYA_MISAWA'
+  | 'UNKNOWN_OR_NOT_SET'
 
 // PDF処理の進捗ステータス定義
-type ProcessStatus = 
-  | 'waiting'           // 待機中（処理開始前）
-  | 'ocr_processing'    // OCR実行中（会社判定含む）
+type ProcessStatus =
+  | 'waiting' // 待機中（処理開始前）
+  | 'ocr_processing' // OCR実行中（会社判定含む）
   | 'document_creating' // 手配書作成中
-  | 'completed'         // 完了
-  | 'error';            // エラー
+  | 'completed' // 完了
+  | 'error' // エラー
 
 // ステータス更新用のヘルパー関数群
 /**
@@ -67,11 +63,11 @@ type ProcessStatus =
 async function createWorkOrderWithInitialStatus(
   client: SupabaseClient,
   fileName: string,
-  status: ProcessStatus = 'waiting'
+  status: ProcessStatus = 'waiting',
 ): Promise<string | null> {
   try {
     const { data, error } = await client
-      .from("work_orders")
+      .from('work_orders')
       .insert([{
         file_name: fileName,
         status: status,
@@ -79,19 +75,19 @@ async function createWorkOrderWithInitialStatus(
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }])
-      .select("id")
-      .single();
+      .select('id')
+      .single()
 
     if (error) {
-      console.error(`[DB] Error creating work_order for ${fileName}:`, error);
-      return null;
+      console.error(`[DB] Error creating work_order for ${fileName}:`, error)
+      return null
     }
 
-    console.log(`[DB] Created work_order record for ${fileName}, ID: ${data.id}, status: ${status}`);
-    return data.id;
+    console.log(`[DB] Created work_order record for ${fileName}, ID: ${data.id}, status: ${status}`)
+    return data.id
   } catch (e) {
-    console.error(`[DB] Exception creating work_order for ${fileName}:`, e);
-    return null;
+    console.error(`[DB] Exception creating work_order for ${fileName}:`, e)
+    return null
   }
 }
 
@@ -102,30 +98,30 @@ async function updateWorkOrderStatus(
   client: SupabaseClient,
   recordId: string,
   status: ProcessStatus,
-  additionalFields?: Record<string, any>
+  additionalFields?: Record<string, any>,
 ): Promise<boolean> {
   try {
     const updateData = {
       status: status,
       updated_at: new Date().toISOString(),
       ...additionalFields,
-    };
-
-    const { error } = await client
-      .from("work_orders")
-      .update(updateData)
-      .eq("id", recordId);
-
-    if (error) {
-      console.error(`[DB] Error updating work_order ${recordId} to status ${status}:`, error);
-      return false;
     }
 
-    console.log(`[DB] Updated work_order ${recordId} to status: ${status}`);
-    return true;
+    const { error } = await client
+      .from('work_orders')
+      .update(updateData)
+      .eq('id', recordId)
+
+    if (error) {
+      console.error(`[DB] Error updating work_order ${recordId} to status ${status}:`, error)
+      return false
+    }
+
+    console.log(`[DB] Updated work_order ${recordId} to status: ${status}`)
+    return true
   } catch (e) {
-    console.error(`[DB] Exception updating work_order ${recordId}:`, e);
-    return false;
+    console.error(`[DB] Exception updating work_order ${recordId}:`, e)
+    return false
   }
 }
 
@@ -136,18 +132,16 @@ async function updateWorkOrderWithError(
   client: SupabaseClient,
   recordId: string,
   errorMessage: string,
-  errorDetails?: string
+  errorDetails?: string,
 ): Promise<boolean> {
   // エラー詳細がある場合は、メッセージに追加
-  const fullErrorMessage = errorDetails 
-    ? `${errorMessage}\n詳細: ${errorDetails}`
-    : errorMessage;
+  const fullErrorMessage = errorDetails ? `${errorMessage}\n詳細: ${errorDetails}` : errorMessage
 
   const additionalFields: Record<string, any> = {
     error_message: fullErrorMessage,
-  };
+  }
 
-  return await updateWorkOrderStatus(client, recordId, 'error', additionalFields);
+  return await updateWorkOrderStatus(client, recordId, 'error', additionalFields)
 }
 
 /**
@@ -158,13 +152,13 @@ async function performOcrCompanyDetection(
   pdfFile: File,
   pdfBase64Data: string,
 ): Promise<OcrDetectionResponse> {
-  const genAI = new GoogleGenAI({ apiKey: geminiApiKey });
+  const genAI = new GoogleGenAI({ apiKey: geminiApiKey })
 
   try {
     const response = await genAI.models.generateContent({
-      model: "gemini-2.5-flash-preview-04-17",
+      model: 'gemini-2.5-flash-preview-04-17',
       contents: [{
-        role: "user",
+        role: 'user',
         parts: [
           { text: OCR_COMPANY_DETECTION_PROMPT },
           {
@@ -175,204 +169,200 @@ async function performOcrCompanyDetection(
           },
         ],
       }],
-    });
+    })
 
-    const responseText = response.text || "";
-    console.log("[OCR Detection] Gemini raw response:", responseText);
+    const responseText = response.text || ''
+    console.log('[OCR Detection] Gemini raw response:', responseText)
 
     // JSONレスポンスをパース
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/)
     if (!jsonMatch) {
-      throw new Error("No JSON found in OCR response");
+      throw new Error('No JSON found in OCR response')
     }
 
-    const result = JSON.parse(jsonMatch[0]) as OcrDetectionResponse;
+    const result = JSON.parse(jsonMatch[0]) as OcrDetectionResponse
 
     // バリデーション
     return {
       company_id: result.company_id || null,
-      confidence: typeof result.confidence === "number" ? result.confidence : 0,
-      detected_text: result.detected_text || "",
-      found_keywords: Array.isArray(result.found_keywords)
-        ? result.found_keywords
-        : [],
-      reasoning: result.reasoning || "",
-    };
+      confidence: typeof result.confidence === 'number' ? result.confidence : 0,
+      detected_text: result.detected_text || '',
+      found_keywords: Array.isArray(result.found_keywords) ? result.found_keywords : [],
+      reasoning: result.reasoning || '',
+    }
   } catch (error) {
-    console.error("[OCR Detection] Error calling Gemini API:", error);
-    throw error;
+    console.error('[OCR Detection] Error calling Gemini API:', error)
+    throw error
   }
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    if (req.method !== "POST") {
+    if (req.method !== 'POST') {
       return new Response(
-        JSON.stringify({ error: "Method Not Allowed. Please use POST." }),
+        JSON.stringify({ error: 'Method Not Allowed. Please use POST.' }),
         {
           status: 405,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         },
-      );
+      )
     }
 
     // Content-Typeのチェック (multipart/form-data を期待)
-    const contentType = req.headers.get("content-type");
+    const contentType = req.headers.get('content-type')
     if (
-      !contentType || !contentType.toLowerCase().includes("multipart/form-data")
+      !contentType || !contentType.toLowerCase().includes('multipart/form-data')
     ) {
       console.warn(
         `Invalid Content-Type: "${contentType}". Expected multipart/form-data.`,
-      );
+      )
       return new Response(
         JSON.stringify({
           error:
-            "不正なリクエスト形式です。Content-Type は multipart/form-data である必要があります。",
+            '不正なリクエスト形式です。Content-Type は multipart/form-data である必要があります。',
         }),
         {
           status: 415, // Unsupported Media Type
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         },
-      );
+      )
     }
 
-    let formData: FormData;
+    let formData: FormData
     try {
       // リクエストボディを FormData としてパース
-      formData = await req.formData();
+      formData = await req.formData()
     } catch (e: unknown) {
       let errorMessage =
-        "リクエストボディの解析に失敗しました。multipart/form-data 形式が正しいか確認してください。";
+        'リクエストボディの解析に失敗しました。multipart/form-data 形式が正しいか確認してください。'
       if (e instanceof Error) {
-        errorMessage = e.message; // Deno の formData() が投げるエラーのメッセージを利用
-      } else if (typeof e === "string") {
-        errorMessage = e;
+        errorMessage = e.message // Deno の formData() が投げるエラーのメッセージを利用
+      } else if (typeof e === 'string') {
+        errorMessage = e
       }
-      console.error("Failed to parse FormData body:", errorMessage, e); // 元のエラーオブジェクトもログに出力
+      console.error('Failed to parse FormData body:', errorMessage, e) // 元のエラーオブジェクトもログに出力
       return new Response(
-        JSON.stringify({ error: "不正なリクエストボディです。" }),
+        JSON.stringify({ error: '不正なリクエストボディです。' }),
         {
           status: 400, // Bad Request
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         },
-      );
+      )
     }
 
     // パラメーター取得
-    let companyIdFromFrontend = formData.get("companyId") as CompanyIdentifier; // フロントエンドから会社IDを受け取る
-    const enableAutoDetection = formData.get("enableAutoDetection") === "true"; // 自動判定を有効にするかどうか
-    const ocrOnly = formData.get("ocrOnly") === "true"; // OCRと会社判定のみを実行するかどうか
+    let companyIdFromFrontend = formData.get('companyId') as CompanyIdentifier // フロントエンドから会社IDを受け取る
+    const enableAutoDetection = formData.get('enableAutoDetection') === 'true' // 自動判定を有効にするかどうか
+    const ocrOnly = formData.get('ocrOnly') === 'true' // OCRと会社判定のみを実行するかどうか
 
-    const pdfFile = formData.get("pdfFile"); // フロントエンドで append したキー名
+    const pdfFile = formData.get('pdfFile') // フロントエンドで append したキー名
     // バリデーション
     if (!(pdfFile instanceof File)) {
       return new Response(
         JSON.stringify({
-          error: "PDFファイルが提供されていないか、形式が無効です。",
+          error: 'PDFファイルが提供されていないか、形式が無効です。',
         }),
         {
           status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         },
-      );
+      )
     }
 
-    const fileName = pdfFile.name; // フロントエンドから送られてくるファイル名
+    const fileName = pdfFile.name // フロントエンドから送られてくるファイル名
     if (!fileName) {
       return new Response(
-        JSON.stringify({ error: "fileName is required in the request body." }),
+        JSON.stringify({ error: 'fileName is required in the request body.' }),
         {
           status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         },
-      );
+      )
     }
 
     console.log(
       `[${
         new Date().toISOString()
       }] Received request for ${fileName}, Company ID from frontend: ${companyIdFromFrontend}`,
-    );
+    )
 
     // PDFファイルの内容をBase64エンコード
     // ステップ1: PDFファイルの内容を ArrayBuffer として読み込む
-    let fileArrayBuffer: ArrayBuffer;
+    let fileArrayBuffer: ArrayBuffer
     try {
-      fileArrayBuffer = await pdfFile.arrayBuffer();
+      fileArrayBuffer = await pdfFile.arrayBuffer()
       console.log(
         `[PDF Processing] Successfully read file into ArrayBuffer, size: ${fileArrayBuffer.byteLength} bytes`,
-      );
+      )
     } catch (bufferError) {
       console.error(
         `[PDF Processing] Failed to read PDF file content for ${fileName}:`,
         bufferError,
-      );
+      )
       return new Response(
-        JSON.stringify({ error: "PDFファイル内容の読み取りに失敗しました。" }),
+        JSON.stringify({ error: 'PDFファイル内容の読み取りに失敗しました。' }),
         {
           status: 500, // Internal Server Error
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         },
-      );
+      )
     }
     // ステップ2: ArrayBuffer を Base64 文字列にエンコードする
-    const pdfBase64Data = encodeBase64(fileArrayBuffer);
+    const pdfBase64Data = encodeBase64(fileArrayBuffer)
     console.log(
       `[PDF Processing] Successfully Base64 encoded PDF content for ${fileName}.`,
-    );
+    )
 
     // 1. Gemini APIキーを環境変数から取得
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY')
     if (!GEMINI_API_KEY) {
       console.error(
-        "CRITICAL: GEMINI_API_KEY is not set in environment variables.",
-      );
+        'CRITICAL: GEMINI_API_KEY is not set in environment variables.',
+      )
       return new Response(
         JSON.stringify({
-          error: "API key for AI service is not configured on the server.",
+          error: 'API key for AI service is not configured on the server.',
         }),
         {
           status: 500, // Internal Server Error
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         },
-      );
+      )
     }
 
     // OCR専用処理の場合
     if (ocrOnly) {
       console.log(
-        `[${
-          new Date().toISOString()
-        }] Starting OCR-only company detection for ${fileName}`,
-      );
+        `[${new Date().toISOString()}] Starting OCR-only company detection for ${fileName}`,
+      )
 
       // 初期レコード作成（waiting状態）
-      let dbRecordId: string | null = null;
+      let dbRecordId: string | null = null
       if (supabaseClient) {
         dbRecordId = await createWorkOrderWithInitialStatus(
           supabaseClient,
           fileName,
-          'waiting'
-        );
-        
+          'waiting',
+        )
+
         if (!dbRecordId) {
           return new Response(
             JSON.stringify({
-              error: "データベースレコードの作成に失敗しました",
+              error: 'データベースレコードの作成に失敗しました',
             }),
             {
               status: 500,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             },
-          );
+          )
         }
 
         // OCR処理開始時のステータス更新
-        await updateWorkOrderStatus(supabaseClient, dbRecordId, 'ocr_processing');
+        await updateWorkOrderStatus(supabaseClient, dbRecordId, 'ocr_processing')
       }
 
       try {
@@ -380,20 +370,20 @@ Deno.serve(async (req: Request) => {
           GEMINI_API_KEY,
           pdfFile,
           pdfBase64Data,
-        );
+        )
 
         // OCR完了時のステータス更新
         if (supabaseClient && dbRecordId) {
-          await updateWorkOrderStatus(supabaseClient, dbRecordId, 'completed');
+          await updateWorkOrderStatus(supabaseClient, dbRecordId, 'completed')
         }
 
         return new Response(
           JSON.stringify({
-            message: "OCRフェーズ完了",
+            message: 'OCRフェーズ完了',
             detectionResult: {
               detectedCompanyId: ocrResult.company_id,
               confidence: ocrResult.confidence,
-              method: "ocr_gemini",
+              method: 'ocr_gemini',
               details: {
                 foundKeywords: ocrResult.found_keywords,
                 geminiReasoning: ocrResult.reasoning,
@@ -406,29 +396,29 @@ Deno.serve(async (req: Request) => {
           }),
           {
             status: 200,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           },
-        );
+        )
       } catch (error) {
-        console.error("[OCR Detection] Error:", error);
-        
+        console.error('[OCR Detection] Error:', error)
+
         // エラー時のステータス更新
         if (supabaseClient && dbRecordId) {
           await updateWorkOrderWithError(
             supabaseClient,
             dbRecordId,
-            "OCR処理中にエラーが発生しました",
-            error instanceof Error ? error.message : String(error)
-          );
+            'OCR処理中にエラーが発生しました',
+            error instanceof Error ? error.message : String(error),
+          )
         }
 
         return new Response(
           JSON.stringify({
-            error: "OCR処理中にエラーが発生しました",
+            error: 'OCR処理中にエラーが発生しました',
             detectionResult: {
               detectedCompanyId: null,
               confidence: 0,
-              method: "ocr_gemini",
+              method: 'ocr_gemini',
               details: {
                 geminiReasoning: `エラー: ${
                   error instanceof Error ? error.message : String(error)
@@ -439,135 +429,130 @@ Deno.serve(async (req: Request) => {
           }),
           {
             status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           },
-        );
+        )
       }
     }
 
     // 通常の自動判定と手配書作成の実行
-    let detectionResult = null;
-    let detectionConfidence = 0;
-    let detectionMethod = "manual";
-    let detectionDetails = {};
+    let detectionResult = null
+    let detectionConfidence = 0
+    let detectionMethod = 'manual'
+    let detectionDetails = {}
 
     // 通常処理用の初期レコード作成（waiting状態）
-    let dbRecordId: string | null = null;
+    let dbRecordId: string | null = null
     if (supabaseClient) {
       dbRecordId = await createWorkOrderWithInitialStatus(
         supabaseClient,
         fileName,
-        'waiting'
-      );
-      
+        'waiting',
+      )
+
       if (!dbRecordId) {
         return new Response(
           JSON.stringify({
-            error: "データベースレコードの作成に失敗しました",
+            error: 'データベースレコードの作成に失敗しました',
           }),
           {
             status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           },
-        );
+        )
       }
     }
 
     if (
       enableAutoDetection || !companyIdFromFrontend ||
-      companyIdFromFrontend === "UNKNOWN_OR_NOT_SET"
+      companyIdFromFrontend === 'UNKNOWN_OR_NOT_SET'
     ) {
       console.log(
-        `[${
-          new Date().toISOString()
-        }] Starting automatic company detection for ${fileName}`,
-      );
+        `[${new Date().toISOString()}] Starting automatic company detection for ${fileName}`,
+      )
 
       // 自動判定開始時のステータス更新
       if (supabaseClient && dbRecordId) {
-        await updateWorkOrderStatus(supabaseClient, dbRecordId, 'ocr_processing');
+        await updateWorkOrderStatus(supabaseClient, dbRecordId, 'ocr_processing')
       }
 
-      const detector = new CompanyDetector(GEMINI_API_KEY, supabaseClient);
-      detectionResult = await detector.detectCompany(pdfFile, pdfBase64Data);
+      const detector = new CompanyDetector(GEMINI_API_KEY, supabaseClient)
+      detectionResult = await detector.detectCompany(pdfFile, pdfBase64Data)
 
       if (detectionResult.detectedCompanyId) {
         console.log(
           `[${
             new Date().toISOString()
           }] Auto-detected company: ${detectionResult.detectedCompanyId} with confidence ${detectionResult.confidence}`,
-        );
+        )
 
         // 自動判定完了時のステータス更新（document_creating段階へ）
         if (supabaseClient && dbRecordId) {
-          await updateWorkOrderStatus(supabaseClient, dbRecordId, 'document_creating');
+          await updateWorkOrderStatus(supabaseClient, dbRecordId, 'document_creating')
         }
 
         // フロントエンドから会社IDが提供されていない場合、自動判定結果を使用
         if (
           !companyIdFromFrontend ||
-          companyIdFromFrontend === "UNKNOWN_OR_NOT_SET"
+          companyIdFromFrontend === 'UNKNOWN_OR_NOT_SET'
         ) {
           companyIdFromFrontend = detectionResult
-            .detectedCompanyId as CompanyIdentifier;
+            .detectedCompanyId as CompanyIdentifier
         }
 
-        detectionConfidence = detectionResult.confidence;
-        detectionMethod = detectionResult.method;
-        detectionDetails = detectionResult.details;
+        detectionConfidence = detectionResult.confidence
+        detectionMethod = detectionResult.method
+        detectionDetails = detectionResult.details
       } else {
         console.log(
-          `[${
-            new Date().toISOString()
-          }] Could not auto-detect company for ${fileName}`,
-        );
+          `[${new Date().toISOString()}] Could not auto-detect company for ${fileName}`,
+        )
 
         // 自動判定に失敗し、フロントエンドからも会社IDが提供されていない場合
         if (
           !companyIdFromFrontend ||
-          companyIdFromFrontend === "UNKNOWN_OR_NOT_SET"
+          companyIdFromFrontend === 'UNKNOWN_OR_NOT_SET'
         ) {
           // 自動判定失敗時のエラーステータス更新
           if (supabaseClient && dbRecordId) {
             await updateWorkOrderWithError(
               supabaseClient,
               dbRecordId,
-              "会社を自動判定できませんでした。手動で会社を選択してください。",
-              `自動判定信頼度: ${detectionResult?.confidence || 0}`
-            );
+              '会社を自動判定できませんでした。手動で会社を選択してください。',
+              `自動判定信頼度: ${detectionResult?.confidence || 0}`,
+            )
           }
 
           return new Response(
             JSON.stringify({
-              error:
-                "会社を自動判定できませんでした。手動で会社を選択してください。",
+              error: '会社を自動判定できませんでした。手動で会社を選択してください。',
               detectionResult: detectionResult,
               dbRecordId: dbRecordId, // エラー時でもレコードIDを返す
             }),
             {
               status: 400,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             },
-          );
+          )
         }
       }
     } else {
       // 自動判定を行わない場合（手動選択）は、document_creating段階に直接移行
       if (supabaseClient && dbRecordId) {
-        await updateWorkOrderStatus(supabaseClient, dbRecordId, 'document_creating');
+        await updateWorkOrderStatus(supabaseClient, dbRecordId, 'document_creating')
       }
     }
 
     // supabase/functions/process-pdf-single/promptRegistry.ts
     // から識別子とプロンプトのマッピング情報を取得
-    const promptEntry = getPrompt(companyIdFromFrontend);
+    const promptEntry = getPrompt(companyIdFromFrontend)
 
     if (!promptEntry) {
       console.error(
         `[${
           new Date().toISOString()
         }] No prompt entry found for companyId: ${companyIdFromFrontend} (file: ${fileName})`,
-      );
+      )
 
       // プロンプト設定エラー時のステータス更新
       if (supabaseClient && dbRecordId) {
@@ -575,36 +560,35 @@ Deno.serve(async (req: Request) => {
           supabaseClient,
           dbRecordId,
           `サポートされていない会社またはプロンプト設定: ${companyIdFromFrontend}`,
-          "プロンプト設定の確認が必要です"
-        );
+          'プロンプト設定の確認が必要です',
+        )
       }
 
       return new Response(
         JSON.stringify({
-          error:
-            `Unsupported company or prompt configuration for: ${companyIdFromFrontend}`,
+          error: `Unsupported company or prompt configuration for: ${companyIdFromFrontend}`,
           dbRecordId: dbRecordId, // エラー時でもレコードIDを返す
         }),
         {
           status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         },
-      );
+      )
     }
 
     // 2. Genクライアントの初期化
-    const genAI = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
-    const model = "gemini-2.5-flash-preview-04-17"; // または "gen-pro", "gen-1.5-pro-latest" など。速度とコストで選択。
+    const genAI = new GoogleGenAI({ apiKey: GEMINI_API_KEY })
+    const model = 'gemini-2.5-flash-preview-04-17' // または "gen-pro", "gen-1.5-pro-latest" など。速度とコストで選択。
     // gemini-2.5-flash-preview-04-17 適応的思考、費用対効果
     // gemini-2.5-pro-preview-05-06 思考と推論の強化、マルチモーダル理解、高度なコーディングなど
     // gemini-2.0-flash 次世代の機能、速度。
 
     // 3. プロンプトの組み立て
     // PROMPT_FUNCTION を取得（どのプロンプトを使うか）
-    const selectedPromptFunction: PromptFunction = promptEntry.promptFunction;
+    const selectedPromptFunction: PromptFunction = promptEntry.promptFunction
     // 組み立て
-    const prompt = selectedPromptFunction(fileName);
-    const promptIdentifier = `${companyIdFromFrontend}_${promptEntry.version}`;
+    const prompt = selectedPromptFunction(fileName)
+    const promptIdentifier = `${companyIdFromFrontend}_${promptEntry.version}`
     // Gemini APIに渡すパーツを作成
     const requestParts: Part[] = [
       { text: prompt }, // テキストによる指示
@@ -614,23 +598,23 @@ Deno.serve(async (req: Request) => {
           data: pdfBase64Data, // Base64エンコードされたファイルデータ
         },
       },
-    ];
+    ]
 
     console.log(
       `[${
         new Date().toISOString()
       }] Sending prompt with PDF data to Gemini API for file: ${fileName}`,
-    );
+    )
     // console.debug("Full Prompt to Gen:", prompt); // デバッグ時に必要ならコメント解除 (非常に長くなる可能性)
 
     // 4. Gemini API呼び出し
-    let generatedTextByGen: string = "";
-    let usageMetadata: any = null;
+    let generatedTextByGen: string = ''
+    let usageMetadata: any = null
     try {
       // API Ref https://ai.google.dev/api/generate-content?hl=ja#v1beta.GenerateContentResponse
       const response = await genAI.models.generateContent({
         model: model,
-        contents: [{ role: "user", parts: requestParts }], // マルチモーダル入力形式
+        contents: [{ role: 'user', parts: requestParts }], // マルチモーダル入力形式
         // role: 'user' はユーザーのメッセージを、role: 'model' はAIモデル自身の応答を示す
         // 安全性設定の例 (必要に応じて調整)
         // safetySettings: [
@@ -653,59 +637,57 @@ Deno.serve(async (req: Request) => {
         // ],
         // デベロッパーがシステム指示を設定
         // systemInstruction: "",
-      });
-      if (typeof response.text === "string") {
-        generatedTextByGen = response.text;
+      })
+      if (typeof response.text === 'string') {
+        generatedTextByGen = response.text
       } else {
         // response.text が undefined だった場合の処理
         // 例えば、デフォルトの文字列を代入する、エラーを投げる、など
-        generatedTextByGen = ""; // またはエラー処理
-        console.error("response.text is undefined");
+        generatedTextByGen = '' // またはエラー処理
+        console.error('response.text is undefined')
       }
       console.log(
         `[${
           new Date().toISOString()
         }] Successfully received response from Gemini API for: ${fileName}`,
-      );
-      usageMetadata = response.usageMetadata;
+      )
+      usageMetadata = response.usageMetadata
 
       // usageMetadata が存在する場合、トークン数をログに出力
       if (usageMetadata) {
-        console.log(`Token Usage for ${fileName}:`);
-        console.log(`  Prompt Token Count: ${usageMetadata.promptTokenCount}`);
+        console.log(`Token Usage for ${fileName}:`)
+        console.log(`  Prompt Token Count: ${usageMetadata.promptTokenCount}`)
         // candidatesTokenCount は存在する場合のみログに出力 (モデルや設定により異なる)
         if (usageMetadata.candidatesTokenCount !== undefined) {
           console.log(
             `  Candidates Token Count: ${usageMetadata.candidatesTokenCount}`,
-          );
+          )
         }
         // totalTokenCount は存在する場合のみログに出力
         if (usageMetadata.totalTokenCount !== undefined) {
-          console.log(`  Total Token Count: ${usageMetadata.totalTokenCount}`);
+          console.log(`  Total Token Count: ${usageMetadata.totalTokenCount}`)
         }
         // cachedContentTokenCount も存在する場合がある
         if (usageMetadata.cachedContentTokenCount !== undefined) {
           console.log(
             `  Cached Content Token Count: ${usageMetadata.cachedContentTokenCount}`,
-          );
+          )
         }
       } else {
         console.log(
           `[${
             new Date().toISOString()
           }] usageMetadata not found in Gemini API response for: ${fileName}`,
-        );
+        )
       }
 
       // console.debug("Gen Raw Response Text:", generatedTextByGen); // デバッグ時に必要ならコメント解除
     } catch (genError: any) {
       console.error(
-        `[${
-          new Date().toISOString()
-        }] Error calling Gemini API for ${fileName}:`,
+        `[${new Date().toISOString()}] Error calling Gemini API for ${fileName}:`,
         genError,
-      );
-      let userFriendlyErrorMessage = "AIによるテキスト生成に失敗しました。";
+      )
+      let userFriendlyErrorMessage = 'AIによるテキスト生成に失敗しました。'
       // Gemini APIからのエラーレスポンスに詳細が含まれていれば、それをログに出力
       // genError.message にも情報が含まれることがある
       // if (genError.response && genError.response.promptFeedback) {
@@ -721,8 +703,8 @@ Deno.serve(async (req: Request) => {
           supabaseClient,
           dbRecordId,
           userFriendlyErrorMessage,
-          genError.message
-        );
+          genError.message,
+        )
       }
 
       return new Response(
@@ -733,27 +715,27 @@ Deno.serve(async (req: Request) => {
         }),
         {
           status: 502, // Bad Gateway (外部APIとの連携で問題があった場合)
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         },
-      );
+      )
     }
 
     // --- データベースへの保存処理 ---
-    const companyName = promptEntry.companyName;
+    const companyName = promptEntry.companyName
     if (supabaseClient && dbRecordId) {
       try {
         console.log(
           `[${
             new Date().toISOString()
           }] Attempting to update work_order record ${dbRecordId} with generated text for: ${fileName}`,
-        );
+        )
 
         // 既存レコードを手配書作成完了状態に更新
         const { error: dbError } = await supabaseClient
-          .from("work_orders")
+          .from('work_orders')
           .update({
             generated_text: generatedTextByGen,
-            status: "completed", // 新しいProcessStatusを使用
+            status: 'completed', // 新しいProcessStatusを使用
             prompt_identifier: promptIdentifier,
             company_name: companyName,
             gemini_processed_at: new Date().toISOString(),
@@ -765,7 +747,7 @@ Deno.serve(async (req: Request) => {
             final_company_id: companyIdFromFrontend,
             updated_at: new Date().toISOString(),
           })
-          .eq("id", dbRecordId);
+          .eq('id', dbRecordId)
 
         if (dbError) {
           console.error(
@@ -773,61 +755,59 @@ Deno.serve(async (req: Request) => {
               new Date().toISOString()
             }] Error updating database record ${dbRecordId} for ${fileName}:`,
             dbError,
-          );
+          )
 
           // 更新失敗時のエラーステータス更新
           await updateWorkOrderWithError(
             supabaseClient,
             dbRecordId,
-            "データベース更新に失敗しました",
-            dbError.message
-          );
+            'データベース更新に失敗しました',
+            dbError.message,
+          )
 
           return new Response(
             JSON.stringify({
-              error: "Failed to update work_order record.",
+              error: 'Failed to update work_order record.',
               details: dbError.message,
               dbRecordId: dbRecordId,
             }),
             {
               status: 500,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             },
-          );
+          )
         }
 
         console.log(
           `[${
             new Date().toISOString()
           }] Successfully updated database record ${dbRecordId} for ${fileName}`,
-        );
+        )
 
-          // 判定履歴を保存
-          if (detectionResult && enableAutoDetection) {
-            const detector = new CompanyDetector(
-              GEMINI_API_KEY,
-              supabaseClient,
-            );
-            await detector.saveDetectionHistory(
-              dbRecordId,
-              fileName,
-              detectionResult,
-              undefined, // TODO: ユーザーIDを渡す場合はここで設定
-            );
-          }
+        // 判定履歴を保存
+        if (detectionResult && enableAutoDetection) {
+          const detector = new CompanyDetector(
+            GEMINI_API_KEY,
+            supabaseClient,
+          )
+          await detector.saveDetectionHistory(
+            dbRecordId,
+            fileName,
+            detectionResult,
+            undefined, // TODO: ユーザーIDを渡す場合はここで設定
+          )
+        }
       } catch (e: unknown) {
         console.error(
-          `[${
-            new Date().toISOString()
-          }] Exception during database update for ${fileName}:`,
+          `[${new Date().toISOString()}] Exception during database update for ${fileName}:`,
           e,
-        );
+        )
 
-        let errorMessage = "Internal Server Error. Please try again later.";
+        let errorMessage = 'Internal Server Error. Please try again later.'
         if (e instanceof Error) {
-          errorMessage = e.message;
-        } else if (typeof e === "string") {
-          errorMessage = e;
+          errorMessage = e.message
+        } else if (typeof e === 'string') {
+          errorMessage = e
         }
 
         // 例外発生時のエラーステータス更新
@@ -835,36 +815,35 @@ Deno.serve(async (req: Request) => {
           await updateWorkOrderWithError(
             supabaseClient,
             dbRecordId,
-            "データベース更新中に例外が発生しました",
-            errorMessage
-          );
+            'データベース更新中に例外が発生しました',
+            errorMessage,
+          )
         }
 
         return new Response(
           JSON.stringify({
-            error: "An exception occurred while updating database.",
+            error: 'An exception occurred while updating database.',
             details: errorMessage,
             dbRecordId: dbRecordId,
           }),
           {
             status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           },
-        );
+        )
       }
     } else {
       console.warn(
         `[${
           new Date().toISOString()
         }] Supabase client not initialized or dbRecordId is null. Skipping database update for ${fileName}.`,
-      );
+      )
       // 本番では client が null または dbRecordId が null ならエラーにすべき
     }
 
     // 5. フロントエンドへのレスポンス
     const responseData = {
-      message:
-        `Successfully generated text for ${fileName} (Company: ${companyIdFromFrontend}).`,
+      message: `Successfully generated text for ${fileName} (Company: ${companyIdFromFrontend}).`,
       generatedText: generatedTextByGen,
       originalFileName: fileName,
       promptUsedIdentifier: promptIdentifier, // プロンプトのバージョン管理用
@@ -880,31 +859,31 @@ Deno.serve(async (req: Request) => {
           details: detectionResult.details,
         }
         : null,
-    };
+    }
 
     return new Response(JSON.stringify(responseData), {
       status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
   } catch (error: unknown) {
     console.error(
       `[${new Date().toISOString()}] Unhandled error in function:`,
       error,
-    );
-    let errorMessage = "Internal Server Error. Please try again later.";
+    )
+    let errorMessage = 'Internal Server Error. Please try again later.'
     if (error instanceof Error) {
-      errorMessage = error.message;
-    } else if (typeof error === "string") {
-      errorMessage = error;
+      errorMessage = error.message
+    } else if (typeof error === 'string') {
+      errorMessage = error
     }
     return new Response(
       JSON.stringify({
-        error: errorMessage || "Internal Server Error. Please try again later.",
+        error: errorMessage || 'Internal Server Error. Please try again later.',
       }),
       {
         status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       },
-    );
+    )
   }
-});
+})

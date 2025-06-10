@@ -71,4 +71,4 @@ export const KATOUBENIYA_MISAWA_PROMPT = (fileName: string): string => `
 ※タオル巻き禁止!
 ※現場内及び周辺(路上含む)は禁煙
 4名作業
-`;
+`
