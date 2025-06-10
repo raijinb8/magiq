@@ -350,12 +350,42 @@ Deno.serve(async (req: Request) => {
         }] Starting OCR-only company detection for ${fileName}`,
       );
 
+      // 初期レコード作成（waiting状態）
+      let dbRecordId: string | null = null;
+      if (supabaseClient) {
+        dbRecordId = await createWorkOrderWithInitialStatus(
+          supabaseClient,
+          fileName,
+          'waiting'
+        );
+        
+        if (!dbRecordId) {
+          return new Response(
+            JSON.stringify({
+              error: "データベースレコードの作成に失敗しました",
+            }),
+            {
+              status: 500,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
+        }
+
+        // OCR処理開始時のステータス更新
+        await updateWorkOrderStatus(supabaseClient, dbRecordId, 'ocr_processing');
+      }
+
       try {
         const ocrResult = await performOcrCompanyDetection(
           GEMINI_API_KEY,
           pdfFile,
           pdfBase64Data,
         );
+
+        // OCR完了時のステータス更新
+        if (supabaseClient && dbRecordId) {
+          await updateWorkOrderStatus(supabaseClient, dbRecordId, 'completed');
+        }
 
         return new Response(
           JSON.stringify({
@@ -372,6 +402,7 @@ Deno.serve(async (req: Request) => {
             },
             fileName: fileName,
             ocrOnly: true,
+            dbRecordId: dbRecordId, // フロントエンドでポーリング用
           }),
           {
             status: 200,
@@ -380,6 +411,17 @@ Deno.serve(async (req: Request) => {
         );
       } catch (error) {
         console.error("[OCR Detection] Error:", error);
+        
+        // エラー時のステータス更新
+        if (supabaseClient && dbRecordId) {
+          await updateWorkOrderWithError(
+            supabaseClient,
+            dbRecordId,
+            "OCR処理中にエラーが発生しました",
+            error instanceof Error ? error.message : String(error)
+          );
+        }
+
         return new Response(
           JSON.stringify({
             error: "OCR処理中にエラーが発生しました",
@@ -393,6 +435,7 @@ Deno.serve(async (req: Request) => {
                 }`,
               },
             },
+            dbRecordId: dbRecordId, // エラー時でもレコードIDを返す
           }),
           {
             status: 500,
