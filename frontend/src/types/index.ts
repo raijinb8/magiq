@@ -114,7 +114,7 @@ export interface WorkOrderRecord {
   detected_company_id?: string | null;
   detection_confidence?: number | null;
   detection_method?: string | null;
-  detection_metadata?: any;
+  detection_metadata?: Record<string, unknown>;
   final_company_id?: string | null;
 }
 

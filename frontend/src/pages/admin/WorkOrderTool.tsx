@@ -341,6 +341,7 @@ const WorkOrderTool: React.FC = () => {
       setProcessingFile,
       setGeneratedText,
       setProcessedCompanyInfo,
+      workOrderStatus,
     ]
   );
 

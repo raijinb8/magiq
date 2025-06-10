@@ -120,6 +120,7 @@ export const useWorkOrderStatus = (options: UseWorkOrderStatusOptions = {}) => {
       }
       processStatus.startPolling(recordId);
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [processStatus.startPolling, enableNotifications]
   );
 
@@ -128,6 +129,7 @@ export const useWorkOrderStatus = (options: UseWorkOrderStatusOptions = {}) => {
     if (enableNotifications) {
       toast.info('処理を中断しました');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [processStatus.stopPolling, enableNotifications]);
 
   return {
