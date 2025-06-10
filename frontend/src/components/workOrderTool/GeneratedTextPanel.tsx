@@ -122,16 +122,6 @@ export const GeneratedTextPanel: React.FC<GeneratedTextPanelProps> = ({
           )}
         </h2>
         <div className="flex gap-2">
-          {/* 自動判定結果がある場合、フィードバックボタンを表示 */}
-          {lastDetectionResult &&
-            onRequestFeedback &&
-            generatedText &&
-            !generatedText.startsWith('エラー') && (
-              <Button variant="outline" size="sm" onClick={onRequestFeedback}>
-                判定を修正
-              </Button>
-            )}
-
           {/* 編集機能ボタン */}
           {displayText && !isLoading && (
             <>
@@ -165,6 +155,16 @@ export const GeneratedTextPanel: React.FC<GeneratedTextPanelProps> = ({
               )}
             </>
           )}
+
+          {/* 自動判定結果がある場合、フィードバックボタンを表示 */}
+          {lastDetectionResult &&
+            onRequestFeedback &&
+            generatedText &&
+            !generatedText.startsWith('エラー') && (
+              <Button variant="outline" size="sm" onClick={onRequestFeedback}>
+                判定を修正
+              </Button>
+            )}
 
           {/* これらのボタンは現状ダミーなので、機能実装時にprops経由でハンドラを受け取る */}
           <Button variant="outline" size="sm" disabled>
