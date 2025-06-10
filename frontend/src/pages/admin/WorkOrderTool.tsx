@@ -42,6 +42,8 @@ const WorkOrderTool: React.FC = () => {
     useState<CompanyOptionValue>('');
   // 生成されたテキストの状態
   const [generatedText, setGeneratedText] = useState<string>('');
+  // 編集されたテキストの状態
+  const [editedText, setEditedText] = useState<string>('');
   // AI処理結果に関する情報 (ファイル名、会社ラベル)
   const [processedCompanyInfo, setProcessedCompanyInfo] =
     useState<ProcessedCompanyInfo>({ file: null, companyLabel: '' });
@@ -276,6 +278,14 @@ const WorkOrderTool: React.FC = () => {
   );
 
   /**
+   * 編集テキストが変更されたときのコールバック。
+   * GeneratedTextPanelから呼び出される。
+   */
+  const handleEditedTextChange = useCallback((newEditedText: string) => {
+    setEditedText(newEditedText);
+  }, []);
+
+  /**
    * ファイルリスト内のファイルがクリックされたときの処理。
    * 該当ファイルのPDFプレビューのみを行います。
    */
@@ -291,8 +301,10 @@ const WorkOrderTool: React.FC = () => {
       setPdfFileToDisplay(file);
       setProcessingFile(file); // ★ プレビュー中のファイルを「次にAI実行する対象」としてマーク
       setGeneratedText(''); // プレビュー変更時は生成テキストをクリア
+      setEditedText(''); // 編集テキストもクリア
       setProcessedCompanyInfo({ file: null, companyLabel: '' }); // 処理情報もクリア
       setLastDetectionResult(null); // 前回の判定結果もクリア
+      setLastWorkOrderId(null); // work_order IDもクリア
       // ページ数などは Document の onLoadSuccess でリセットされる (handleDocumentLoadSuccess経由)
       toast.dismiss(); // 既存の通知があれば消す
       toast.info(`「${file.name}」をプレビュー中です。`);
@@ -437,6 +449,9 @@ const WorkOrderTool: React.FC = () => {
             processedCompanyInfo={processedCompanyInfo}
             lastDetectionResult={lastDetectionResult}
             onRequestFeedback={() => setShowFeedbackModal(true)}
+            workOrderId={lastWorkOrderId || undefined}
+            editedText={editedText}
+            onEditedTextChange={handleEditedTextChange}
           />
         </main>
       </div>
