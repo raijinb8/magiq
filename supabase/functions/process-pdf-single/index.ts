@@ -451,6 +451,28 @@ Deno.serve(async (req: Request) => {
     let detectionMethod = "manual";
     let detectionDetails = {};
 
+    // 通常処理用の初期レコード作成（waiting状態）
+    let dbRecordId: string | null = null;
+    if (supabaseClient) {
+      dbRecordId = await createWorkOrderWithInitialStatus(
+        supabaseClient,
+        fileName,
+        'waiting'
+      );
+      
+      if (!dbRecordId) {
+        return new Response(
+          JSON.stringify({
+            error: "データベースレコードの作成に失敗しました",
+          }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+    }
+
     if (
       enableAutoDetection || !companyIdFromFrontend ||
       companyIdFromFrontend === "UNKNOWN_OR_NOT_SET"
@@ -461,6 +483,11 @@ Deno.serve(async (req: Request) => {
         }] Starting automatic company detection for ${fileName}`,
       );
 
+      // 自動判定開始時のステータス更新
+      if (supabaseClient && dbRecordId) {
+        await updateWorkOrderStatus(supabaseClient, dbRecordId, 'ocr_processing');
+      }
+
       const detector = new CompanyDetector(GEMINI_API_KEY, supabaseClient);
       detectionResult = await detector.detectCompany(pdfFile, pdfBase64Data);
 
@@ -470,6 +497,11 @@ Deno.serve(async (req: Request) => {
             new Date().toISOString()
           }] Auto-detected company: ${detectionResult.detectedCompanyId} with confidence ${detectionResult.confidence}`,
         );
+
+        // 自動判定完了時のステータス更新（document_creating段階へ）
+        if (supabaseClient && dbRecordId) {
+          await updateWorkOrderStatus(supabaseClient, dbRecordId, 'document_creating');
+        }
 
         // フロントエンドから会社IDが提供されていない場合、自動判定結果を使用
         if (
@@ -495,11 +527,22 @@ Deno.serve(async (req: Request) => {
           !companyIdFromFrontend ||
           companyIdFromFrontend === "UNKNOWN_OR_NOT_SET"
         ) {
+          // 自動判定失敗時のエラーステータス更新
+          if (supabaseClient && dbRecordId) {
+            await updateWorkOrderWithError(
+              supabaseClient,
+              dbRecordId,
+              "会社を自動判定できませんでした。手動で会社を選択してください。",
+              `自動判定信頼度: ${detectionResult?.confidence || 0}`
+            );
+          }
+
           return new Response(
             JSON.stringify({
               error:
                 "会社を自動判定できませんでした。手動で会社を選択してください。",
               detectionResult: detectionResult,
+              dbRecordId: dbRecordId, // エラー時でもレコードIDを返す
             }),
             {
               status: 400,
@@ -507,6 +550,11 @@ Deno.serve(async (req: Request) => {
             },
           );
         }
+      }
+    } else {
+      // 自動判定を行わない場合（手動選択）は、document_creating段階に直接移行
+      if (supabaseClient && dbRecordId) {
+        await updateWorkOrderStatus(supabaseClient, dbRecordId, 'document_creating');
       }
     }
 
@@ -520,10 +568,22 @@ Deno.serve(async (req: Request) => {
           new Date().toISOString()
         }] No prompt entry found for companyId: ${companyIdFromFrontend} (file: ${fileName})`,
       );
+
+      // プロンプト設定エラー時のステータス更新
+      if (supabaseClient && dbRecordId) {
+        await updateWorkOrderWithError(
+          supabaseClient,
+          dbRecordId,
+          `サポートされていない会社またはプロンプト設定: ${companyIdFromFrontend}`,
+          "プロンプト設定の確認が必要です"
+        );
+      }
+
       return new Response(
         JSON.stringify({
           error:
             `Unsupported company or prompt configuration for: ${companyIdFromFrontend}`,
+          dbRecordId: dbRecordId, // エラー時でもレコードIDを返す
         }),
         {
           status: 400,
@@ -654,10 +714,22 @@ Deno.serve(async (req: Request) => {
       //       userFriendlyErrorMessage += ` 理由: ${genError.response.promptFeedback.blockReason}`;
       //   }
       // }
+
+      // Gemini APIエラー時のステータス更新
+      if (supabaseClient && dbRecordId) {
+        await updateWorkOrderWithError(
+          supabaseClient,
+          dbRecordId,
+          userFriendlyErrorMessage,
+          genError.message
+        );
+      }
+
       return new Response(
         JSON.stringify({
           error: userFriendlyErrorMessage,
           details: genError.message,
+          dbRecordId: dbRecordId, // エラー時でもレコードIDを返す
         }),
         {
           status: 502, // Bad Gateway (外部APIとの連携で問題があった場合)
@@ -668,50 +740,54 @@ Deno.serve(async (req: Request) => {
 
     // --- データベースへの保存処理 ---
     const companyName = promptEntry.companyName;
-    let dbRecordId: string | null = null;
-    if (supabaseClient) {
+    if (supabaseClient && dbRecordId) {
       try {
         console.log(
           `[${
             new Date().toISOString()
-          }] Attempting to save generated text to database for: ${fileName}`,
+          }] Attempting to update work_order record ${dbRecordId} with generated text for: ${fileName}`,
         );
-        const { data: insertedData, error: dbError } = await supabaseClient
-          .from("work_orders") // 作成したテーブル名
-          .insert([
-            {
-              file_name: fileName,
-              // uploaded_at: new Date().toISOString(), // 本来はフロントからアップロード時刻をもらうか、ここで設定
-              generated_text: generatedTextByGen,
-              // edited_text: generatedTextByGen, // 初期値として同じものを入れるか、NULLのままか
-              status: "completed_from_ai", // AI処理完了を示すステータス
-              prompt_identifier: promptIdentifier, // どのプロンプトを使ったか
-              company_name: companyName, // 取引先_発注元
-              gemini_processed_at: new Date().toISOString(), // Gemini処理完了時刻
-              // 自動判定関連のカラム
-              detected_company_id: detectionResult?.detectedCompanyId || null,
-              detection_confidence: detectionConfidence || null,
-              detection_method: detectionMethod,
-              detection_metadata: detectionDetails || null,
-              final_company_id: companyIdFromFrontend, // 最終的に使用された会社ID
-            },
-          ])
-          .select("id") // 挿入されたレコードのIDを取得
-          .single(); // 1件のレコードが返ることを期待
+
+        // 既存レコードを手配書作成完了状態に更新
+        const { error: dbError } = await supabaseClient
+          .from("work_orders")
+          .update({
+            generated_text: generatedTextByGen,
+            status: "completed", // 新しいProcessStatusを使用
+            prompt_identifier: promptIdentifier,
+            company_name: companyName,
+            gemini_processed_at: new Date().toISOString(),
+            // 自動判定関連のカラム
+            detected_company_id: detectionResult?.detectedCompanyId || null,
+            detection_confidence: detectionConfidence || null,
+            detection_method: detectionMethod,
+            detection_metadata: detectionDetails || null,
+            final_company_id: companyIdFromFrontend,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", dbRecordId);
 
         if (dbError) {
           console.error(
             `[${
               new Date().toISOString()
-            }] Error saving to database for ${fileName}:`,
+            }] Error updating database record ${dbRecordId} for ${fileName}:`,
             dbError,
           );
-          // DB保存エラーは致命的ではないかもしれないので、フロントには成功として返しつつログで警告する選択肢もある
-          // 今回はエラーとして扱う
+
+          // 更新失敗時のエラーステータス更新
+          await updateWorkOrderWithError(
+            supabaseClient,
+            dbRecordId,
+            "データベース更新に失敗しました",
+            dbError.message
+          );
+
           return new Response(
             JSON.stringify({
-              error: "Failed to save generated text to database.",
+              error: "Failed to update work_order record.",
               details: dbError.message,
+              dbRecordId: dbRecordId,
             }),
             {
               status: 500,
@@ -719,13 +795,12 @@ Deno.serve(async (req: Request) => {
             },
           );
         }
-        if (insertedData && insertedData.id) {
-          dbRecordId = insertedData.id;
-          console.log(
-            `[${
-              new Date().toISOString()
-            }] Successfully saved to database for ${fileName}, record ID: ${dbRecordId}`,
-          );
+
+        console.log(
+          `[${
+            new Date().toISOString()
+          }] Successfully updated database record ${dbRecordId} for ${fileName}`,
+        );
 
           // 判定履歴を保存
           if (detectionResult && enableAutoDetection) {
@@ -740,31 +815,36 @@ Deno.serve(async (req: Request) => {
               undefined, // TODO: ユーザーIDを渡す場合はここで設定
             );
           }
-        } else {
-          console.warn(
-            `[${
-              new Date().toISOString()
-            }] Saved to database for ${fileName}, but no ID returned or insert failed silently.`,
-          );
-        }
       } catch (e: unknown) {
         console.error(
           `[${
             new Date().toISOString()
-          }] Exception during database save for ${fileName}:`,
+          }] Exception during database update for ${fileName}:`,
           e,
         );
-        // こちらもエラーとして扱う
+
         let errorMessage = "Internal Server Error. Please try again later.";
         if (e instanceof Error) {
           errorMessage = e.message;
         } else if (typeof e === "string") {
           errorMessage = e;
         }
+
+        // 例外発生時のエラーステータス更新
+        if (dbRecordId) {
+          await updateWorkOrderWithError(
+            supabaseClient,
+            dbRecordId,
+            "データベース更新中に例外が発生しました",
+            errorMessage
+          );
+        }
+
         return new Response(
           JSON.stringify({
-            error: "An exception occurred while saving to database.",
+            error: "An exception occurred while updating database.",
             details: errorMessage,
+            dbRecordId: dbRecordId,
           }),
           {
             status: 500,
@@ -776,10 +856,9 @@ Deno.serve(async (req: Request) => {
       console.warn(
         `[${
           new Date().toISOString()
-        }] Supabase client not initialized. Skipping database save for ${fileName}.`,
+        }] Supabase client not initialized or dbRecordId is null. Skipping database update for ${fileName}.`,
       );
-      // 開発中はDB接続なしでも動くようにしておくか、エラーにするか選択
-      // 今回は警告のみで進めるが、本番では client が null ならエラーにすべき
+      // 本番では client が null または dbRecordId が null ならエラーにすべき
     }
 
     // 5. フロントエンドへのレスポンス
