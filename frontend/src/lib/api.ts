@@ -2,12 +2,15 @@
 import { supabase } from './supabase';
 import { getTargetShiftWeek } from '@/utils/getTargetShiftWeek';
 
-export async function updateWorkOrderEditedText(workOrderId: string, editedText: string) {
+export async function updateWorkOrderEditedText(
+  workOrderId: string,
+  editedText: string
+) {
   const { data, error } = await supabase
     .from('work_orders')
-    .update({ 
+    .update({
       edited_text: editedText,
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     })
     .eq('id', workOrderId)
     .select('id, edited_text, updated_at')

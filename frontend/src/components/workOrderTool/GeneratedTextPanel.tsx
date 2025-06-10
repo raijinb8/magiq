@@ -74,10 +74,10 @@ export const GeneratedTextPanel: React.FC<GeneratedTextPanelProps> = ({
     setIsSaving(true);
     try {
       await updateWorkOrderEditedText(workOrderId, localEditedText);
-      
+
       // 親コンポーネントに編集テキストの変更を通知
       onEditedTextChange?.(localEditedText);
-      
+
       setIsEditMode(false);
       setLocalEditedText('');
       toast.success('編集内容を保存しました');
@@ -126,9 +126,9 @@ export const GeneratedTextPanel: React.FC<GeneratedTextPanelProps> = ({
           {displayText && !isLoading && (
             <>
               {!isEditMode ? (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={handleEnterEditMode}
                   disabled={!workOrderId}
                 >
@@ -136,16 +136,16 @@ export const GeneratedTextPanel: React.FC<GeneratedTextPanelProps> = ({
                 </Button>
               ) : (
                 <>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={handleCancelEdit}
                     disabled={isSaving}
                   >
                     キャンセル
                   </Button>
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     onClick={handleSaveEdit}
                     disabled={isSaving || localEditedText.trim() === ''}
                   >
@@ -187,13 +187,13 @@ export const GeneratedTextPanel: React.FC<GeneratedTextPanelProps> = ({
             ✓ 編集済み - この内容は編集されています
           </div>
         )}
-        
+
         <Textarea
           className={`flex-1 resize-none rounded-md text-sm font-mono ${
-            isEditMode 
-              ? 'border-orange-300 focus:border-orange-500 bg-orange-50/30' 
-              : editedText 
-                ? 'bg-blue-50/30 border-blue-200' 
+            isEditMode
+              ? 'border-orange-300 focus:border-orange-500 bg-orange-50/30'
+              : editedText
+                ? 'bg-blue-50/30 border-blue-200'
                 : ''
           }`}
           placeholder={getPlaceholderText()}
