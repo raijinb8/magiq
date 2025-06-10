@@ -79,21 +79,21 @@ export type PdfProcessResponse =
   | PdfProcessErrorResponse;
 
 // PDF処理の進捗ステータス定義（バックエンドと一致）
-export type ProcessStatus = 
-  | 'waiting'           // 待機中（処理開始前）
-  | 'ocr_processing'    // OCR実行中（会社判定含む）
+export type ProcessStatus =
+  | 'waiting' // 待機中（処理開始前）
+  | 'ocr_processing' // OCR実行中（会社判定含む）
   | 'document_creating' // 手配書作成中
-  | 'completed'         // 完了
-  | 'error';            // エラー
+  | 'completed' // 完了
+  | 'error'; // エラー
 
 // ステータス表示用の情報
 export interface ProcessStatusInfo {
   status: ProcessStatus;
-  label: string;          // 日本語ラベル
-  description: string;    // 詳細説明
+  label: string; // 日本語ラベル
+  description: string; // 詳細説明
   color: 'blue' | 'yellow' | 'green' | 'red' | 'gray'; // 表示色
-  icon: string;          // アイコン名
-  isLoading: boolean;    // ローディング表示するか
+  icon: string; // アイコン名
+  isLoading: boolean; // ローディング表示するか
 }
 
 // work_orderレコードの型定義

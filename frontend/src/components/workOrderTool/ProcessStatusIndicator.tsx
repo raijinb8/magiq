@@ -3,15 +3,15 @@ import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { 
-  Clock, 
-  Search, 
-  Edit, 
-  Check, 
-  AlertCircle, 
+import {
+  Clock,
+  Search,
+  Edit,
+  Check,
+  AlertCircle,
   HelpCircle,
   X,
-  Loader2
+  Loader2,
 } from 'lucide-react';
 import type { ProcessStatusInfo } from '@/types';
 
@@ -38,12 +38,12 @@ export interface ProcessStatusIndicatorProps {
 
 // アイコンマッピング
 const getStatusIcon = (status: string, isLoading: boolean) => {
-  const iconProps = { size: 16, className: "shrink-0" };
-  
+  const iconProps = { size: 16, className: 'shrink-0' };
+
   if (isLoading) {
     return <Loader2 {...iconProps} className="animate-spin shrink-0" />;
   }
-  
+
   switch (status) {
     case 'waiting':
       return <Clock {...iconProps} />;
@@ -95,8 +95,8 @@ const getBadgeColorClasses = (color: string) => {
 };
 
 // プログレスバーコンポーネント
-const ProgressBar: React.FC<{ 
-  status: string; 
+const ProgressBar: React.FC<{
+  status: string;
   isLoading: boolean;
   compact?: boolean;
 }> = ({ status, isLoading, compact }) => {
@@ -108,13 +108,13 @@ const ProgressBar: React.FC<{
   ];
 
   const getStepStatus = (stepKey: string) => {
-    const stepIndex = steps.findIndex(s => s.key === stepKey);
-    const currentIndex = steps.findIndex(s => s.key === status);
-    
+    const stepIndex = steps.findIndex((s) => s.key === stepKey);
+    const currentIndex = steps.findIndex((s) => s.key === status);
+
     if (status === 'error') {
       return currentIndex >= stepIndex ? 'error' : 'pending';
     }
-    
+
     if (currentIndex > stepIndex) return 'completed';
     if (currentIndex === stepIndex) return isLoading ? 'active' : 'completed';
     return 'pending';
@@ -122,12 +122,13 @@ const ProgressBar: React.FC<{
 
   if (compact) {
     // コンパクトモードでは簡単なプログレスバーのみ
-    const currentStep = steps.findIndex(s => s.key === status);
-    const progress = currentStep >= 0 ? ((currentStep + 1) / steps.length) * 100 : 0;
-    
+    const currentStep = steps.findIndex((s) => s.key === status);
+    const progress =
+      currentStep >= 0 ? ((currentStep + 1) / steps.length) * 100 : 0;
+
     return (
       <div className="w-full bg-gray-200 rounded-full h-2">
-        <div 
+        <div
           className={`h-2 rounded-full transition-all duration-300 ${
             status === 'error' ? 'bg-red-500' : 'bg-blue-500'
           }`}
@@ -149,8 +150,8 @@ const ProgressBar: React.FC<{
                 stepStatus === 'completed' || stepStatus === 'active'
                   ? 'text-blue-600 dark:text-blue-400'
                   : stepStatus === 'error'
-                  ? 'text-red-600 dark:text-red-400'
-                  : 'text-gray-500 dark:text-gray-400'
+                    ? 'text-red-600 dark:text-red-400'
+                    : 'text-gray-500 dark:text-gray-400'
               }`}
             >
               {step.label}
@@ -169,10 +170,10 @@ const ProgressBar: React.FC<{
                   stepStatus === 'completed'
                     ? 'bg-green-500'
                     : stepStatus === 'active'
-                    ? 'bg-blue-500 animate-pulse'
-                    : stepStatus === 'error'
-                    ? 'bg-red-500'
-                    : 'bg-gray-200'
+                      ? 'bg-blue-500 animate-pulse'
+                      : stepStatus === 'error'
+                        ? 'bg-red-500'
+                        : 'bg-gray-200'
                 } ${index < steps.length - 1 ? 'border-r border-white' : ''}`}
               />
             );
@@ -202,7 +203,9 @@ export const ProcessStatusIndicator: React.FC<ProcessStatusIndicatorProps> = ({
 
   if (compact) {
     return (
-      <div className={`flex items-center gap-2 p-2 rounded-md bg-gray-50 dark:bg-gray-800 ${className}`}>
+      <div
+        className={`flex items-center gap-2 p-2 rounded-md bg-gray-50 dark:bg-gray-800 ${className}`}
+      >
         {getStatusIcon(status, isLoading)}
         <span className="text-sm font-medium">{label}</span>
         {formattedElapsedTime && (
@@ -231,7 +234,7 @@ export const ProcessStatusIndicator: React.FC<ProcessStatusIndicatorProps> = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             {getStatusIcon(status, isLoading)}
-            <Badge 
+            <Badge
               variant={getBadgeVariant(color)}
               className={getBadgeColorClasses(color)}
             >

@@ -20,7 +20,7 @@ export interface UseWorkOrderStatusOptions {
 
 /**
  * WorkOrderTool用に最適化されたプロセスステータス管理フック
- * 
+ *
  * useProcessStatusの上位ラッパーで、以下の機能を提供：
  * - 自動通知（toast）
  * - WorkOrderTool固有のコールバック処理
@@ -35,56 +35,71 @@ export const useWorkOrderStatus = (options: UseWorkOrderStatusOptions = {}) => {
   } = options;
 
   // ステータス変化時の処理
-  const handleStatusChange = useCallback((status: ProcessStatus, response: ProcessStatusResponse) => {
-    if (!enableNotifications) return;
+  const handleStatusChange = useCallback(
+    (status: ProcessStatus, response: ProcessStatusResponse) => {
+      if (!enableNotifications) return;
 
-    switch (status) {
-      case 'ocr_processing':
-        toast.info('会社判定を開始しました', {
-          description: 'PDFから会社情報を抽出しています...',
-        });
-        break;
-      case 'document_creating':
-        toast.info('手配書作成を開始しました', {
-          description: 'AIが手配書を作成しています...',
-        });
-        break;
-      case 'completed':
-        toast.success(customMessages.completed || '処理が完了しました！', {
-          description: '手配書の作成が完了しました',
-        });
-        onProcessComplete?.(response);
-        break;
-      case 'error':
-        toast.error(customMessages.error || '処理中にエラーが発生しました', {
-          description: response.error_message || '詳細は画面で確認してください',
-        });
-        onProcessError?.(response);
-        break;
-    }
-  }, [enableNotifications, customMessages, onProcessComplete, onProcessError]);
+      switch (status) {
+        case 'ocr_processing':
+          toast.info('会社判定を開始しました', {
+            description: 'PDFから会社情報を抽出しています...',
+          });
+          break;
+        case 'document_creating':
+          toast.info('手配書作成を開始しました', {
+            description: 'AIが手配書を作成しています...',
+          });
+          break;
+        case 'completed':
+          toast.success(customMessages.completed || '処理が完了しました！', {
+            description: '手配書の作成が完了しました',
+          });
+          onProcessComplete?.(response);
+          break;
+        case 'error':
+          toast.error(customMessages.error || '処理中にエラーが発生しました', {
+            description:
+              response.error_message || '詳細は画面で確認してください',
+          });
+          onProcessError?.(response);
+          break;
+      }
+    },
+    [enableNotifications, customMessages, onProcessComplete, onProcessError]
+  );
 
   // エラー時の処理
-  const handleError = useCallback((error: Error) => {
-    if (enableNotifications) {
-      toast.error('ステータス取得エラー', {
-        description: error.message,
-      });
-    }
-  }, [enableNotifications]);
+  const handleError = useCallback(
+    (error: Error) => {
+      if (enableNotifications) {
+        toast.error('ステータス取得エラー', {
+          description: error.message,
+        });
+      }
+    },
+    [enableNotifications]
+  );
 
   // 処理完了時の処理
-  const handleComplete = useCallback((response: ProcessStatusResponse) => {
-    // ブラウザ通知（許可されている場合）
-    if (enableNotifications && 'Notification' in window && Notification.permission === 'granted') {
-      new Notification('MagIQ - 処理完了', {
-        body: response.status === 'completed' 
-          ? '手配書の作成が完了しました'
-          : 'エラーが発生しました',
-        icon: '/vite.svg', // アプリのアイコン
-      });
-    }
-  }, [enableNotifications]);
+  const handleComplete = useCallback(
+    (response: ProcessStatusResponse) => {
+      // ブラウザ通知（許可されている場合）
+      if (
+        enableNotifications &&
+        'Notification' in window &&
+        Notification.permission === 'granted'
+      ) {
+        new Notification('MagIQ - 処理完了', {
+          body:
+            response.status === 'completed'
+              ? '手配書の作成が完了しました'
+              : 'エラーが発生しました',
+          icon: '/vite.svg', // アプリのアイコン
+        });
+      }
+    },
+    [enableNotifications]
+  );
 
   const processStatus = useProcessStatus({
     pollingInterval: 3000, // 3秒間隔
@@ -94,14 +109,19 @@ export const useWorkOrderStatus = (options: UseWorkOrderStatusOptions = {}) => {
   });
 
   // WorkOrderTool用の便利メソッド
-  const startProcessing = useCallback((recordId: string, fileName?: string) => {
-    if (enableNotifications) {
-      toast.info('処理を開始しました', {
-        description: fileName ? `「${fileName}」を処理中...` : '処理を開始しています...',
-      });
-    }
-    processStatus.startPolling(recordId);
-  }, [processStatus.startPolling, enableNotifications]);
+  const startProcessing = useCallback(
+    (recordId: string, fileName?: string) => {
+      if (enableNotifications) {
+        toast.info('処理を開始しました', {
+          description: fileName
+            ? `「${fileName}」を処理中...`
+            : '処理を開始しています...',
+        });
+      }
+      processStatus.startPolling(recordId);
+    },
+    [processStatus.startPolling, enableNotifications]
+  );
 
   const cancelProcessing = useCallback(() => {
     processStatus.stopPolling();

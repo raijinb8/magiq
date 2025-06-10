@@ -1,10 +1,10 @@
 // lib/api.ts
 import { supabase } from './supabase';
 import { getTargetShiftWeek } from '@/utils/getTargetShiftWeek';
-import type { 
-  ProcessStatusResponse, 
-  WorkOrderRecord, 
-  ProcessStatus 
+import type {
+  ProcessStatusResponse,
+  WorkOrderRecord,
+  ProcessStatus,
 } from '@/types';
 
 export async function updateWorkOrderEditedText(
@@ -164,7 +164,7 @@ export async function getMultipleWorkOrderStatuses(
     throw new Error(`ステータス取得に失敗しました: ${error.message}`);
   }
 
-  return (data || []).map(record => ({
+  return (data || []).map((record) => ({
     id: record.id,
     status: record.status as ProcessStatus,
     error_message: record.error_message,

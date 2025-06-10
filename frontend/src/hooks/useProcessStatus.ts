@@ -1,19 +1,22 @@
 // hooks/useProcessStatus.ts
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { getWorkOrderStatus } from '@/lib/api';
-import { 
-  getProcessStatusInfo, 
+import {
+  getProcessStatusInfo,
   formatElapsedTime,
   type ProcessStatus,
   type ProcessStatusInfo,
-  type ProcessStatusResponse 
+  type ProcessStatusResponse,
 } from '@/types';
 
 export interface UseProcessStatusOptions {
   /** ポーリング間隔（ミリ秒）デフォルト: 3000ms */
   pollingInterval?: number;
   /** ステータス変化時のコールバック */
-  onStatusChange?: (status: ProcessStatus, response: ProcessStatusResponse) => void;
+  onStatusChange?: (
+    status: ProcessStatus,
+    response: ProcessStatusResponse
+  ) => void;
   /** エラー発生時のコールバック */
   onError?: (error: Error) => void;
   /** 処理完了時のコールバック */
@@ -62,7 +65,8 @@ export const useProcessStatus = (
 
   // 状態管理
   const [statusInfo, setStatusInfo] = useState<ProcessStatusInfo | null>(null);
-  const [currentResponse, setCurrentResponse] = useState<ProcessStatusResponse | null>(null);
+  const [currentResponse, setCurrentResponse] =
+    useState<ProcessStatusResponse | null>(null);
   const [isPolling, setIsPolling] = useState<boolean>(false);
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [elapsedTime, setElapsedTime] = useState<number>(0);
@@ -98,7 +102,7 @@ export const useProcessStatus = (
 
     try {
       const response = await getWorkOrderStatus(recordIdRef.current);
-      
+
       setCurrentResponse(response);
       setError(null);
 
@@ -113,7 +117,7 @@ export const useProcessStatus = (
       }
 
       // 自動停止条件をチェック
-      const shouldStop = shouldStopPolling 
+      const shouldStop = shouldStopPolling
         ? shouldStopPolling(response.status)
         : response.status === 'completed' || response.status === 'error';
 
@@ -129,12 +133,12 @@ export const useProcessStatus = (
           onComplete?.(response);
         }
       }
-
     } catch (err) {
-      const error = err instanceof Error ? err : new Error('ステータス取得に失敗しました');
+      const error =
+        err instanceof Error ? err : new Error('ステータス取得に失敗しました');
       setError(error);
       onError?.(error);
-      
+
       // エラー時もポーリングを停止
       setIsPolling(false);
       if (intervalRef.current) {
@@ -145,24 +149,27 @@ export const useProcessStatus = (
   }, [onStatusChange, onError, onComplete, shouldStopPolling]);
 
   // ポーリング開始
-  const startPolling = useCallback((recordId: string) => {
-    // 既存のポーリングを停止
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-    }
+  const startPolling = useCallback(
+    (recordId: string) => {
+      // 既存のポーリングを停止
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
 
-    recordIdRef.current = recordId;
-    setIsPolling(true);
-    setStartTime(new Date());
-    setError(null);
-    previousStatusRef.current = null;
+      recordIdRef.current = recordId;
+      setIsPolling(true);
+      setStartTime(new Date());
+      setError(null);
+      previousStatusRef.current = null;
 
-    // 即座に1回実行
-    fetchStatus();
+      // 即座に1回実行
+      fetchStatus();
 
-    // 定期的にポーリング
-    intervalRef.current = setInterval(fetchStatus, pollingInterval);
-  }, [fetchStatus, pollingInterval]);
+      // 定期的にポーリング
+      intervalRef.current = setInterval(fetchStatus, pollingInterval);
+    },
+    [fetchStatus, pollingInterval]
+  );
 
   // ポーリング停止
   const stopPolling = useCallback(() => {
