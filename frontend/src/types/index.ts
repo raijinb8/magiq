@@ -39,11 +39,12 @@ export interface ScrollPosition {
 export interface CompanyDetectionResult {
   detectedCompanyId: string | null;
   confidence: number;
-  method: 'gemini_analysis' | 'rule_based' | 'unknown';
+  method: 'ocr_gemini' | 'gemini_analysis' | 'rule_based' | 'unknown';
   details: {
     foundKeywords?: string[];
     matchedPatterns?: string[];
     geminiReasoning?: string;
+    detectedText?: string;
     rulesApplied?: Array<{
       ruleId: string;
       ruleType: string;
