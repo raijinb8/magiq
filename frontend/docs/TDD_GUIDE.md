@@ -350,7 +350,6 @@ it('カスタムフックの動作確認', () => {
    ```
 
 2. **Arrange-Act-Assert パターン**
-
    ```typescript
    it('ユーザー情報を更新する', async () => {
      // Arrange: 準備

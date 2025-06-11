@@ -22,14 +22,12 @@ import { usePdfDocument } from '@/hooks/usePdfDocument';
 import { usePdfControls } from '@/hooks/usePdfControls';
 import { usePdfProcessor } from '@/hooks/usePdfProcessor';
 import { useDragAndDrop } from '@/hooks/useDragAndDrop';
-import { useWorkOrderStatus } from '@/hooks/useWorkOrderStatus';
 
 // 子コンポーネント
 import { FileManagementPanel } from '@/components/workOrderTool/FileManagementPanel';
 import { PdfPreviewPanel } from '@/components/workOrderTool/PdfPreviewPanel';
 import { GeneratedTextPanel } from '@/components/workOrderTool/GeneratedTextPanel';
 import { DetectionFeedbackModal } from '@/components/workOrderTool/DetectionFeedbackModal';
-import { ProcessStatusIndicator } from '@/components/workOrderTool/ProcessStatusIndicator';
 
 // PDFのレンダリングを効率的に行うための Web Worker を設定
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -56,19 +54,6 @@ const WorkOrderTool: React.FC = () => {
     useState<CompanyDetectionResult | null>(null);
   const [showFeedbackModal, setShowFeedbackModal] = useState<boolean>(false);
   const [lastWorkOrderId, setLastWorkOrderId] = useState<string | null>(null);
-
-  // ステータス管理フック
-  const workOrderStatus = useWorkOrderStatus({
-    enableNotifications: false, // 既存のtoast通知と競合を避ける
-    onProcessComplete: (response) => {
-      // 処理完了時の追加処理があればここに記述
-      console.log('Process completed:', response);
-    },
-    onProcessError: (response) => {
-      // エラー時の追加処理があればここに記述
-      console.log('Process error:', response);
-    },
-  });
 
   // --- カスタムフックの利用 ---
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -123,12 +108,6 @@ const WorkOrderTool: React.FC = () => {
             .detectedCompanyId as CompanyOptionValue;
           setSelectedCompanyId(detectedCompanyId);
 
-          // OCR段階でもdbRecordIdがある場合はポーリング開始
-          if (data.dbRecordId) {
-            setLastWorkOrderId(data.dbRecordId);
-            workOrderStatus.startProcessing(data.dbRecordId, file.name);
-          }
-
           toast.success(`会社を自動判定しました: ${detectedCompanyId}`, {
             description: `信頼度: ${(data.detectionResult.confidence * 100).toFixed(0)}% - 手配書作成を開始します`,
           });
@@ -169,8 +148,6 @@ const WorkOrderTool: React.FC = () => {
       // Work Order IDを保存（フィードバック用）
       if (data.dbRecordId) {
         setLastWorkOrderId(data.dbRecordId);
-        // ステータスポーリングを開始
-        workOrderStatus.startProcessing(data.dbRecordId, file.name);
       }
 
       const companyLabel =
@@ -194,8 +171,6 @@ const WorkOrderTool: React.FC = () => {
         file,
         companyLabel: `エラー (${companyLabelForError})`,
       });
-      // エラー時はポーリングを停止
-      workOrderStatus.stopPolling();
       // setProcessingFile(null); // エラー時も、どのファイルでエラーか示すために維持しても良い
       toast.error(`処理エラー: ${errorMessage}`, {
         description: `ファイル「${file.name}」の処理中に問題が発生しました。`,
@@ -330,7 +305,6 @@ const WorkOrderTool: React.FC = () => {
       setProcessedCompanyInfo({ file: null, companyLabel: '' }); // 処理情報もクリア
       setLastDetectionResult(null); // 前回の判定結果もクリア
       setLastWorkOrderId(null); // work_order IDもクリア
-      workOrderStatus.resetStatus(); // ステータスポーリングもリセット
       // ページ数などは Document の onLoadSuccess でリセットされる (handleDocumentLoadSuccess経由)
       toast.dismiss(); // 既存の通知があれば消す
       toast.info(`「${file.name}」をプレビュー中です。`);
@@ -341,7 +315,6 @@ const WorkOrderTool: React.FC = () => {
       setProcessingFile,
       setGeneratedText,
       setProcessedCompanyInfo,
-      workOrderStatus,
     ]
   );
 
@@ -421,22 +394,6 @@ const WorkOrderTool: React.FC = () => {
       <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent">
         <h1 className="text-xl font-semibold">業務手配書 作成ツール</h1>
       </header>
-
-      {/* ステータス表示エリア */}
-      {workOrderStatus.isProcessing && workOrderStatus.statusInfo && (
-        <div className="px-4 py-3 border-b bg-gray-50 dark:bg-gray-900">
-          <ProcessStatusIndicator
-            statusInfo={workOrderStatus.statusInfo}
-            formattedElapsedTime={workOrderStatus.formattedElapsedTime}
-            errorMessage={workOrderStatus.currentResponse?.error_message}
-            fileName={processingFile?.name}
-            showCancelButton={workOrderStatus.isProcessing}
-            cancelDisabled={false}
-            onCancel={workOrderStatus.cancelProcessing}
-            compact={true}
-          />
-        </div>
-      )}
 
       {/* メインコンテンツエリア (3ペイン) */}
       <div className="flex flex-1 overflow-hidden">
