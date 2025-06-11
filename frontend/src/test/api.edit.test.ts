@@ -18,7 +18,7 @@ describe('updateWorkOrderEditedText', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-
+    
     // Supabaseクエリビルダーのモック設定
     mockSingle.mockResolvedValue({
       data: {
@@ -32,7 +32,7 @@ describe('updateWorkOrderEditedText', () => {
     mockSelect.mockReturnValue({ single: mockSingle });
     mockEq.mockReturnValue({ select: mockSelect });
     mockUpdate.mockReturnValue({ eq: mockEq });
-
+    
     (supabase.from as any).mockReturnValue({
       update: mockUpdate,
     });
@@ -78,17 +78,16 @@ describe('updateWorkOrderEditedText', () => {
       error: { message: errorMessage },
     });
 
-    const consoleErrorSpy = vi
-      .spyOn(console, 'error')
-      .mockImplementation(() => {});
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     await expect(
       updateWorkOrderEditedText('test-id', 'test-content')
     ).rejects.toEqual({ message: errorMessage });
 
-    expect(consoleErrorSpy).toHaveBeenCalledWith('❌ 編集テキスト保存エラー:', {
-      message: errorMessage,
-    });
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      '❌ 編集テキスト保存エラー:',
+      { message: errorMessage }
+    );
 
     consoleErrorSpy.mockRestore();
   });
@@ -106,8 +105,7 @@ describe('updateWorkOrderEditedText', () => {
   });
 
   it('特殊文字を含むテキストでも正常に処理できる', async () => {
-    const specialCharText =
-      '🚀 テスト\n改行\t\tタブ"引用符\'シングル\\バックスラッシュ';
+    const specialCharText = '🚀 テスト\n改行\t\tタブ"引用符\'シングル\\バックスラッシュ';
     const workOrderId = 'test-work-order-id';
 
     await updateWorkOrderEditedText(workOrderId, specialCharText);

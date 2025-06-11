@@ -35,15 +35,15 @@ PDFファイルから会社情報を抽出して判定してください。
 - 「野原グループ株式会社」が検出された場合は、他のキーワードに関係なく必ずNOHARA_Gとして判定
 - 判定に自信がない場合は confidence を低めに設定
 - 確定キーワードが検出された場合は信頼度を0.95以上に設定
-`
+`;
 
 /**
  * OCR専用処理のレスポンス型定義
  */
 export interface OcrDetectionResponse {
-  company_id: string | null
-  confidence: number
-  detected_text: string
-  found_keywords: string[]
-  reasoning: string
+  company_id: string | null;
+  confidence: number;
+  detected_text: string;
+  found_keywords: string[];
+  reasoning: string;
 }
