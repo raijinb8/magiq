@@ -118,3 +118,32 @@ export type PdfBatchProcessResponse =
 export interface FileSelectionState {
   [fileName: string]: boolean;
 }
+
+// ステータス保持・閲覧機能関連の型定義 (issue53対応)
+export type ProcessStatus =
+  | 'waiting' // 待機中
+  | 'ocr_processing' // OCR実行中（会社判定含む）
+  | 'document_creating' // 手配書作成中
+  | 'completed' // 完了
+  | 'error' // エラー
+  | 'cancelled'; // キャンセル済み
+
+export interface ProcessState {
+  status: ProcessStatus;
+  currentStep: string; // 日本語の現在処理内容
+  errorDetail?: string; // エラー詳細
+  startTime: Date; // 開始時刻
+  workOrderId?: string; // DB追跡用ID
+  progress?: number; // 進捗度（0-100）
+  canCancel: boolean; // キャンセル可能フラグ
+}
+
+export interface WorkOrderStatusResponse {
+  id: string;
+  status: string;
+  error_message?: string;
+  uploaded_at: string;
+  gemini_processed_at?: string;
+  file_name: string;
+  updated_at: string;
+}

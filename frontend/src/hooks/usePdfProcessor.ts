@@ -1,5 +1,5 @@
 // src/pages/admin/WorkOrderTool/hooks/usePdfProcessor.ts
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import type {
@@ -27,6 +27,7 @@ export interface UsePdfProcessorReturn {
     enableAutoDetection?: boolean, // 自動判定を有効にするかどうか
     ocrOnly?: boolean // OCRと会社判定のみを実行するかどうか
   ) => Promise<void>;
+  abortRequest: () => void; // APIリクエスト中断機能
 }
 
 export const usePdfProcessor = ({
@@ -34,6 +35,7 @@ export const usePdfProcessor = ({
   onError,
 }: UsePdfProcessorProps): UsePdfProcessorReturn => {
   const [isLoading, setIsLoading] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const processFile = useCallback(
     async (
@@ -50,6 +52,10 @@ export const usePdfProcessor = ({
         onError('会社未選択', fileToProcess, companyLabelForError);
         return;
       }
+      // AbortControllerを作成
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
+
       setIsLoading(true);
       try {
         const session = (await supabase.auth.getSession()).data.session;
@@ -90,6 +96,7 @@ export const usePdfProcessor = ({
             // 'apikey': import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY, // Edge Functionの認証設定によっては必要
           },
           body: formData, // FormDataオブジェクトをbodyに設定
+          signal: abortController.signal, // 中断シグナルを追加
         });
 
         // response.json() の前に response.ok をチェックする方が一般的
@@ -130,6 +137,12 @@ export const usePdfProcessor = ({
           (await response.json()) as PdfProcessSuccessResponse; // 成功レスポンスとして型付け
         onSuccess(responseData, fileToProcess);
       } catch (error: unknown) {
+        // 中断された場合は通常のエラー処理をスキップ
+        if (error instanceof Error && error.name === 'AbortError') {
+          console.log('API request was aborted');
+          return; // 中断時は何もしない（エラー表示なし）
+        }
+
         let errorMessage = 'API呼び出し中に予期せぬエラーが発生しました。';
         if (error instanceof Error) {
           errorMessage = error.message;
@@ -139,10 +152,19 @@ export const usePdfProcessor = ({
         onError(errorMessage, fileToProcess, companyLabelForError);
       } finally {
         setIsLoading(false);
+        abortControllerRef.current = null; // リクエスト完了後はリセット
       }
     },
     [onSuccess, onError] // 依存配列
   );
 
-  return { isLoading, setIsLoading, processFile };
+  // APIリクエストを中断する関数
+  const abortRequest = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+  }, []);
+
+  return { isLoading, setIsLoading, processFile, abortRequest };
 };
