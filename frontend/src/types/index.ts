@@ -78,6 +78,136 @@ export type PdfProcessResponse =
   | PdfProcessSuccessResponse
   | PdfProcessErrorResponse;
 
+// PDF処理の進捗ステータス定義（バックエンドと一致）
+export type ProcessStatus =
+  | 'waiting' // 待機中（処理開始前）
+  | 'ocr_processing' // OCR実行中（会社判定含む）
+  | 'document_creating' // 手配書作成中
+  | 'completed' // 完了
+  | 'error'; // エラー
+
+// ステータス表示用の情報
+export interface ProcessStatusInfo {
+  status: ProcessStatus;
+  label: string; // 日本語ラベル
+  description: string; // 詳細説明
+  color: 'blue' | 'yellow' | 'green' | 'red' | 'gray'; // 表示色
+  icon: string; // アイコン名
+  isLoading: boolean; // ローディング表示するか
+}
+
+// work_orderレコードの型定義
+export interface WorkOrderRecord {
+  id: string;
+  file_name: string | null;
+  uploaded_at: string;
+  company_name: string | null;
+  prompt_identifier: string | null;
+  generated_text: string | null;
+  edited_text: string | null;
+  status: ProcessStatus;
+  error_message: string | null;
+  gemini_processed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  // 自動判定関連フィールド
+  detected_company_id?: string | null;
+  detection_confidence?: number | null;
+  detection_method?: string | null;
+  detection_metadata?: Record<string, unknown>;
+  final_company_id?: string | null;
+}
+
+// ステータスポーリング用の型
+export interface ProcessStatusResponse {
+  id: string;
+  status: ProcessStatus;
+  error_message: string | null;
+  updated_at: string;
+  // 処理進捗に関する追加情報
+  currentStep?: string;
+  startTime?: string;
+}
+
+// ステータス管理用のコンテキスト型
+export interface ProcessStatusContextType {
+  statusInfo: ProcessStatusInfo | null;
+  startTime: Date | null;
+  recordId: string | null;
+  isPolling: boolean;
+  startPolling: (recordId: string) => void;
+  stopPolling: () => void;
+  resetStatus: () => void;
+  elapsedTime: number; // 経過時間（秒）
+}
+
+// ProcessStatusからProcessStatusInfoを生成するユーティリティ関数
+export function getProcessStatusInfo(status: ProcessStatus): ProcessStatusInfo {
+  switch (status) {
+    case 'waiting':
+      return {
+        status,
+        label: '待機中',
+        description: '処理開始を待機しています',
+        color: 'gray',
+        icon: 'clock',
+        isLoading: false,
+      };
+    case 'ocr_processing':
+      return {
+        status,
+        label: '会社判定中',
+        description: 'PDFから会社情報を抽出しています',
+        color: 'blue',
+        icon: 'search',
+        isLoading: true,
+      };
+    case 'document_creating':
+      return {
+        status,
+        label: '手配書作成中',
+        description: 'AI が手配書を作成しています',
+        color: 'yellow',
+        icon: 'edit',
+        isLoading: true,
+      };
+    case 'completed':
+      return {
+        status,
+        label: '完了',
+        description: '手配書の作成が完了しました',
+        color: 'green',
+        icon: 'check',
+        isLoading: false,
+      };
+    case 'error':
+      return {
+        status,
+        label: 'エラー',
+        description: '処理中にエラーが発生しました',
+        color: 'red',
+        icon: 'alert-circle',
+        isLoading: false,
+      };
+    default:
+      return {
+        status: 'waiting',
+        label: '不明',
+        description: '不明なステータスです',
+        color: 'gray',
+        icon: 'help-circle',
+        isLoading: false,
+      };
+  }
+}
+
+// 経過時間をフォーマットする関数
+export function formatElapsedTime(seconds: number): string {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+}
+
 // バッチ処理関連の型定義
 export interface BatchProcessIndividualResult {
   fileName: string;
