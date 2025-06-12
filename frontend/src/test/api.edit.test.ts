@@ -33,9 +33,9 @@ describe('updateWorkOrderEditedText', () => {
     mockEq.mockReturnValue({ select: mockSelect });
     mockUpdate.mockReturnValue({ eq: mockEq });
     
-    (supabase.from as any).mockReturnValue({
+    vi.mocked(supabase.from).mockReturnValue({
       update: mockUpdate,
-    });
+    } as unknown as ReturnType<typeof supabase.from>);
   });
 
   it('正常に編集テキストを更新できる', async () => {

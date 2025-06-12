@@ -34,7 +34,7 @@ describe('GeneratedTextPanel - 編集モード状態遷移', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (updateWorkOrderEditedText as any).mockResolvedValue({
+    vi.mocked(updateWorkOrderEditedText).mockResolvedValue({
       id: 'test-work-order-id',
       edited_text: 'Updated content',
       updated_at: new Date().toISOString(),
@@ -149,10 +149,10 @@ describe('GeneratedTextPanel - 編集モード状態遷移', () => {
     it('保存中はボタンが無効化される', async () => {
       const user = userEvent.setup();
       let resolveUpdate: (value: Awaited<ReturnType<typeof updateWorkOrderEditedText>>) => void;
-      const updatePromise = new Promise((resolve) => {
+      const updatePromise = new Promise<Awaited<ReturnType<typeof updateWorkOrderEditedText>>>((resolve) => {
         resolveUpdate = resolve;
       });
-      (updateWorkOrderEditedText as any).mockReturnValue(updatePromise);
+      vi.mocked(updateWorkOrderEditedText).mockReturnValue(updatePromise);
       
       render(<GeneratedTextPanel {...defaultProps} />);
       
@@ -256,7 +256,7 @@ describe('GeneratedTextPanel - 編集モード状態遷移', () => {
 
     it('保存エラー時は編集モードが継続される', async () => {
       const user = userEvent.setup();
-      (updateWorkOrderEditedText as any).mockRejectedValue(new Error('Save failed'));
+      vi.mocked(updateWorkOrderEditedText).mockRejectedValue(new Error('Save failed'));
       
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       

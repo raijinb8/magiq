@@ -60,7 +60,7 @@ describe('GeneratedTextPanel - 編集保存エラーハンドリング', () => {
 
     it('編集テキストが空の場合のエラー表示', async () => {
       const user = userEvent.setup();
-      (updateWorkOrderEditedText as any).mockResolvedValue({});
+      vi.mocked(updateWorkOrderEditedText).mockResolvedValue({} as Awaited<ReturnType<typeof updateWorkOrderEditedText>>);
       
       render(<GeneratedTextPanel {...defaultProps} />);
       
@@ -103,7 +103,7 @@ describe('GeneratedTextPanel - 編集保存エラーハンドリング', () => {
     it('ネットワークエラーのハンドリング', async () => {
       const user = userEvent.setup();
       const networkError = new Error('Network Error');
-      (updateWorkOrderEditedText as any).mockRejectedValue(networkError);
+      vi.mocked(updateWorkOrderEditedText).mockRejectedValue(networkError);
       
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       
@@ -141,7 +141,7 @@ describe('GeneratedTextPanel - 編集保存エラーハンドリング', () => {
     it('データベースエラーのハンドリング', async () => {
       const user = userEvent.setup();
       const dbError = new Error('Database connection failed');
-      (updateWorkOrderEditedText as any).mockRejectedValue(dbError);
+      vi.mocked(updateWorkOrderEditedText).mockRejectedValue(dbError);
       
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       
@@ -173,7 +173,7 @@ describe('GeneratedTextPanel - 編集保存エラーハンドリング', () => {
     it('権限不足エラーのハンドリング', async () => {
       const user = userEvent.setup();
       const authError = new Error('Permission denied');
-      (updateWorkOrderEditedText as any).mockRejectedValue(authError);
+      vi.mocked(updateWorkOrderEditedText).mockRejectedValue(authError);
       
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       
@@ -205,10 +205,10 @@ describe('GeneratedTextPanel - 編集保存エラーハンドリング', () => {
     it('保存中にキャンセルボタンが無効化される', async () => {
       const user = userEvent.setup();
       let resolveUpdate: (value: Awaited<ReturnType<typeof updateWorkOrderEditedText>>) => void;
-      const updatePromise = new Promise((resolve) => {
+      const updatePromise = new Promise<Awaited<ReturnType<typeof updateWorkOrderEditedText>>>((resolve) => {
         resolveUpdate = resolve;
       });
-      (updateWorkOrderEditedText as any).mockReturnValue(updatePromise);
+      vi.mocked(updateWorkOrderEditedText).mockReturnValue(updatePromise);
       
       render(<GeneratedTextPanel {...defaultProps} />);
       
@@ -248,7 +248,7 @@ describe('GeneratedTextPanel - 編集保存エラーハンドリング', () => {
     it('保存中にエラーが発生しても状態が適切にリセットされる', async () => {
       const user = userEvent.setup();
       const error = new Error('Save failed');
-      (updateWorkOrderEditedText as any).mockRejectedValue(error);
+      vi.mocked(updateWorkOrderEditedText).mockRejectedValue(error);
       
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       
@@ -291,7 +291,7 @@ describe('GeneratedTextPanel - 編集保存エラーハンドリング', () => {
     it('長いテキストの保存エラーハンドリング', async () => {
       const user = userEvent.setup();
       const error = new Error('Text too long');
-      (updateWorkOrderEditedText as any).mockRejectedValue(error);
+      vi.mocked(updateWorkOrderEditedText).mockRejectedValue(error);
       
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       
@@ -323,7 +323,7 @@ describe('GeneratedTextPanel - 編集保存エラーハンドリング', () => {
     it('特殊文字を含むテキストのエラーハンドリング', async () => {
       const user = userEvent.setup();
       const error = new Error('Invalid characters');
-      (updateWorkOrderEditedText as any).mockRejectedValue(error);
+      vi.mocked(updateWorkOrderEditedText).mockRejectedValue(error);
       
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       
