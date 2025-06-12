@@ -300,12 +300,36 @@ const WorkOrderTool: React.FC = () => {
     onFileProcessed: (result) => {
       // 各ファイルの処理完了時の処理
       console.log('File processed:', result);
+      
+      // 処理済みファイルのリストを更新（現在プレビュー中の場合は自動的に生成文言を表示）
+      if (result.status === 'success' && result.workOrderId && pdfFileToDisplay?.name === result.fileName) {
+        // 現在プレビュー中のファイルが処理完了した場合、自動的にデータを取得して表示
+        import('@/lib/api').then(({ getWorkOrderByFileName }) => {
+          getWorkOrderByFileName(result.fileName).then(workOrder => {
+            if (workOrder) {
+              setGeneratedText(workOrder.generated_text || '');
+              setEditedText(workOrder.edited_text || '');
+              setLastWorkOrderId(workOrder.id);
+              setProcessedCompanyInfo({
+                file: pdfFileToDisplay,
+                companyLabel: workOrder.company_name || '',
+              });
+            }
+          });
+        });
+      }
     },
     onBatchComplete: (results) => {
       // バッチ処理完了時の処理
       setShowBatchProgress(false);
       setBatchMode(false);
       setSelectedFiles({});
+      
+      // 成功したファイル数を通知
+      const successCount = results.filter(r => r.status === 'success').length;
+      if (successCount > 0) {
+        toast.success(`${successCount}個のファイルの処理が完了しました。ファイルをクリックして結果を確認してください。`);
+      }
     },
     getCompanyLabel: (companyId) => 
       ALL_COMPANY_OPTIONS.find(opt => opt.value === companyId)?.label || companyId,
@@ -426,10 +450,10 @@ const WorkOrderTool: React.FC = () => {
 
   /**
    * ファイルリスト内のファイルがクリックされたときの処理。
-   * 該当ファイルのPDFプレビューのみを行います。
+   * 該当ファイルのPDFプレビューを行い、既存のwork_orderデータがあれば表示します。
    */
   const handleFilePreviewRequest = useCallback(
-    (file: PdfFile) => {
+    async (file: PdfFile) => {
       if (isLoading) {
         // AI処理中は何もしない（またはトースト表示）
         toast.info(
@@ -439,15 +463,41 @@ const WorkOrderTool: React.FC = () => {
       }
       setPdfFileToDisplay(file);
       setProcessingFile(file); // ★ プレビュー中のファイルを「次にAI実行する対象」としてマーク
-      setGeneratedText(''); // プレビュー変更時は生成テキストをクリア
-      setEditedText(''); // 編集テキストもクリア
-      setProcessedCompanyInfo({ file: undefined, companyLabel: '' }); // 処理情報もクリア
-      setLastDetectionResult(null); // 前回の判定結果もクリア
-      setLastWorkOrderId(null); // work_order IDもクリア
-      clearProcess(); // プロセス状態もクリア
-      // ページ数などは Document の onLoadSuccess でリセットされる (handleDocumentLoadSuccess経由)
-      toast.dismiss(); // 既存の通知があれば消す
-      toast.info(`「${file.name}」をプレビュー中です。`);
+      
+      // デフォルトでクリア
+      setGeneratedText('');
+      setEditedText('');
+      setProcessedCompanyInfo({ file: undefined, companyLabel: '' });
+      setLastDetectionResult(null);
+      setLastWorkOrderId(null);
+      clearProcess();
+      
+      // 既存の通知を消す
+      toast.dismiss();
+      
+      // データベースから既存のwork_orderを検索
+      try {
+        const { getWorkOrderByFileName } = await import('@/lib/api');
+        const workOrder = await getWorkOrderByFileName(file.name);
+        
+        if (workOrder && workOrder.status === 'completed') {
+          // 既存のwork_orderが見つかった場合、その内容を表示
+          setGeneratedText(workOrder.generated_text || '');
+          setEditedText(workOrder.edited_text || '');
+          setLastWorkOrderId(workOrder.id);
+          setProcessedCompanyInfo({
+            file: file,
+            companyLabel: workOrder.company_name || '',
+          });
+          
+          toast.success(`「${file.name}」の処理済みデータを表示しています。`);
+        } else {
+          toast.info(`「${file.name}」をプレビュー中です。`);
+        }
+      } catch (error) {
+        console.error('既存データの取得エラー:', error);
+        toast.info(`「${file.name}」をプレビュー中です。`);
+      }
     },
     [
       isLoading,

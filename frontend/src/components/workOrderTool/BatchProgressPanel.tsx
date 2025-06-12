@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { downloadBatchResults } from '@/utils/batchExport';
 import type { BatchProcessingState, BatchProcessResult } from '@/types';
 
 interface BatchProgressPanelProps {
@@ -81,12 +80,8 @@ export const BatchProgressPanel: React.FC<BatchProgressPanelProps> = ({
               </>
             )}
             {!batchState.isProcessing && batchState.results.length > 0 && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => downloadBatchResults(batchState.results)}
-              >
-                CSV出力
+              <Button size="sm" variant="secondary" disabled>
+                完了
               </Button>
             )}
           </div>

@@ -69,6 +69,12 @@ export const useBatchProcessor = ({
         return;
       }
 
+      // パフォーマンスのため、大量ファイルの処理には制限を設ける
+      if (files.length > 50) {
+        toast.warning('一度に処理できるファイルは50個までです。ファイルを分割して処理してください。');
+        return;
+      }
+
       try {
         // バッチ処理をデータベースに作成
         const batchProcess = await createBatchProcess(files.length, options);
@@ -217,10 +223,11 @@ export const useBatchProcessor = ({
 
       // 並行処理数に応じて処理を実行
       if (concurrentLimit > 1) {
-        // 並行処理
+        // 並行処理（メモリ効率を考慮して最大3並列に制限）
+        const effectiveConcurrentLimit = Math.min(concurrentLimit, 3);
         const chunks: PdfFile[][] = [];
-        for (let i = 0; i < files.length; i += concurrentLimit) {
-          chunks.push(files.slice(i, i + concurrentLimit));
+        for (let i = 0; i < files.length; i += effectiveConcurrentLimit) {
+          chunks.push(files.slice(i, i + effectiveConcurrentLimit));
         }
 
         for (const chunk of chunks) {
@@ -232,6 +239,11 @@ export const useBatchProcessor = ({
             )
           );
           results.push(...chunkResults);
+          
+          // メモリ解放のため、大量処理時は少し待機
+          if (files.length > 20 && chunks.length > 1) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
         }
       } else {
         // 順次処理

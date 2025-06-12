@@ -25,6 +25,25 @@ export async function updateWorkOrderEditedText(
   return data;
 }
 
+/**
+ * ファイル名でwork_orderを取得
+ */
+export async function getWorkOrderByFileName(fileName: string) {
+  const { data, error } = await supabase
+    .from('work_orders')
+    .select('id, file_name, generated_text, edited_text, status, company_name, prompt_identifier')
+    .eq('file_name', fileName)
+    .order('created_at', { ascending: false })
+    .limit(1);
+
+  if (error) {
+    console.error('❌ work_order取得エラー:', error);
+    return null;
+  }
+
+  return data && data.length > 0 ? data[0] : null;
+}
+
 // バッチ処理関連のAPI
 
 /**

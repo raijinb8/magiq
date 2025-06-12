@@ -78,10 +78,14 @@ export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
   // リストアイテムのスタイルを決定するヘルパー関数 (元のclassNameロジックを参考に)
   const getListItemClasses = (file: PdfFile): string => {
     const baseClasses =
-      'mb-2 cursor-pointer rounded-md p-2 text-sm transition-colors duration-150 ease-in-out';
+      'mb-2 cursor-pointer rounded-md p-2 text-sm transition-colors duration-150 ease-in-out relative';
+    
+    // 処理中（アニメーション付き）
     if (processingFile?.name === file.name && isLoading) {
       return `${baseClasses} bg-blue-100 dark:bg-blue-800/30 ring-2 ring-blue-500 animate-pulse`;
     }
+    
+    // 処理成功
     if (
       processedCompanyInfo.file?.name === file.name &&
       !isLoading &&
@@ -90,6 +94,8 @@ export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
     ) {
       return `${baseClasses} bg-green-100 dark:bg-green-800/30 ring-1 ring-green-500`;
     }
+    
+    // 処理エラー
     if (
       processedCompanyInfo.file?.name === file.name &&
       !isLoading &&
@@ -98,15 +104,22 @@ export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
     ) {
       return `${baseClasses} bg-red-100 dark:bg-red-800/30 ring-1 ring-red-500`;
     }
-    // プレビュー中 (まだ処理結果がない or エラーだった場合)
+    
+    // 現在プレビュー中（データ有り）
     if (
       pdfFileToDisplay?.name === file.name &&
       !isLoading &&
-      (!processedCompanyInfo.file ||
-        processedCompanyInfo.file.name !== file.name ||
-        generatedText.startsWith('エラー'))
+      generatedText
     ) {
-      // 処理中でない && (まだ処理結果がない || 表示中ファイルと処理結果ファイルが違う || エラーだった)
+      return `${baseClasses} bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400`;
+    }
+    
+    // 現在プレビュー中（データなし）
+    if (
+      pdfFileToDisplay?.name === file.name &&
+      !isLoading &&
+      !generatedText
+    ) {
       return `${baseClasses} bg-yellow-100 dark:bg-yellow-800/30 ring-1 ring-yellow-500`;
     }
 
