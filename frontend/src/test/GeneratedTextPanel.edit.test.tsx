@@ -36,7 +36,7 @@ describe('GeneratedTextPanel - 編集機能', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (updateWorkOrderEditedText as any).mockResolvedValue({
+    vi.mocked(updateWorkOrderEditedText).mockResolvedValue({
       id: 'test-work-order-id',
       edited_text: 'Updated content',
       updated_at: new Date().toISOString(),
@@ -185,7 +185,7 @@ describe('GeneratedTextPanel - 編集機能', () => {
   it('保存エラー時にエラートーストが表示される', async () => {
     const user = userEvent.setup();
     const errorMessage = 'Network error';
-    (updateWorkOrderEditedText as any).mockRejectedValue(new Error(errorMessage));
+    vi.mocked(updateWorkOrderEditedText).mockRejectedValue(new Error(errorMessage));
     
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     

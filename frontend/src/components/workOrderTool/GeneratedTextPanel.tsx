@@ -9,7 +9,9 @@ import type {
   PdfFile,
   CompanyOptionValue,
   CompanyDetectionResult,
+  ProcessState,
 } from '@/types';
+import { ProcessStatusIndicator } from './ProcessStatusIndicator';
 
 interface GeneratedTextPanelProps {
   generatedText: string;
@@ -23,6 +25,9 @@ interface GeneratedTextPanelProps {
   workOrderId?: string; // 編集対象のwork_order ID
   editedText?: string; // 編集済みテキスト
   onEditedTextChange?: (text: string) => void; // 編集テキスト変更時のコールバック
+  // ステータス管理関連
+  processState?: ProcessState | null; // プロセス状態
+  onCancelProcess?: () => void; // プロセスキャンセル
 }
 
 export const GeneratedTextPanel: React.FC<GeneratedTextPanelProps> = ({
@@ -37,6 +42,8 @@ export const GeneratedTextPanel: React.FC<GeneratedTextPanelProps> = ({
   workOrderId,
   editedText = '',
   onEditedTextChange,
+  processState,
+  onCancelProcess,
 }) => {
   // 編集モード状態管理
   const [isEditMode, setIsEditMode] = useState<boolean>(false);
@@ -176,6 +183,15 @@ export const GeneratedTextPanel: React.FC<GeneratedTextPanelProps> = ({
         </div>
       </div>
       <div className="flex flex-col flex-1 gap-2">
+        {/* プロセス状態表示 */}
+        {processState && (
+          <ProcessStatusIndicator
+            processState={processState}
+            onCancel={onCancelProcess}
+            className="mb-2"
+          />
+        )}
+
         {/* 編集状態の表示 */}
         {isEditMode && (
           <div className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded border-l-4 border-orange-400">

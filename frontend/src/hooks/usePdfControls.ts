@@ -32,8 +32,10 @@ export const usePdfControls = (): UsePdfControlsReturn => {
   const [isPanning, setIsPanning] = useState<boolean>(false);
   const [panStart, setPanStart] = useState<Point>({ x: 0, y: 0 });
   const [scrollStart, setScrollStart] = useState<ScrollPosition>({
-    left: 0,
+    scrollTop: 0,
+    scrollLeft: 0,
     top: 0,
+    left: 0,
   });
 
   /**
@@ -62,6 +64,8 @@ export const usePdfControls = (): UsePdfControlsReturn => {
         setIsPanning(true);
         setPanStart({ x: event.clientX, y: event.clientY });
         setScrollStart({
+          scrollLeft: pdfDisplayContainerRef.current.scrollLeft,
+          scrollTop: pdfDisplayContainerRef.current.scrollTop,
           left: pdfDisplayContainerRef.current.scrollLeft,
           top: pdfDisplayContainerRef.current.scrollTop,
         });
@@ -78,8 +82,8 @@ export const usePdfControls = (): UsePdfControlsReturn => {
       if (isPanning && pdfDisplayContainerRef.current) {
         const deltaX = event.clientX - panStart.x;
         const deltaY = event.clientY - panStart.y;
-        pdfDisplayContainerRef.current.scrollLeft = scrollStart.left - deltaX;
-        pdfDisplayContainerRef.current.scrollTop = scrollStart.top - deltaY;
+        pdfDisplayContainerRef.current.scrollLeft = scrollStart.scrollLeft - deltaX;
+        pdfDisplayContainerRef.current.scrollTop = scrollStart.scrollTop - deltaY;
       }
     },
     [isPanning, panStart, scrollStart] // これらの値に依存して処理を行う

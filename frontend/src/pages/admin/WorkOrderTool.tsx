@@ -22,6 +22,7 @@ import { usePdfDocument } from '@/hooks/usePdfDocument';
 import { usePdfControls } from '@/hooks/usePdfControls';
 import { usePdfProcessor } from '@/hooks/usePdfProcessor';
 import { useDragAndDrop } from '@/hooks/useDragAndDrop';
+import { useWorkOrderStatus } from '@/hooks/useWorkOrderStatus';
 
 // 子コンポーネント
 import { FileManagementPanel } from '@/components/workOrderTool/FileManagementPanel';
@@ -36,6 +37,13 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 ).toString();
 
 const WorkOrderTool: React.FC = () => {
+  // ブラウザ通知の許可を要求
+  React.useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
   // --- 状態管理 ---
   // 会社選択の状態
   const [selectedCompanyId, setSelectedCompanyId] =
@@ -46,7 +54,7 @@ const WorkOrderTool: React.FC = () => {
   const [editedText, setEditedText] = useState<string>('');
   // AI処理結果に関する情報 (ファイル名、会社ラベル)
   const [processedCompanyInfo, setProcessedCompanyInfo] =
-    useState<ProcessedCompanyInfo>({ file: null, companyLabel: '' });
+    useState<ProcessedCompanyInfo>({ file: undefined, companyLabel: '' });
 
   // 自動判定用の状態
   const [autoDetectEnabled, setAutoDetectEnabled] = useState<boolean>(true); // デフォルトで有効
@@ -91,12 +99,45 @@ const WorkOrderTool: React.FC = () => {
     onDocumentLoadSuccess: baseOnDocumentLoadSuccess, // フックからの基本処理
   } = usePdfDocument();
 
+  // ステータス管理フック（usePdfProcessorより先に定義する必要がある）
+  const {
+    processState,
+    startProcessWithoutId,
+    updateWorkOrderId,
+    setDocumentCreating,
+    completeProcess,
+    setErrorState,
+    cancelProcess: cancelWorkOrderStatus,
+    clearProcess,
+  } = useWorkOrderStatus({
+    onProcessComplete: () => {
+      toast.success('処理が完了しました！');
+      // ブラウザ通知（対応ブラウザのみ）
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('MagIQ - 処理完了', {
+          body: `「${processingFile?.name}」の手配書作成が完了しました`,
+          icon: '/vite.svg',
+        });
+      }
+    },
+    onProcessError: (_, errorMessage) => {
+      toast.error('処理中にエラーが発生しました', {
+        description: errorMessage,
+      });
+    },
+  });
+
   // API処理とローディング状態の管理
-  const { isLoading, processFile } = usePdfProcessor({
+  const { isLoading, processFile, abortRequest } = usePdfProcessor({
     onSuccess: (data: PdfProcessSuccessResponse, file: File) => {
-      setGeneratedText(
-        data.generatedText || 'テキストが生成されませんでした。'
-      );
+      // レスポンスデータの検証
+      if (!data.generatedText && !data.ocrOnly) {
+        console.error('Empty generatedText received:', data);
+        setErrorState(
+          'AIから空のレスポンスが返されました。PDFの内容を確認してください。'
+        );
+        return;
+      }
 
       // 自動判定結果を保存
       if (data.detectionResult) {
@@ -108,16 +149,28 @@ const WorkOrderTool: React.FC = () => {
             .detectedCompanyId as CompanyOptionValue;
           setSelectedCompanyId(detectedCompanyId);
 
-          toast.success(`会社を自動判定しました: ${detectedCompanyId}`, {
-            description: `信頼度: ${(data.detectionResult.confidence * 100).toFixed(0)}% - 手配書作成を開始します`,
-          });
-
-          // Stage 2: 手配書作成
+          // OCR完了時：判定された会社情報を表示
           const companyLabel =
             ALL_COMPANY_OPTIONS.find((opt) => opt.value === detectedCompanyId)
               ?.label || detectedCompanyId;
 
+          setGeneratedText(
+            `📋 会社判定が完了しました\n\n✅ 判定結果: ${companyLabel}\n📊 信頼度: ${(data.detectionResult.confidence * 100).toFixed(0)}%\n\n🔄 手配書作成を開始します...`
+          );
+
+          toast.success(`会社を自動判定しました: ${detectedCompanyId}`, {
+            description: `信頼度: ${(data.detectionResult.confidence * 100).toFixed(0)}% - 手配書作成を開始します`,
+          });
+
+          // Stage 1完了 → Stage 2の状態に遷移
+          if (data.dbRecordId) {
+            updateWorkOrderId(data.dbRecordId);
+          }
+
           setTimeout(async () => {
+            // Stage 2開始時に確実に手配書作成中状態を設定
+            setDocumentCreating();
+
             toast.info(`「${file.name}」の手配書作成を開始します`, {
               description: `会社: ${companyLabel}`,
             });
@@ -145,15 +198,33 @@ const WorkOrderTool: React.FC = () => {
         }
       }
 
+      // 手配書作成完了時の検証
+      if (
+        !data.ocrOnly &&
+        (!data.generatedText || data.generatedText.trim().length === 0)
+      ) {
+        console.error('Empty final generatedText received:', data);
+        setErrorState('手配書の生成に失敗しました。再度実行してください。');
+        return;
+      }
+
       // Work Order IDを保存（フィードバック用）
       if (data.dbRecordId) {
         setLastWorkOrderId(data.dbRecordId);
+        // 処理完了状態に遷移
+        completeProcess();
       }
 
       const companyLabel =
         ALL_COMPANY_OPTIONS.find((opt) => opt.value === data.identifiedCompany)
           ?.label || String(data.identifiedCompany);
       setProcessedCompanyInfo({ file, companyLabel });
+
+      // 最終的な生成テキストを設定
+      if (data.generatedText && !data.ocrOnly) {
+        setGeneratedText(data.generatedText);
+      }
+
       toast.success(
         `「${file.name}」のAI処理が完了しました！ (会社: ${companyLabel})`
       );
@@ -171,12 +242,22 @@ const WorkOrderTool: React.FC = () => {
         file,
         companyLabel: `エラー (${companyLabelForError})`,
       });
-      // setProcessingFile(null); // エラー時も、どのファイルでエラーか示すために維持しても良い
+
+      // プロセス状態をエラーに更新
+      setErrorState(errorMessage);
+
       toast.error(`処理エラー: ${errorMessage}`, {
         description: `ファイル「${file.name}」の処理中に問題が発生しました。`,
       });
     },
   });
+
+  // 統合された中断処理：ワークオーダーステータス中断とAPIリクエスト中断の両方を実行
+  const cancelProcess = useCallback(() => {
+    cancelWorkOrderStatus(); // ワークオーダーステータスを中断状態にする
+    abortRequest(); // 進行中のAPIリクエストを中断する
+    toast.info('処理を中断しました');
+  }, [cancelWorkOrderStatus, abortRequest]);
 
   /**
    * 2段階処理：OCR+会社判定 → 手配書作成
@@ -232,6 +313,10 @@ const WorkOrderTool: React.FC = () => {
     }
 
     setLastDetectionResult(null); // 前回の判定結果をクリア
+    clearProcess(); // 前回のプロセス状態をクリア
+
+    // プログレスバー表示開始
+    startProcessWithoutId();
 
     // 自動判定有効の場合は2段階処理
     if (autoDetectEnabled) {
@@ -261,6 +346,8 @@ const WorkOrderTool: React.FC = () => {
     isLoading,
     processFile,
     handleTwoStageProcess,
+    clearProcess,
+    startProcessWithoutId,
   ]);
 
   // --- 連携ロジックとコールバック関数 ---
@@ -302,9 +389,10 @@ const WorkOrderTool: React.FC = () => {
       setProcessingFile(file); // ★ プレビュー中のファイルを「次にAI実行する対象」としてマーク
       setGeneratedText(''); // プレビュー変更時は生成テキストをクリア
       setEditedText(''); // 編集テキストもクリア
-      setProcessedCompanyInfo({ file: null, companyLabel: '' }); // 処理情報もクリア
+      setProcessedCompanyInfo({ file: undefined, companyLabel: '' }); // 処理情報もクリア
       setLastDetectionResult(null); // 前回の判定結果もクリア
       setLastWorkOrderId(null); // work_order IDもクリア
+      clearProcess(); // プロセス状態もクリア
       // ページ数などは Document の onLoadSuccess でリセットされる (handleDocumentLoadSuccess経由)
       toast.dismiss(); // 既存の通知があれば消す
       toast.info(`「${file.name}」をプレビュー中です。`);
@@ -315,6 +403,7 @@ const WorkOrderTool: React.FC = () => {
       setProcessingFile,
       setGeneratedText,
       setProcessedCompanyInfo,
+      clearProcess,
     ]
   );
 
@@ -452,6 +541,8 @@ const WorkOrderTool: React.FC = () => {
             workOrderId={lastWorkOrderId || undefined}
             editedText={editedText}
             onEditedTextChange={handleEditedTextChange}
+            processState={processState}
+            onCancelProcess={cancelProcess}
           />
         </main>
       </div>
