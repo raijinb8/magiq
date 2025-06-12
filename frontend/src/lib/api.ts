@@ -2,6 +2,28 @@
 import { supabase } from './supabase';
 import { getTargetShiftWeek } from '@/utils/getTargetShiftWeek';
 
+export async function updateWorkOrderEditedText(
+  workOrderId: string,
+  editedText: string
+) {
+  const { data, error } = await supabase
+    .from('work_orders')
+    .update({
+      edited_text: editedText,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', workOrderId)
+    .select('id, edited_text, updated_at')
+    .single();
+
+  if (error) {
+    console.error('❌ 編集テキスト保存エラー:', error);
+    throw error;
+  }
+
+  return data;
+}
+
 export async function getSubmittedShiftsForCurrentUser(userId: string) {
   const dates = getTargetShiftWeek();
 

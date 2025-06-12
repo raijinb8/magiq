@@ -3,5 +3,27 @@
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.formatOnSave": true,
   "deno.enable": true,
-  "deno.enablePaths": ["./supabase/functions"]
+  "deno.enablePaths": ["./supabase/functions"],
+  
+  // TypeScript設定
+  "typescript.preferences.includePackageJsonAutoImports": "on",
+  "typescript.suggest.autoImports": true,
+  "typescript.validate.enable": true,
+  "typescript.surveys.enabled": false,
+  "typescript.preferences.verbatimModuleSyntax": false,
+  
+  // フロントエンド用の設定
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  
+  // ワークスペース設定
+  "typescript.preferences.useAliasesForRenames": false,
+  "files.associations": {
+    "*.test.tsx": "typescriptreact",
+    "*.test.ts": "typescript"
+  }
 }

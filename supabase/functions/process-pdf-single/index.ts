@@ -5,6 +5,8 @@ import { GoogleGenAI } from '@google/genai'
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { getPrompt, PromptFunction } from './promptRegistry.ts'
 import { encodeBase64 } from 'https://deno.land/std@0.224.0/encoding/base64.ts' // Base64エンコード用
+import { CompanyDetector } from './companyDetector.ts'
+import { OCR_COMPANY_DETECTION_PROMPT, type OcrDetectionResponse } from './ocrPrompt.ts'
 
 console.log('process-pdf-single function (v2 - with Gen) has been invoked!')
 
@@ -41,6 +43,60 @@ try {
 
 type CompanyIdentifier = 'NOHARA_G' | 'KATOUBENIYA_MISAWA' | 'UNKNOWN_OR_NOT_SET'
 
+/**
+ * OCR専用の会社判定処理
+ */
+async function performOcrCompanyDetection(
+  geminiApiKey: string,
+  pdfFile: File,
+  pdfBase64Data: string
+): Promise<OcrDetectionResponse> {
+  const genAI = new GoogleGenAI({ apiKey: geminiApiKey })
+
+  try {
+    const response = await genAI.models.generateContent({
+      model: 'gemini-2.5-flash-preview-04-17',
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            { text: OCR_COMPANY_DETECTION_PROMPT },
+            {
+              inlineData: {
+                mimeType: pdfFile.type,
+                data: pdfBase64Data,
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    const responseText = response.text || ''
+    console.log('[OCR Detection] Gemini raw response:', responseText)
+
+    // JSONレスポンスをパース
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) {
+      throw new Error('No JSON found in OCR response')
+    }
+
+    const result = JSON.parse(jsonMatch[0]) as OcrDetectionResponse
+
+    // バリデーション
+    return {
+      company_id: result.company_id || null,
+      confidence: typeof result.confidence === 'number' ? result.confidence : 0,
+      detected_text: result.detected_text || '',
+      found_keywords: Array.isArray(result.found_keywords) ? result.found_keywords : [],
+      reasoning: result.reasoning || '',
+    }
+  } catch (error) {
+    console.error('[OCR Detection] Error calling Gemini API:', error)
+    throw error
+  }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -60,13 +116,12 @@ Deno.serve(async (req: Request) => {
       console.warn(`Invalid Content-Type: "${contentType}". Expected multipart/form-data.`)
       return new Response(
         JSON.stringify({
-          error:
-            '不正なリクエスト形式です。Content-Type は multipart/form-data である必要があります。',
+          error: '不正なリクエスト形式です。Content-Type は multipart/form-data である必要があります。',
         }),
         {
           status: 415, // Unsupported Media Type
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        },
+        }
       )
     }
 
@@ -75,8 +130,7 @@ Deno.serve(async (req: Request) => {
       // リクエストボディを FormData としてパース
       formData = await req.formData()
     } catch (e: unknown) {
-      let errorMessage =
-        'リクエストボディの解析に失敗しました。multipart/form-data 形式が正しいか確認してください。'
+      let errorMessage = 'リクエストボディの解析に失敗しました。multipart/form-data 形式が正しいか確認してください。'
       if (e instanceof Error) {
         errorMessage = e.message // Deno の formData() が投げるエラーのメッセージを利用
       } else if (typeof e === 'string') {
@@ -89,26 +143,22 @@ Deno.serve(async (req: Request) => {
       })
     }
 
-    // 将来的にはここに実際のPDFの内容を渡す処理が入る（例: OCR結果など）
-    const companyIdFromFrontend = formData.get('companyId') as CompanyIdentifier // フロントエンドから会社IDを受け取る
-
-    if (!companyIdFromFrontend || companyIdFromFrontend === 'UNKNOWN_OR_NOT_SET') {
-      // companyIdが送られてこない、または未選択の場合はエラーにするか、デフォルト処理をする
-      return new Response(JSON.stringify({ error: '会社IDが提供されていません。' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
+    // パラメーター取得
+    let companyIdFromFrontend = formData.get('companyId') as CompanyIdentifier // フロントエンドから会社IDを受け取る
+    const enableAutoDetection = formData.get('enableAutoDetection') === 'true' // 自動判定を有効にするかどうか
+    const ocrOnly = formData.get('ocrOnly') === 'true' // OCRと会社判定のみを実行するかどうか
 
     const pdfFile = formData.get('pdfFile') // フロントエンドで append したキー名
     // バリデーション
     if (!(pdfFile instanceof File)) {
       return new Response(
-        JSON.stringify({ error: 'PDFファイルが提供されていないか、形式が無効です。' }),
+        JSON.stringify({
+          error: 'PDFファイルが提供されていないか、形式が無効です。',
+        }),
         {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        },
+        }
       )
     }
 
@@ -121,9 +171,7 @@ Deno.serve(async (req: Request) => {
     }
 
     console.log(
-      `[${
-        new Date().toISOString()
-      }] Received request for ${fileName}, Company ID from frontend: ${companyIdFromFrontend}`,
+      `[${new Date().toISOString()}] Received request for ${fileName}, Company ID from frontend: ${companyIdFromFrontend}`
     )
 
     // PDFファイルの内容をBase64エンコード
@@ -131,14 +179,9 @@ Deno.serve(async (req: Request) => {
     let fileArrayBuffer: ArrayBuffer
     try {
       fileArrayBuffer = await pdfFile.arrayBuffer()
-      console.log(
-        `[PDF Processing] Successfully read file into ArrayBuffer, size: ${fileArrayBuffer.byteLength} bytes`,
-      )
+      console.log(`[PDF Processing] Successfully read file into ArrayBuffer, size: ${fileArrayBuffer.byteLength} bytes`)
     } catch (bufferError) {
-      console.error(
-        `[PDF Processing] Failed to read PDF file content for ${fileName}:`,
-        bufferError,
-      )
+      console.error(`[PDF Processing] Failed to read PDF file content for ${fileName}:`, bufferError)
       return new Response(JSON.stringify({ error: 'PDFファイル内容の読み取りに失敗しました。' }), {
         status: 500, // Internal Server Error
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -147,24 +190,6 @@ Deno.serve(async (req: Request) => {
     // ステップ2: ArrayBuffer を Base64 文字列にエンコードする
     const pdfBase64Data = encodeBase64(fileArrayBuffer)
     console.log(`[PDF Processing] Successfully Base64 encoded PDF content for ${fileName}.`)
-
-    // supabase/functions/process-pdf-single/promptRegistry.ts
-    // から識別子とプロンプトのマッピング情報を取得
-    const promptEntry = getPrompt(companyIdFromFrontend)
-
-    if (!promptEntry) {
-      console.error(
-        `[${
-          new Date().toISOString()
-        }] No prompt entry found for companyId: ${companyIdFromFrontend} (file: ${fileName})`,
-      )
-      return new Response(
-        JSON.stringify({
-          error: `Unsupported company or prompt configuration for: ${companyIdFromFrontend}`,
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      )
-    }
 
     // 1. Gemini APIキーを環境変数から取得
     const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY')
@@ -177,7 +202,122 @@ Deno.serve(async (req: Request) => {
         {
           status: 500, // Internal Server Error
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        },
+        }
+      )
+    }
+
+    // OCR専用処理の場合
+    if (ocrOnly) {
+      console.log(`[${new Date().toISOString()}] Starting OCR-only company detection for ${fileName}`)
+
+      try {
+        const ocrResult = await performOcrCompanyDetection(GEMINI_API_KEY, pdfFile, pdfBase64Data)
+
+        return new Response(
+          JSON.stringify({
+            message: 'OCRフェーズ完了',
+            detectionResult: {
+              detectedCompanyId: ocrResult.company_id,
+              confidence: ocrResult.confidence,
+              method: 'ocr_gemini',
+              details: {
+                foundKeywords: ocrResult.found_keywords,
+                geminiReasoning: ocrResult.reasoning,
+                detectedText: ocrResult.detected_text,
+              },
+            },
+            fileName: fileName,
+            ocrOnly: true,
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        )
+      } catch (error) {
+        console.error('[OCR Detection] Error:', error)
+        return new Response(
+          JSON.stringify({
+            error: 'OCR処理中にエラーが発生しました',
+            detectionResult: {
+              detectedCompanyId: null,
+              confidence: 0,
+              method: 'ocr_gemini',
+              details: {
+                geminiReasoning: `エラー: ${error instanceof Error ? error.message : String(error)}`,
+              },
+            },
+          }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        )
+      }
+    }
+
+    // 通常の自動判定と手配書作成の実行
+    let detectionResult = null
+    let detectionConfidence = 0
+    let detectionMethod = 'manual'
+    let detectionDetails = {}
+
+    if (enableAutoDetection || !companyIdFromFrontend || companyIdFromFrontend === 'UNKNOWN_OR_NOT_SET') {
+      console.log(`[${new Date().toISOString()}] Starting automatic company detection for ${fileName}`)
+
+      const detector = new CompanyDetector(GEMINI_API_KEY, supabaseClient)
+      detectionResult = await detector.detectCompany(pdfFile, pdfBase64Data)
+
+      if (detectionResult.detectedCompanyId) {
+        console.log(
+          `[${new Date().toISOString()}] Auto-detected company: ${detectionResult.detectedCompanyId} with confidence ${
+            detectionResult.confidence
+          }`
+        )
+
+        // フロントエンドから会社IDが提供されていない場合、自動判定結果を使用
+        if (!companyIdFromFrontend || companyIdFromFrontend === 'UNKNOWN_OR_NOT_SET') {
+          companyIdFromFrontend = detectionResult.detectedCompanyId as CompanyIdentifier
+        }
+
+        detectionConfidence = detectionResult.confidence
+        detectionMethod = detectionResult.method
+        detectionDetails = detectionResult.details
+      } else {
+        console.log(`[${new Date().toISOString()}] Could not auto-detect company for ${fileName}`)
+
+        // 自動判定に失敗し、フロントエンドからも会社IDが提供されていない場合
+        if (!companyIdFromFrontend || companyIdFromFrontend === 'UNKNOWN_OR_NOT_SET') {
+          return new Response(
+            JSON.stringify({
+              error: '会社を自動判定できませんでした。手動で会社を選択してください。',
+              detectionResult: detectionResult,
+            }),
+            {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            }
+          )
+        }
+      }
+    }
+
+    // supabase/functions/process-pdf-single/promptRegistry.ts
+    // から識別子とプロンプトのマッピング情報を取得
+    const promptEntry = getPrompt(companyIdFromFrontend)
+
+    if (!promptEntry) {
+      console.error(
+        `[${new Date().toISOString()}] No prompt entry found for companyId: ${companyIdFromFrontend} (file: ${fileName})`
+      )
+      return new Response(
+        JSON.stringify({
+          error: `Unsupported company or prompt configuration for: ${companyIdFromFrontend}`,
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
       )
     }
 
@@ -205,11 +345,7 @@ Deno.serve(async (req: Request) => {
       },
     ]
 
-    console.log(
-      `[${
-        new Date().toISOString()
-      }] Sending prompt with PDF data to Gemini API for file: ${fileName}`,
-    )
+    console.log(`[${new Date().toISOString()}] Sending prompt with PDF data to Gemini API for file: ${fileName}`)
     // console.debug("Full Prompt to Gen:", prompt); // デバッグ時に必要ならコメント解除 (非常に長くなる可能性)
 
     // 4. Gemini API呼び出し
@@ -243,19 +379,14 @@ Deno.serve(async (req: Request) => {
         // デベロッパーがシステム指示を設定
         // systemInstruction: "",
       })
-      if (typeof response.text === 'string') {
+      if (typeof response.text === 'string' && response.text.trim().length > 0) {
         generatedTextByGen = response.text
       } else {
-        // response.text が undefined だった場合の処理
-        // 例えば、デフォルトの文字列を代入する、エラーを投げる、など
-        generatedTextByGen = '' // またはエラー処理
-        console.error('response.text is undefined')
+        // response.text が undefined または空文字列だった場合の処理
+        console.error('response.text is undefined or empty:', response)
+        throw new Error('Gemini APIからの応答が空です。PDFの内容を確認してください。')
       }
-      console.log(
-        `[${
-          new Date().toISOString()
-        }] Successfully received response from Gemini API for: ${fileName}`,
-      )
+      console.log(`[${new Date().toISOString()}] Successfully received response from Gemini API for: ${fileName}`)
       usageMetadata = response.usageMetadata
 
       // usageMetadata が存在する場合、トークン数をログに出力
@@ -275,19 +406,12 @@ Deno.serve(async (req: Request) => {
           console.log(`  Cached Content Token Count: ${usageMetadata.cachedContentTokenCount}`)
         }
       } else {
-        console.log(
-          `[${
-            new Date().toISOString()
-          }] usageMetadata not found in Gemini API response for: ${fileName}`,
-        )
+        console.log(`[${new Date().toISOString()}] usageMetadata not found in Gemini API response for: ${fileName}`)
       }
 
       // console.debug("Gen Raw Response Text:", generatedTextByGen); // デバッグ時に必要ならコメント解除
     } catch (genError: any) {
-      console.error(
-        `[${new Date().toISOString()}] Error calling Gemini API for ${fileName}:`,
-        genError,
-      )
+      console.error(`[${new Date().toISOString()}] Error calling Gemini API for ${fileName}:`, genError)
       let userFriendlyErrorMessage = 'AIによるテキスト生成に失敗しました。'
       // Gemini APIからのエラーレスポンスに詳細が含まれていれば、それをログに出力
       // genError.message にも情報が含まれることがある
@@ -305,7 +429,7 @@ Deno.serve(async (req: Request) => {
         {
           status: 502, // Bad Gateway (外部APIとの連携で問題があった場合)
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        },
+        }
       )
     }
 
@@ -314,11 +438,7 @@ Deno.serve(async (req: Request) => {
     let dbRecordId: string | null = null
     if (supabaseClient) {
       try {
-        console.log(
-          `[${
-            new Date().toISOString()
-          }] Attempting to save generated text to database for: ${fileName}`,
-        )
+        console.log(`[${new Date().toISOString()}] Attempting to save generated text to database for: ${fileName}`)
         const { data: insertedData, error: dbError } = await supabaseClient
           .from('work_orders') // 作成したテーブル名
           .insert([
@@ -331,16 +451,19 @@ Deno.serve(async (req: Request) => {
               prompt_identifier: promptIdentifier, // どのプロンプトを使ったか
               company_name: companyName, // 取引先_発注元
               gemini_processed_at: new Date().toISOString(), // Gemini処理完了時刻
+              // 自動判定関連のカラム
+              detected_company_id: detectionResult?.detectedCompanyId || null,
+              detection_confidence: detectionConfidence || null,
+              detection_method: detectionMethod,
+              detection_metadata: detectionDetails || null,
+              final_company_id: companyIdFromFrontend, // 最終的に使用された会社ID
             },
           ])
           .select('id') // 挿入されたレコードのIDを取得
           .single() // 1件のレコードが返ることを期待
 
         if (dbError) {
-          console.error(
-            `[${new Date().toISOString()}] Error saving to database for ${fileName}:`,
-            dbError,
-          )
+          console.error(`[${new Date().toISOString()}] Error saving to database for ${fileName}:`, dbError)
           // DB保存エラーは致命的ではないかもしれないので、フロントには成功として返しつつログで警告する選択肢もある
           // 今回はエラーとして扱う
           return new Response(
@@ -351,28 +474,32 @@ Deno.serve(async (req: Request) => {
             {
               status: 500,
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            },
+            }
           )
         }
         if (insertedData && insertedData.id) {
           dbRecordId = insertedData.id
           console.log(
-            `[${
-              new Date().toISOString()
-            }] Successfully saved to database for ${fileName}, record ID: ${dbRecordId}`,
+            `[${new Date().toISOString()}] Successfully saved to database for ${fileName}, record ID: ${dbRecordId}`
           )
+
+          // 判定履歴を保存
+          if (detectionResult && enableAutoDetection) {
+            const detector = new CompanyDetector(GEMINI_API_KEY, supabaseClient)
+            await detector.saveDetectionHistory(
+              dbRecordId,
+              fileName,
+              detectionResult,
+              undefined // TODO: ユーザーIDを渡す場合はここで設定
+            )
+          }
         } else {
           console.warn(
-            `[${
-              new Date().toISOString()
-            }] Saved to database for ${fileName}, but no ID returned or insert failed silently.`,
+            `[${new Date().toISOString()}] Saved to database for ${fileName}, but no ID returned or insert failed silently.`
           )
         }
       } catch (e: unknown) {
-        console.error(
-          `[${new Date().toISOString()}] Exception during database save for ${fileName}:`,
-          e,
-        )
+        console.error(`[${new Date().toISOString()}] Exception during database save for ${fileName}:`, e)
         // こちらもエラーとして扱う
         let errorMessage = 'Internal Server Error. Please try again later.'
         if (e instanceof Error) {
@@ -388,14 +515,12 @@ Deno.serve(async (req: Request) => {
           {
             status: 500,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          },
+          }
         )
       }
     } else {
       console.warn(
-        `[${
-          new Date().toISOString()
-        }] Supabase client not initialized. Skipping database save for ${fileName}.`,
+        `[${new Date().toISOString()}] Supabase client not initialized. Skipping database save for ${fileName}.`
       )
       // 開発中はDB接続なしでも動くようにしておくか、エラーにするか選択
       // 今回は警告のみで進めるが、本番では client が null ならエラーにすべき
@@ -410,6 +535,15 @@ Deno.serve(async (req: Request) => {
       identifiedCompany: companyIdFromFrontend,
       usageMetadata: usageMetadata, // トークン使用量も返す
       dbRecordId: dbRecordId, // DBに保存されたレコードのIDも返す (オプション)
+      // 自動判定の結果を含める
+      detectionResult: detectionResult
+        ? {
+            detectedCompanyId: detectionResult.detectedCompanyId,
+            confidence: detectionResult.confidence,
+            method: detectionResult.method,
+            details: detectionResult.details,
+          }
+        : null,
     }
 
     return new Response(JSON.stringify(responseData), {
@@ -431,7 +565,7 @@ Deno.serve(async (req: Request) => {
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      },
+      }
     )
   }
 })

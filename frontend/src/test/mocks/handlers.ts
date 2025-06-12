@@ -123,7 +123,13 @@ export const authHandlers = [
   }),
 
   // トークンリフレッシュ
-  http.post('*/auth/v1/token?grant_type=refresh_token', async ({ request }) => {
+  http.post('*/auth/v1/token', async ({ request }) => {
+    const url = new URL(request.url);
+    const grantType = url.searchParams.get('grant_type');
+
+    if (grantType !== 'refresh_token') {
+      return;
+    }
     const body = (await request.json()) as { refresh_token: string };
 
     if (
