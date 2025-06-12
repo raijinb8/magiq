@@ -1,22 +1,22 @@
 /// <reference types="vite/client" />
 
-interface ImportMetaEnv {
-  readonly VITE_PUBLIC_SUPABASE_URL: string
-  readonly VITE_PUBLIC_SUPABASE_ANON_KEY: string
-  readonly VITE_PUBLIC_PROCESS_PDF_FUNCTION_URL?: string
+declare global {
+  interface ImportMetaEnv {
+    readonly VITE_PUBLIC_SUPABASE_URL: string
+    readonly VITE_PUBLIC_SUPABASE_ANON_KEY: string
+    readonly VITE_PUBLIC_PROCESS_PDF_FUNCTION_URL?: string
+  }
+
+  interface ImportMeta {
+    readonly env: ImportMetaEnv
+  }
 }
 
-interface ImportMeta {
-  readonly env: ImportMetaEnv
-}
-
-// CSSモジュールの型定義
 declare module '*.css' {
   const content: { [className: string]: string };
   export default content;
 }
 
-// react-pdfのCSSファイル用の型定義
 declare module 'react-pdf/dist/esm/Page/AnnotationLayer.css' {
   const content: string;
   export default content;
@@ -26,3 +26,5 @@ declare module 'react-pdf/dist/esm/Page/TextLayer.css' {
   const content: string;
   export default content;
 }
+
+export {}
