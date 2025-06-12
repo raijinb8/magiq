@@ -1,6 +1,7 @@
 // lib/api.ts
 import { supabase } from './supabase';
 import { getTargetShiftWeek } from '@/utils/getTargetShiftWeek';
+import type { BatchProcessOptions, BatchProcessResult } from '@/types';
 
 export async function updateWorkOrderEditedText(
   workOrderId: string,
@@ -18,6 +19,193 @@ export async function updateWorkOrderEditedText(
 
   if (error) {
     console.error('❌ 編集テキスト保存エラー:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+// バッチ処理関連のAPI
+
+/**
+ * バッチ処理ジョブを作成
+ */
+export async function createBatchProcess(
+  totalFiles: number,
+  options: BatchProcessOptions
+) {
+  const { data: session } = await supabase.auth.getSession();
+  const userId = session.session?.user?.id;
+
+  if (!userId) {
+    throw new Error('ユーザーが認証されていません');
+  }
+
+  const { data, error } = await supabase
+    .from('batch_processes')
+    .insert({
+      user_id: userId,
+      total_files: totalFiles,
+      company_id: options.companyId,
+      auto_detect_enabled: options.autoDetectEnabled,
+      options: {
+        concurrentLimit: options.concurrentLimit,
+        retryFailedFiles: options.retryFailedFiles,
+        pauseOnError: options.pauseOnError,
+      },
+      status: 'processing',
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('❌ バッチ処理作成エラー:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+/**
+ * バッチ処理ファイルを記録
+ */
+export async function recordBatchProcessFile(
+  batchProcessId: string,
+  fileName: string,
+  fileSize?: number
+) {
+  const { data, error } = await supabase
+    .from('batch_process_files')
+    .insert({
+      batch_process_id: batchProcessId,
+      file_name: fileName,
+      file_size: fileSize,
+      status: 'pending',
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('❌ バッチファイル記録エラー:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+/**
+ * バッチ処理ファイルのステータスを更新
+ */
+export async function updateBatchProcessFile(
+  batchProcessId: string,
+  fileName: string,
+  result: BatchProcessResult
+) {
+  const updateData: any = {
+    status: result.status,
+    error_message: result.errorMessage,
+    processing_time_ms: result.processingTime,
+    started_at: result.startedAt?.toISOString(),
+    completed_at: result.completedAt?.toISOString(),
+  };
+
+  if (result.workOrderId) {
+    updateData.work_order_id = result.workOrderId;
+  }
+
+  if (result.companyId) {
+    updateData.company_id = result.companyId;
+  }
+
+  if (result.detectionResult) {
+    updateData.detection_result = result.detectionResult;
+  }
+
+  const { data, error } = await supabase
+    .from('batch_process_files')
+    .update(updateData)
+    .eq('batch_process_id', batchProcessId)
+    .eq('file_name', fileName)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('❌ バッチファイル更新エラー:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+/**
+ * バッチ処理のステータスを更新
+ */
+export async function updateBatchProcessStatus(
+  batchProcessId: string,
+  status: string,
+  processedFiles?: number,
+  failedFiles?: number
+) {
+  const updateData: any = { status };
+
+  if (processedFiles !== undefined) {
+    updateData.processed_files = processedFiles;
+  }
+
+  if (failedFiles !== undefined) {
+    updateData.failed_files = failedFiles;
+  }
+
+  if (status === 'completed' || status === 'cancelled' || status === 'error') {
+    updateData.completed_at = new Date().toISOString();
+  }
+
+  const { data, error } = await supabase
+    .from('batch_processes')
+    .update(updateData)
+    .eq('id', batchProcessId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('❌ バッチ処理ステータス更新エラー:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+/**
+ * バッチ処理の履歴を取得
+ */
+export async function getBatchProcessHistory(limit = 10) {
+  const { data: session } = await supabase.auth.getSession();
+  const userId = session.session?.user?.id;
+
+  if (!userId) {
+    throw new Error('ユーザーが認証されていません');
+  }
+
+  const { data, error } = await supabase
+    .from('batch_processes')
+    .select(`
+      *,
+      batch_process_files (
+        id,
+        file_name,
+        status,
+        error_message,
+        processing_time_ms,
+        company_id,
+        work_order_id
+      )
+    `)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error('❌ バッチ処理履歴取得エラー:', error);
     throw error;
   }
 

@@ -5,6 +5,7 @@ import { pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 import { supabase } from '@/lib/supabase';
+import { Button } from '@/components/ui/button';
 
 // 型定義と定数
 import type {
@@ -23,12 +24,15 @@ import { usePdfControls } from '@/hooks/usePdfControls';
 import { usePdfProcessor } from '@/hooks/usePdfProcessor';
 import { useDragAndDrop } from '@/hooks/useDragAndDrop';
 import { useWorkOrderStatus } from '@/hooks/useWorkOrderStatus';
+import { useBatchProcessor } from '@/hooks/useBatchProcessor';
 
 // 子コンポーネント
 import { FileManagementPanel } from '@/components/workOrderTool/FileManagementPanel';
 import { PdfPreviewPanel } from '@/components/workOrderTool/PdfPreviewPanel';
 import { GeneratedTextPanel } from '@/components/workOrderTool/GeneratedTextPanel';
 import { DetectionFeedbackModal } from '@/components/workOrderTool/DetectionFeedbackModal';
+import { BatchProgressPanel } from '@/components/workOrderTool/BatchProgressPanel';
+import { BatchHistoryPanel } from '@/components/workOrderTool/BatchHistoryPanel';
 
 // PDFのレンダリングを効率的に行うための Web Worker を設定
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -62,6 +66,12 @@ const WorkOrderTool: React.FC = () => {
     useState<CompanyDetectionResult | null>(null);
   const [showFeedbackModal, setShowFeedbackModal] = useState<boolean>(false);
   const [lastWorkOrderId, setLastWorkOrderId] = useState<string | null>(null);
+
+  // バッチ処理用の状態
+  const [batchMode, setBatchMode] = useState<boolean>(false);
+  const [selectedFiles, setSelectedFiles] = useState<{ [fileName: string]: boolean }>({});
+  const [showBatchProgress, setShowBatchProgress] = useState<boolean>(false);
+  const [showBatchHistory, setShowBatchHistory] = useState<boolean>(false);
 
   // --- カスタムフックの利用 ---
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -211,6 +221,11 @@ const WorkOrderTool: React.FC = () => {
       // Work Order IDを保存（フィードバック用）
       if (data.dbRecordId) {
         setLastWorkOrderId(data.dbRecordId);
+        // バッチ処理用に結果を保存
+        lastProcessResultRef.current = {
+          workOrderId: data.dbRecordId,
+          detectionResult: data.detectionResult || undefined,
+        };
         // 処理完了状態に遷移
         completeProcess();
       }
@@ -258,6 +273,43 @@ const WorkOrderTool: React.FC = () => {
     abortRequest(); // 進行中のAPIリクエストを中断する
     toast.info('処理を中断しました');
   }, [cancelWorkOrderStatus, abortRequest]);
+
+  // processFileの結果を保持するためのRef
+  const lastProcessResultRef = useRef<{ workOrderId?: string; detectionResult?: CompanyDetectionResult } | null>(null);
+
+  // バッチ処理フック
+  const {
+    batchState,
+    startBatchProcess,
+    pauseBatchProcess,
+    resumeBatchProcess,
+    cancelBatchProcess,
+    getProgress,
+    getElapsedTime,
+  } = useBatchProcessor({
+    processFile: async (file, companyId, companyLabel, enableAutoDetection, ocrOnly) => {
+      // processFileを呼び出す前にrefをクリア
+      lastProcessResultRef.current = null;
+      
+      // processFileを呼び出し
+      await processFile(file, companyId, companyLabel, enableAutoDetection, ocrOnly);
+      
+      // 処理結果をrefから取得して返す
+      return lastProcessResultRef.current;
+    },
+    onFileProcessed: (result) => {
+      // 各ファイルの処理完了時の処理
+      console.log('File processed:', result);
+    },
+    onBatchComplete: (results) => {
+      // バッチ処理完了時の処理
+      setShowBatchProgress(false);
+      setBatchMode(false);
+      setSelectedFiles({});
+    },
+    getCompanyLabel: (companyId) => 
+      ALL_COMPANY_OPTIONS.find(opt => opt.value === companyId)?.label || companyId,
+  });
 
   /**
    * 2段階処理：OCR+会社判定 → 手配書作成
@@ -431,6 +483,50 @@ const WorkOrderTool: React.FC = () => {
   };
 
   /**
+   * バッチ処理関連の関数
+   */
+  const handleFileSelectionChange = useCallback((fileName: string, selected: boolean) => {
+    setSelectedFiles(prev => ({
+      ...prev,
+      [fileName]: selected,
+    }));
+  }, []);
+
+  const handleSelectAll = useCallback(() => {
+    const newSelection: { [fileName: string]: boolean } = {};
+    uploadedFiles.forEach(file => {
+      newSelection[file.name] = true;
+    });
+    setSelectedFiles(newSelection);
+  }, [uploadedFiles]);
+
+  const handleDeselectAll = useCallback(() => {
+    setSelectedFiles({});
+  }, []);
+
+  const handleBatchProcess = useCallback(async () => {
+    const filesToProcess = uploadedFiles.filter(file => selectedFiles[file.name]);
+    
+    if (filesToProcess.length === 0) {
+      toast.error('処理するファイルを選択してください');
+      return;
+    }
+
+    if (!selectedCompanyId && !autoDetectEnabled) {
+      toast.error('会社を選択してください');
+      return;
+    }
+
+    setShowBatchProgress(true);
+    await startBatchProcess(filesToProcess, {
+      companyId: selectedCompanyId,
+      autoDetectEnabled,
+      concurrentLimit: 1, // 1つずつ処理
+      pauseOnError: true,
+    });
+  }, [uploadedFiles, selectedFiles, selectedCompanyId, autoDetectEnabled, startBatchProcess]);
+
+  /**
    * 判定フィードバックの送信
    */
   const handleDetectionFeedback = async (
@@ -482,6 +578,27 @@ const WorkOrderTool: React.FC = () => {
       {/* ツールヘッダー */}
       <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent">
         <h1 className="text-xl font-semibold">業務手配書 作成ツール</h1>
+        <div className="ml-auto flex items-center gap-2">
+          <Button
+            variant={showBatchHistory ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setShowBatchHistory(!showBatchHistory)}
+          >
+            履歴
+          </Button>
+          <Button
+            variant={batchMode ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => {
+              setBatchMode(!batchMode);
+              setSelectedFiles({});
+              setShowBatchProgress(false);
+            }}
+            disabled={batchState.isProcessing}
+          >
+            {batchMode ? 'バッチモード終了' : 'バッチモード'}
+          </Button>
+        </div>
       </header>
 
       {/* メインコンテンツエリア (3ペイン) */}
@@ -503,6 +620,14 @@ const WorkOrderTool: React.FC = () => {
           autoDetectEnabled={autoDetectEnabled}
           onAutoDetectToggle={() => setAutoDetectEnabled(!autoDetectEnabled)}
           lastDetectionResult={lastDetectionResult}
+          // バッチ処理用のプロパティ
+          batchMode={batchMode}
+          selectedFiles={selectedFiles}
+          onFileSelectionChange={handleFileSelectionChange}
+          onSelectAll={handleSelectAll}
+          onDeselectAll={handleDeselectAll}
+          onBatchProcess={handleBatchProcess}
+          batchProcessing={batchState.isProcessing}
         />
 
         <main className="flex-1 flex flex-row overflow-hidden">
@@ -562,6 +687,43 @@ const WorkOrderTool: React.FC = () => {
         currentFileName={processingFile?.name || ''}
         onSubmitFeedback={handleDetectionFeedback}
       />
+
+      {/* バッチ処理進捗パネル */}
+      {showBatchProgress && (
+        <div className="fixed bottom-4 right-4 z-50 w-96">
+          <BatchProgressPanel
+            batchState={batchState}
+            onPause={pauseBatchProcess}
+            onResume={resumeBatchProcess}
+            onCancel={cancelBatchProcess}
+            progress={getProgress()}
+            elapsedTime={getElapsedTime()}
+          />
+        </div>
+      )}
+
+      {/* バッチ処理履歴パネル */}
+      {showBatchHistory && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm">
+          <div className="fixed inset-y-0 right-0 w-full max-w-2xl bg-background shadow-lg">
+            <div className="flex h-full flex-col">
+              <div className="flex items-center justify-between border-b p-4">
+                <h2 className="text-lg font-semibold">バッチ処理履歴</h2>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setShowBatchHistory(false)}
+                >
+                  閉じる
+                </Button>
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <BatchHistoryPanel />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
