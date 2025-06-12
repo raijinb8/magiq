@@ -54,7 +54,7 @@ const WorkOrderTool: React.FC = () => {
   const [editedText, setEditedText] = useState<string>('');
   // AI処理結果に関する情報 (ファイル名、会社ラベル)
   const [processedCompanyInfo, setProcessedCompanyInfo] =
-    useState<ProcessedCompanyInfo>({ file: null, companyLabel: '' });
+    useState<ProcessedCompanyInfo>({ file: undefined, companyLabel: '' });
 
   // 自動判定用の状態
   const [autoDetectEnabled, setAutoDetectEnabled] = useState<boolean>(true); // デフォルトで有効
@@ -389,7 +389,7 @@ const WorkOrderTool: React.FC = () => {
       setProcessingFile(file); // ★ プレビュー中のファイルを「次にAI実行する対象」としてマーク
       setGeneratedText(''); // プレビュー変更時は生成テキストをクリア
       setEditedText(''); // 編集テキストもクリア
-      setProcessedCompanyInfo({ file: null, companyLabel: '' }); // 処理情報もクリア
+      setProcessedCompanyInfo({ file: undefined, companyLabel: '' }); // 処理情報もクリア
       setLastDetectionResult(null); // 前回の判定結果もクリア
       setLastWorkOrderId(null); // work_order IDもクリア
       clearProcess(); // プロセス状態もクリア
