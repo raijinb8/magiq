@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 // src/pages/admin/WorkOrderTool/hooks/usePdfProcessor.ts
 import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
