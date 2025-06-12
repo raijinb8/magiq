@@ -132,7 +132,9 @@ const mockUseEffect = vi.spyOn(React, 'useEffect');
 
 describe('WorkOrderTool 統合テスト', () => {
   // テスト用のモックPDFファイル
-  const mockPdfFile: PdfFile = new File(['test'], 'test.pdf', { type: 'application/pdf' });
+  const mockPdfFile: PdfFile = new File(['test'], 'test.pdf', {
+    type: 'application/pdf',
+  });
 
   beforeEach(() => {
     vi.clearAllMocks();
