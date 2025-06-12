@@ -302,6 +302,23 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    // 有効な会社IDがない場合はエラーを返す
+    if (!companyIdFromFrontend || companyIdFromFrontend === 'UNKNOWN_OR_NOT_SET') {
+      console.error(
+        `[${new Date().toISOString()}] No valid company ID after detection for file: ${fileName}`
+      )
+      return new Response(
+        JSON.stringify({
+          error: '会社IDが提供されていません。手動で会社を選択してください。',
+          detectionResult: detectionResult,
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      )
+    }
+
     // supabase/functions/process-pdf-single/promptRegistry.ts
     // から識別子とプロンプトのマッピング情報を取得
     const promptEntry = getPrompt(companyIdFromFrontend)
