@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 // src/pages/admin/WorkOrderTool/hooks/usePdfProcessor.ts
-import { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import type {
@@ -16,6 +16,8 @@ export interface UsePdfProcessorProps {
     file: File,
     companyLabelForError: string
   ) => void;
+  // 外部からのAbortSignalを受け取るためのオプション
+  externalAbortSignal?: AbortSignal;
 }
 
 export interface UsePdfProcessorReturn {
@@ -34,9 +36,19 @@ export interface UsePdfProcessorReturn {
 export const usePdfProcessor = ({
   onSuccess,
   onError,
+  externalAbortSignal,
 }: UsePdfProcessorProps): UsePdfProcessorReturn => {
   const [isLoading, setIsLoading] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  
+  // 外部AbortSignalが変更された場合の処理
+  React.useEffect(() => {
+    // 現在のリクエストが進行中で、外部シグナルが中断された場合
+    if (externalAbortSignal?.aborted && abortControllerRef.current && isLoading) {
+      console.log('[usePdfProcessor] External abort signal detected - aborting current request');
+      abortControllerRef.current.abort();
+    }
+  }, [externalAbortSignal?.aborted, isLoading]);
 
   const processFile = useCallback(
     async (
@@ -53,9 +65,32 @@ export const usePdfProcessor = ({
         onError('会社未選択', fileToProcess, companyLabelForError);
         return;
       }
-      // AbortControllerを作成
+      // AbortControllerを作成（内部用）
       const abortController = new AbortController();
       abortControllerRef.current = abortController;
+      
+      // 外部AbortSignalがある場合、それもリッスンする
+      const combinedSignal = abortController.signal;
+      if (externalAbortSignal) {
+        // 外部シグナルが既に中断されている場合は即座に中断
+        if (externalAbortSignal.aborted) {
+          abortController.abort();
+        } else {
+          // 外部シグナルが中断されたら内部のAbortControllerも中断
+          const externalAbortHandler = () => {
+            abortController.abort();
+          };
+          externalAbortSignal.addEventListener('abort', externalAbortHandler);
+          
+          // クリーンアップのため、処理完了後にイベントリスナーを削除
+          const originalFinally = () => {
+            externalAbortSignal.removeEventListener('abort', externalAbortHandler);
+          };
+          
+          // 後でクリーンアップするためにハンドラーを保存
+          (abortController as AbortController & { _cleanup?: () => void })._cleanup = originalFinally;
+        }
+      }
 
       setIsLoading(true);
       try {
@@ -97,7 +132,7 @@ export const usePdfProcessor = ({
             // 'apikey': import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY, // Edge Functionの認証設定によっては必要
           },
           body: formData, // FormDataオブジェクトをbodyに設定
-          signal: abortController.signal, // 中断シグナルを追加
+          signal: combinedSignal, // 統合された中断シグナルを使用
         });
 
         // response.json() の前に response.ok をチェックする方が一般的
@@ -153,10 +188,17 @@ export const usePdfProcessor = ({
         onError(errorMessage, fileToProcess, companyLabelForError);
       } finally {
         setIsLoading(false);
+        
+        // 外部AbortSignalのイベントリスナーをクリーンアップ
+        const controllerWithCleanup = abortControllerRef.current as AbortController & { _cleanup?: () => void };
+        if (controllerWithCleanup?._cleanup) {
+          controllerWithCleanup._cleanup();
+        }
+        
         abortControllerRef.current = null; // リクエスト完了後はリセット
       }
     },
-    [onSuccess, onError] // 依存配列
+    [onSuccess, onError, externalAbortSignal] // 依存配列
   );
 
   // APIリクエストを中断する関数

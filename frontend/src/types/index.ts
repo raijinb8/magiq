@@ -125,6 +125,7 @@ export interface ProcessedCompanyInfo {
   processedAt?: string;
   workOrderId?: string;
   file?: File; // 実際のファイル情報
+  status?: 'completed' | 'processing' | 'error' | 'pending'; // 処理ステータス
 }
 
 // Work Order関連の型定義

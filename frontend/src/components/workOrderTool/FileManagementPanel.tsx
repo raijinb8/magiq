@@ -81,15 +81,54 @@ export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
   batchProcessedFiles = {},
 }) => {
   const selectedCount = Object.values(selectedFiles).filter((v) => v).length;
-  // リストアイテムのスタイルを決定するヘルパー関数 (改善版)
+  // リストアイテムのスタイルを決定するヘルパー関数 (選択状態対応版)
   const getListItemClasses = (file: PdfFile): string => {
     const baseClasses =
       'mb-2 cursor-pointer rounded-md p-2 text-sm transition-colors duration-150 ease-in-out relative';
     
+    // 選択状態の判定
+    const isSelected = pdfFileToDisplay?.name === file.name;
+    const isCurrentlyProcessing = processingFile?.name === file.name && isLoading;
+    
     // 現在AI処理中（最優先）
-    if (processingFile?.name === file.name && isLoading) {
+    if (isCurrentlyProcessing) {
       return `${baseClasses} bg-blue-100 dark:bg-blue-800/30 ring-2 ring-blue-500 animate-pulse`;
     }
+    
+    // 選択状態でのスタイル組み合わせ
+    if (isSelected) {
+      // 選択状態での処理結果表示
+      
+      // バッチ処理結果がある場合
+      if (batchProcessedFiles[file.name] === 'success') {
+        return `${baseClasses} bg-green-100 dark:bg-green-800/30 ring-4 ring-blue-500 shadow-lg border-2 border-blue-400`;
+      }
+      if (batchProcessedFiles[file.name] === 'error') {
+        return `${baseClasses} bg-red-100 dark:bg-red-800/30 ring-4 ring-blue-500 shadow-lg border-2 border-blue-400`;
+      }
+      if (batchProcessedFiles[file.name] === 'processing') {
+        return `${baseClasses} bg-orange-100 dark:bg-orange-800/30 ring-4 ring-blue-500 shadow-lg border-2 border-blue-400 animate-pulse`;
+      }
+      if (batchProcessedFiles[file.name] === 'cancelled') {
+        return `${baseClasses} bg-gray-100 dark:bg-gray-800/30 ring-4 ring-blue-500 shadow-lg border-2 border-blue-400`;
+      }
+      if (batchProcessedFiles[file.name] === 'pending') {
+        return `${baseClasses} bg-yellow-50 dark:bg-yellow-900/20 ring-4 ring-blue-500 shadow-lg border-2 border-blue-400`;
+      }
+      
+      // 単体処理結果がある場合（completedステータスのみ）
+      if (processedCompanyInfo.file?.name === file.name && processedCompanyInfo.status === 'completed' && generatedText) {
+        if (generatedText.startsWith('エラー')) {
+          return `${baseClasses} bg-red-100 dark:bg-red-800/30 ring-4 ring-blue-500 shadow-lg border-2 border-blue-400`;
+        }
+        return `${baseClasses} bg-green-100 dark:bg-green-800/30 ring-4 ring-blue-500 shadow-lg border-2 border-blue-400`;
+      }
+      
+      // 選択状態だがデータなし
+      return `${baseClasses} bg-blue-50 dark:bg-blue-900/20 ring-4 ring-blue-500 shadow-lg border-2 border-blue-400`;
+    }
+    
+    // 非選択状態での表示（従来通り）
     
     // バッチ処理でエラーが発生したファイル
     if (batchProcessedFiles[file.name] === 'error') {
@@ -116,28 +155,12 @@ export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
       return `${baseClasses} bg-yellow-50 dark:bg-yellow-900/20 ring-1 ring-yellow-300`;
     }
     
-    // 現在プレビュー中のファイルで、単体処理の結果がある場合
-    if (
-      pdfFileToDisplay?.name === file.name &&
-      processedCompanyInfo.file?.name === file.name &&
-      !isLoading &&
-      generatedText
-    ) {
-      // エラー結果
+    // 単体処理結果（非選択状態、completedステータスのみ）
+    if (processedCompanyInfo.file?.name === file.name && processedCompanyInfo.status === 'completed' && generatedText) {
       if (generatedText.startsWith('エラー')) {
-        return `${baseClasses} bg-red-100 dark:bg-red-800/30 ring-2 ring-red-500`;
+        return `${baseClasses} bg-red-100 dark:bg-red-800/30 ring-1 ring-red-500`;
       }
-      // 成功結果
-      return `${baseClasses} bg-green-100 dark:bg-green-800/30 ring-2 ring-green-500`;
-    }
-    
-    // 現在プレビュー中（データなし）
-    if (
-      pdfFileToDisplay?.name === file.name &&
-      !isLoading &&
-      !generatedText
-    ) {
-      return `${baseClasses} bg-yellow-100 dark:bg-yellow-800/30 ring-1 ring-yellow-500`;
+      return `${baseClasses} bg-green-100 dark:bg-green-800/30 ring-1 ring-green-500`;
     }
 
     return `${baseClasses} hover:bg-muted dark:hover:bg-slate-700`;
@@ -306,42 +329,79 @@ export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
                   <span className="flex-1">
                     {file.name} ({(file.size / 1024).toFixed(2)} KB)
                   </span>
-                  {/* ステータス表示 (改善版) */}
-                  {/* 現在AI処理中 */}
+                  {/* ステータス表示 (選択状態優先版) */}
+                  {/* 現在AI処理中（最優先） */}
                   {processingFile?.name === file.name && isLoading && (
-                    <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">
+                    <span className="ml-2 text-xs text-blue-600 dark:text-blue-400 font-semibold">
                       (処理中...)
                     </span>
                   )}
-                  {/* バッチ処理結果の表示 */}
-                  {batchProcessedFiles[file.name] === 'success' && (
-                    <span className="ml-2 text-xs text-green-600 dark:text-green-400">
-                      (バッチ処理完了)
-                    </span>
+                  
+                  {/* 選択中の表示（処理中でない場合） */}
+                  {pdfFileToDisplay?.name === file.name && !isLoading && (
+                    <>
+                      <span className="ml-2 text-xs text-blue-600 dark:text-blue-400 font-semibold">
+                        (選択中)
+                      </span>
+                      {/* 選択中のファイルの処理状態を追加表示 */}
+                      {batchProcessedFiles[file.name] === 'success' && (
+                        <span className="ml-1 text-xs text-green-600 dark:text-green-400">
+                          ✓
+                        </span>
+                      )}
+                      {batchProcessedFiles[file.name] === 'error' && (
+                        <span className="ml-1 text-xs text-red-600 dark:text-red-400">
+                          ✗
+                        </span>
+                      )}
+                      {batchProcessedFiles[file.name] === 'processing' && (
+                        <span className="ml-1 text-xs text-orange-600 dark:text-orange-400">
+                          ⟳
+                        </span>
+                      )}
+                      {batchProcessedFiles[file.name] === 'cancelled' && (
+                        <span className="ml-1 text-xs text-gray-600 dark:text-gray-400">
+                          ⊘
+                        </span>
+                      )}
+                    </>
                   )}
-                  {batchProcessedFiles[file.name] === 'error' && (
-                    <span className="ml-2 text-xs text-red-600 dark:text-red-400">
-                      (バッチ処理エラー)
-                    </span>
+                  
+                  {/* 非選択時のバッチ処理結果表示 */}
+                  {pdfFileToDisplay?.name !== file.name && !isLoading && (
+                    <>
+                      {batchProcessedFiles[file.name] === 'success' && (
+                        <span className="ml-2 text-xs text-green-600 dark:text-green-400">
+                          (バッチ処理完了)
+                        </span>
+                      )}
+                      {batchProcessedFiles[file.name] === 'error' && (
+                        <span className="ml-2 text-xs text-red-600 dark:text-red-400">
+                          (バッチ処理エラー)
+                        </span>
+                      )}
+                      {batchProcessedFiles[file.name] === 'processing' && (
+                        <span className="ml-2 text-xs text-orange-600 dark:text-orange-400">
+                          (バッチ処理中...)
+                        </span>
+                      )}
+                      {batchProcessedFiles[file.name] === 'cancelled' && (
+                        <span className="ml-2 text-xs text-gray-600 dark:text-gray-400">
+                          (バッチ処理キャンセル)
+                        </span>
+                      )}
+                      {batchProcessedFiles[file.name] === 'pending' && (
+                        <span className="ml-2 text-xs text-yellow-600 dark:text-yellow-400">
+                          (バッチ処理待機中)
+                        </span>
+                      )}
+                    </>
                   )}
-                  {batchProcessedFiles[file.name] === 'processing' && (
-                    <span className="ml-2 text-xs text-orange-600 dark:text-orange-400">
-                      (バッチ処理中...)
-                    </span>
-                  )}
-                  {batchProcessedFiles[file.name] === 'cancelled' && (
-                    <span className="ml-2 text-xs text-gray-600 dark:text-gray-400">
-                      (バッチ処理キャンセル)
-                    </span>
-                  )}
-                  {batchProcessedFiles[file.name] === 'pending' && (
-                    <span className="ml-2 text-xs text-yellow-600 dark:text-yellow-400">
-                      (バッチ処理待機中)
-                    </span>
-                  )}
-                  {/* 単体処理結果の表示（バッチ処理結果がない場合のみ） */}
+                  {/* 単体処理結果の表示（バッチ処理結果がない場合のみ、completedステータスのみ） */}
                   {!batchProcessedFiles[file.name] && 
+                    pdfFileToDisplay?.name !== file.name && 
                     processedCompanyInfo.file?.name === file.name &&
+                    processedCompanyInfo.status === 'completed' &&
                     !isLoading &&
                     generatedText &&
                     !generatedText.startsWith('エラー') && (
@@ -350,7 +410,9 @@ export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
                       </span>
                     )}
                   {!batchProcessedFiles[file.name] && 
+                    pdfFileToDisplay?.name !== file.name && 
                     processedCompanyInfo.file?.name === file.name &&
+                    processedCompanyInfo.status === 'completed' &&
                     !isLoading &&
                     generatedText &&
                     generatedText.startsWith('エラー') && (
@@ -358,17 +420,25 @@ export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
                         (エラー)
                       </span>
                     )}
-                  {/* プレビュー中の表示（処理結果がない場合のみ） */}
+                  
+                  {/* 選択中ファイルの単体処理結果アイコン表示（completedステータスのみ） */}
                   {!batchProcessedFiles[file.name] && 
                     pdfFileToDisplay?.name === file.name &&
                     !isLoading &&
-                    (!processedCompanyInfo.file ||
-                      processedCompanyInfo.file.name !== file.name) &&
-                    !generatedText &&
-                    !(processingFile?.name === file.name && isLoading) && (
-                      <span className="ml-2 text-xs text-yellow-600 dark:text-yellow-400">
-                        (プレビュー中)
-                      </span>
+                    processedCompanyInfo.file?.name === file.name &&
+                    processedCompanyInfo.status === 'completed' &&
+                    generatedText && (
+                      <>
+                        {generatedText.startsWith('エラー') ? (
+                          <span className="ml-1 text-xs text-red-600 dark:text-red-400">
+                            ✗
+                          </span>
+                        ) : (
+                          <span className="ml-1 text-xs text-green-600 dark:text-green-400">
+                            ✓
+                          </span>
+                        )}
+                      </>
                     )}
                 </li>
               ))}

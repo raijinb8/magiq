@@ -166,6 +166,18 @@ export const useBatchProcessor = ({
             );
           }
 
+          // 処理完了後にキャンセルされていないかチェック
+          if (abortControllerRef.current?.signal.aborted) {
+            return {
+              fileName: file.name,
+              status: 'cancelled',
+              errorMessage: '処理がキャンセルされました',
+              processingTime: new Date().getTime() - startedAt.getTime(),
+              startedAt,
+              completedAt: new Date(),
+            };
+          }
+
           const completedAt = new Date();
           const result: BatchProcessResult = {
             fileName: file.name,
