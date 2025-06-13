@@ -576,6 +576,12 @@ const WorkOrderTool: React.FC = () => {
     });
   }, [uploadedFiles, selectedFiles, selectedCompanyId, autoDetectEnabled, startBatchProcess]);
 
+  const handleBatchModeToggle = useCallback(() => {
+    setBatchMode(!batchMode);
+    setSelectedFiles({});
+    setShowBatchProgress(false);
+  }, [batchMode]);
+
   /**
    * 判定フィードバックの送信
    */
@@ -636,18 +642,6 @@ const WorkOrderTool: React.FC = () => {
           >
             履歴
           </Button>
-          <Button
-            variant={batchMode ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => {
-              setBatchMode(!batchMode);
-              setSelectedFiles({});
-              setShowBatchProgress(false);
-            }}
-            disabled={batchState.isProcessing}
-          >
-            {batchMode ? 'バッチモード終了' : 'バッチモード'}
-          </Button>
         </div>
       </header>
 
@@ -678,6 +672,7 @@ const WorkOrderTool: React.FC = () => {
           onDeselectAll={handleDeselectAll}
           onBatchProcess={handleBatchProcess}
           batchProcessing={batchState.isProcessing}
+          onBatchModeToggle={handleBatchModeToggle}
         />
 
         <main className="flex-1 flex flex-row overflow-hidden">

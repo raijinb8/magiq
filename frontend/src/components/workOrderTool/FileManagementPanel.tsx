@@ -42,6 +42,7 @@ interface FileManagementPanelProps {
   onDeselectAll?: () => void; // 全解除
   onBatchProcess?: () => void; // バッチ処理実行
   batchProcessing?: boolean; // バッチ処理中フラグ
+  onBatchModeToggle?: () => void; // バッチモード切り替え
   // 自動判定用の新しいプロパティ
   autoDetectEnabled?: boolean;
   onAutoDetectToggle?: () => void;
@@ -69,6 +70,7 @@ export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
   onDeselectAll,
   onBatchProcess,
   batchProcessing = false,
+  onBatchModeToggle,
   // 自動判定用
   autoDetectEnabled = false,
   onAutoDetectToggle,
@@ -128,7 +130,19 @@ export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
 
   return (
     <aside className="w-1/4 border-r bg-background p-4 flex flex-col overflow-hidden">
-      <h2 className="mb-4 text-lg font-semibold">アップロード済みPDF一覧</h2>
+      {/* ヘッダー部分 - 見出しとバッチモードボタン */}
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-lg font-semibold">PDF一覧</h2>
+        <Button
+          variant={batchMode ? 'default' : 'outline'}
+          size="sm"
+          onClick={onBatchModeToggle}
+          disabled={batchProcessing}
+          className="text-xs px-2 py-1 h-7"
+        >
+          {batchMode ? 'バッチ' : '単体'}
+        </Button>
+      </div>
       {/* 会社選択ドロップダウン */}
       <div className="mb-4">
         <label
