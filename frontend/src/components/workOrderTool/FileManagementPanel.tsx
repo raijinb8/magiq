@@ -116,9 +116,12 @@ export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
         return `${baseClasses} bg-yellow-50 dark:bg-yellow-900/20 ring-4 ring-blue-500 shadow-lg border-2 border-blue-400`;
       }
       
-      // 単体処理結果がある場合（completedステータスのみ）
-      if (processedCompanyInfo.file?.name === file.name && processedCompanyInfo.status === 'completed' && generatedText) {
-        if (generatedText.startsWith('エラー')) {
+      // 単体処理結果またはバッチ処理成功がある場合
+      const isSingleProcessCompleted = processedCompanyInfo.file?.name === file.name && processedCompanyInfo.status === 'completed' && generatedText;
+      const isBatchProcessSuccess = batchProcessedFiles[file.name] === 'success';
+      
+      if (isSingleProcessCompleted || isBatchProcessSuccess) {
+        if (generatedText && generatedText.startsWith('エラー')) {
           return `${baseClasses} bg-red-100 dark:bg-red-800/30 ring-4 ring-blue-500 shadow-lg border-2 border-blue-400`;
         }
         return `${baseClasses} bg-green-100 dark:bg-green-800/30 ring-4 ring-blue-500 shadow-lg border-2 border-blue-400`;
@@ -155,9 +158,12 @@ export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
       return `${baseClasses} bg-yellow-50 dark:bg-yellow-900/20 ring-1 ring-yellow-300`;
     }
     
-    // 単体処理結果（非選択状態、completedステータスのみ）
-    if (processedCompanyInfo.file?.name === file.name && processedCompanyInfo.status === 'completed' && generatedText) {
-      if (generatedText.startsWith('エラー')) {
+    // 単体処理結果またはバッチ処理成功（非選択状態）
+    const isSingleProcessCompleted = processedCompanyInfo.file?.name === file.name && processedCompanyInfo.status === 'completed' && generatedText;
+    const isBatchProcessSuccess = batchProcessedFiles[file.name] === 'success';
+    
+    if (isSingleProcessCompleted || isBatchProcessSuccess) {
+      if (generatedText && generatedText.startsWith('エラー')) {
         return `${baseClasses} bg-red-100 dark:bg-red-800/30 ring-1 ring-red-500`;
       }
       return `${baseClasses} bg-green-100 dark:bg-green-800/30 ring-1 ring-green-500`;

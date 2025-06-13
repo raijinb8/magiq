@@ -291,11 +291,19 @@ const WorkOrderTool: React.FC = () => {
   
   // バッチ処理専用のPDFプロセッサ
   const { processFile: batchProcessFile } = usePdfProcessor({
-    onSuccess: (data: PdfProcessSuccessResponse) => {
+    onSuccess: (data: PdfProcessSuccessResponse, file: File) => {
       // バッチ処理の成功処理は個別ファイル処理と同じロジック
+      console.log('[batchProcessFile onSuccess] APIレスポンス:', {
+        fileName: file.name,
+        dbRecordId: data.dbRecordId,
+        generatedText: data.generatedText ? 'あり' : 'なし',
+        ocrOnly: data.ocrOnly,
+        identifiedCompany: data.identifiedCompany,
+      });
+      
       // レスポンスデータの検証
       if (!data.generatedText && !data.ocrOnly) {
-        console.error('Empty generatedText received:', data);
+        console.error('[batchProcessFile] Empty generatedText received:', data);
         return;
       }
 
@@ -314,8 +322,12 @@ const WorkOrderTool: React.FC = () => {
         };
       }
     },
-    onError: (errorMessage: string, file: File) => {
-      console.error(`[Batch Processing] Error processing ${file.name}:`, errorMessage);
+    onError: (errorMessage: string, file: File, companyLabelForError: string) => {
+      console.error(`[batchProcessFile onError] ファイル処理エラー:`, {
+        fileName: file.name,
+        errorMessage,
+        companyLabel: companyLabelForError,
+      });
       // エラー時も結果をrefに保存（エラー状態として）
       lastProcessResultRef.current = null;
     },
@@ -351,7 +363,12 @@ const WorkOrderTool: React.FC = () => {
     },
     onFileProcessed: (result) => {
       // 各ファイルの処理完了時の処理
-      console.log('File processed:', result);
+      console.log('[onFileProcessed] バッチ処理ファイル完了:', {
+        fileName: result.fileName,
+        status: result.status,
+        workOrderId: result.workOrderId,
+        errorMessage: result.errorMessage,
+      });
       
       // バッチ処理完了ファイルの状態を更新
       setBatchProcessedFiles(prev => ({
@@ -371,6 +388,7 @@ const WorkOrderTool: React.FC = () => {
               setProcessedCompanyInfo({
                 file: pdfFileToDisplay,
                 companyLabel: workOrder.company_name || '',
+                status: 'completed', // バッチ処理成功時は完了ステータスを設定
               });
             }
           });
@@ -596,13 +614,15 @@ const WorkOrderTool: React.FC = () => {
         const workOrder = await getWorkOrderByFileName(file.name);
         
         console.log(`[handleFilePreviewRequest] 検索結果:`, workOrder);
+        console.log(`[handleFilePreviewRequest] バッチ処理状態:`, batchProcessedFiles[file.name]);
         
         if (workOrder) {
           // 既存のwork_orderが見つかった場合、その内容を表示
-          console.log(`[handleFilePreviewRequest] 処理済みデータを表示: status=${workOrder.status}`);
+          console.log(`[handleFilePreviewRequest] 処理済みデータを表示: status=${workOrder.status}, generated_text=${workOrder.generated_text ? 'あり' : 'なし'}`);
           
-          // completedステータスの場合のみ処理済みとして扱う
-          if (workOrder.status === 'completed') {
+          // completedステータスまたはバッチ処理で成功したファイルの場合は処理済みとして扱う
+          const isBatchProcessSuccess = batchProcessedFiles[file.name] === 'success';
+          if (workOrder.status === 'completed' || isBatchProcessSuccess) {
             setGeneratedText(workOrder.generated_text || '');
             setEditedText(workOrder.edited_text || '');
             setLastWorkOrderId(workOrder.id);
@@ -672,6 +692,7 @@ const WorkOrderTool: React.FC = () => {
     },
     [
       isLoading,
+      batchProcessedFiles,
       setPdfFileToDisplay,
       setProcessingFile,
       setGeneratedText,
