@@ -13,7 +13,6 @@ import type {
   BatchProcessOptions,
   PdfFile,
   CompanyOptionValue,
-  PdfProcessSuccessResponse,
   CompanyDetectionResult,
 } from '@/types';
 
@@ -38,12 +37,16 @@ export const useBatchProcessor = ({
 }: UseBatchProcessorProps) => {
   const [batchState, setBatchState] = useState<BatchProcessingState>({
     isProcessing: false,
+    isPaused: false,
+    processedCount: 0,
+    totalCount: 0,
+    successCount: 0,
+    errorCount: 0,
     currentFileIndex: 0,
     totalFiles: 0,
-    processedFiles: [],
-    failedFiles: [],
+    processedFiles: 0,
+    failedFiles: 0,
     results: [],
-    isPaused: false,
   });
 
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -60,7 +63,6 @@ export const useBatchProcessor = ({
         companyId = '',
         autoDetectEnabled = false,
         concurrentLimit = 1, // デフォルトは1つずつ処理
-        retryFailedFiles = false,
         pauseOnError = false,
       } = options;
 
@@ -90,13 +92,17 @@ export const useBatchProcessor = ({
         // 処理開始
         setBatchState({
           isProcessing: true,
+          isPaused: false,
+          processedCount: 0,
+          totalCount: files.length,
+          successCount: 0,
+          errorCount: 0,
           currentFileIndex: 0,
           totalFiles: files.length,
-          processedFiles: [],
-          failedFiles: [],
+          processedFiles: 0,
+          failedFiles: 0,
           results: [],
           startTime: new Date(),
-          isPaused: false,
         });
 
         pausedRef.current = false;
@@ -174,7 +180,9 @@ export const useBatchProcessor = ({
 
           setBatchState(prev => ({
             ...prev,
-            processedFiles: [...prev.processedFiles, file.name],
+            processedCount: prev.processedCount + 1,
+            successCount: prev.successCount + 1,
+            processedFiles: (prev.processedFiles || 0) + 1,
             results: [...prev.results, result],
           }));
 
@@ -201,7 +209,9 @@ export const useBatchProcessor = ({
 
           setBatchState(prev => ({
             ...prev,
-            failedFiles: [...prev.failedFiles, file.name],
+            processedCount: prev.processedCount + 1,
+            errorCount: prev.errorCount + 1,
+            failedFiles: (prev.failedFiles || 0) + 1,
             results: [...prev.results, result],
           }));
 
@@ -234,7 +244,7 @@ export const useBatchProcessor = ({
           if (abortControllerRef.current?.signal.aborted) break;
           
           const chunkResults = await Promise.all(
-            chunk.map((file, index) => 
+            chunk.map((file) => 
               processFileWithResult(file, files.indexOf(file))
             )
           );
@@ -306,7 +316,8 @@ export const useBatchProcessor = ({
       setBatchState(prev => ({ ...prev, isProcessing: false }));
     }
     },
-    [processFile, onFileProcessed, onBatchComplete]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [processFile, onFileProcessed, onBatchComplete, getCompanyLabel]
   );
 
   // バッチ処理の一時停止
@@ -344,7 +355,7 @@ export const useBatchProcessor = ({
 
   // 進捗率の計算
   const getProgress = useCallback(() => {
-    if (batchState.totalFiles === 0) return 0;
+    if (!batchState.totalFiles || batchState.totalFiles === 0) return 0;
     return Math.round((batchState.results.length / batchState.totalFiles) * 100);
   }, [batchState.results.length, batchState.totalFiles]);
 

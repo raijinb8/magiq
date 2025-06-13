@@ -92,7 +92,7 @@ export const BatchProgressPanel: React.FC<BatchProgressPanelProps> = ({
         <div className="mb-4">
           <div className="flex justify-between text-sm mb-1">
             <span>
-              {batchState.results.length} / {batchState.totalFiles} ファイル
+              {batchState.results.length} / {batchState.totalFiles || 0} ファイル
             </span>
             <span>{progress}%</span>
           </div>
@@ -185,7 +185,7 @@ export const BatchProgressPanel: React.FC<BatchProgressPanelProps> = ({
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
               <span className="text-sm">
                 処理中: {batchState.results.find(r => r.status === 'processing')?.fileName || 
-                        `${batchState.currentFileIndex + 1}番目のファイル`}
+                        `${(batchState.currentFileIndex || 0) + 1}番目のファイル`}
               </span>
             </div>
           </div>

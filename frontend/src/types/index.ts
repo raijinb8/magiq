@@ -351,3 +351,41 @@ export interface WorkOrderStatusResponse {
   };
   error?: string;
 }
+
+// バッチ処理関連の型定義
+export interface BatchProcessOptions {
+  companyId?: CompanyOptionValue;
+  autoDetectEnabled?: boolean;
+  concurrentLimit?: number;
+  pauseOnError?: boolean;
+  retryFailedFiles?: boolean;
+}
+
+export interface BatchProcessResult {
+  fileName: string;
+  status: 'success' | 'error' | 'cancelled' | 'processing' | 'pending';
+  workOrderId?: string;
+  errorMessage?: string;
+  processingTime?: number;
+  startedAt?: Date;
+  completedAt?: Date;
+  detectionResult?: CompanyDetectionResult;
+  companyId?: CompanyOptionValue;
+}
+
+export interface BatchProcessingState {
+  isProcessing: boolean;
+  isPaused: boolean;
+  processedCount: number;
+  totalCount: number;
+  successCount: number;
+  errorCount: number;
+  currentFile?: string;
+  currentFileIndex?: number;
+  results: BatchProcessResult[];
+  startTime?: Date;
+  endTime?: Date;
+  totalFiles?: number;
+  processedFiles?: number;
+  failedFiles?: number;
+}

@@ -120,7 +120,17 @@ export async function updateBatchProcessFile(
   fileName: string,
   result: BatchProcessResult
 ) {
-  const updateData: any = {
+  interface UpdateData {
+    status: string;
+    error_message?: string;
+    processing_time_ms?: number;
+    started_at?: string;
+    completed_at?: string;
+    work_order_id?: string;
+    detection_result?: unknown;
+  }
+
+  const updateData: UpdateData = {
     status: result.status,
     error_message: result.errorMessage,
     processing_time_ms: result.processingTime,
@@ -130,10 +140,6 @@ export async function updateBatchProcessFile(
 
   if (result.workOrderId) {
     updateData.work_order_id = result.workOrderId;
-  }
-
-  if (result.companyId) {
-    updateData.company_id = result.companyId;
   }
 
   if (result.detectionResult) {
@@ -165,7 +171,14 @@ export async function updateBatchProcessStatus(
   processedFiles?: number,
   failedFiles?: number
 ) {
-  const updateData: any = { status };
+  interface BatchUpdateData {
+    status: string;
+    processed_files?: number;
+    failed_files?: number;
+    completed_at?: string;
+  }
+
+  const updateData: BatchUpdateData = { status };
 
   if (processedFiles !== undefined) {
     updateData.processed_files = processedFiles;
