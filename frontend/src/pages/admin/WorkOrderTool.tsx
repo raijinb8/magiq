@@ -422,8 +422,25 @@ const WorkOrderTool: React.FC = () => {
       setProcessingFile(null);
       clearProcess();
       
-      // バッチ処理済みファイル状態をクリア
-      setBatchProcessedFiles({});
+      // バッチ処理済みファイル状態を更新（成功済みは保持、それ以外はキャンセル）
+      setBatchProcessedFiles(prev => {
+        const updated = { ...prev };
+        
+        // 既に成功したファイルは保持
+        const successfulFiles = batchState.results
+          .filter(result => result.status === 'success')
+          .map(result => result.fileName);
+        
+        // 全てのファイルを確認
+        Object.keys(updated).forEach(fileName => {
+          // 成功済みファイル以外をキャンセル状態に更新
+          if (!successfulFiles.includes(fileName) && updated[fileName] !== 'success') {
+            updated[fileName] = 'cancelled';
+          }
+        });
+        
+        return updated;
+      });
       
       toast.info('バッチ処理を中断しました');
     } else {
@@ -435,7 +452,7 @@ const WorkOrderTool: React.FC = () => {
       
       toast.info('処理を中断しました');
     }
-  }, [batchState.isProcessing, cancelBatchProcess, cancelWorkOrderStatus, abortRequest, clearProcess, setProcessingFile, setBatchProcessedFiles]);
+  }, [batchState.isProcessing, batchState.results, cancelBatchProcess, cancelWorkOrderStatus, abortRequest, clearProcess, setProcessingFile, setBatchProcessedFiles]);
 
   /**
    * 2段階処理：OCR+会社判定 → 手配書作成
