@@ -72,6 +72,9 @@ const WorkOrderTool: React.FC = () => {
   const [selectedFiles, setSelectedFiles] = useState<{ [fileName: string]: boolean }>({});
   const [showBatchProgress, setShowBatchProgress] = useState<boolean>(false);
   const [showBatchHistory, setShowBatchHistory] = useState<boolean>(false);
+  
+  // バッチ処理完了ファイルを追跡する状態
+  const [batchProcessedFiles, setBatchProcessedFiles] = useState<{ [fileName: string]: 'success' | 'error' | 'processing' | 'cancelled' | 'pending' }>({});
 
   // --- カスタムフックの利用 ---
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -301,6 +304,12 @@ const WorkOrderTool: React.FC = () => {
       // 各ファイルの処理完了時の処理
       console.log('File processed:', result);
       
+      // バッチ処理完了ファイルの状態を更新
+      setBatchProcessedFiles(prev => ({
+        ...prev,
+        [result.fileName]: result.status,
+      }));
+      
       // 処理済みファイルのリストを更新（現在プレビュー中の場合は自動的に生成文言を表示）
       if (result.status === 'success' && result.workOrderId && pdfFileToDisplay?.name === result.fileName) {
         // 現在プレビュー中のファイルが処理完了した場合、自動的にデータを取得して表示
@@ -461,27 +470,27 @@ const WorkOrderTool: React.FC = () => {
         );
         return;
       }
+      
+      console.log(`[handleFilePreviewRequest] ファイルクリック: ${file.name}`);
+      
       setPdfFileToDisplay(file);
       setProcessingFile(file); // ★ プレビュー中のファイルを「次にAI実行する対象」としてマーク
-      
-      // デフォルトでクリア
-      setGeneratedText('');
-      setEditedText('');
-      setProcessedCompanyInfo({ file: undefined, companyLabel: '' });
-      setLastDetectionResult(null);
-      setLastWorkOrderId(null);
-      clearProcess();
       
       // 既存の通知を消す
       toast.dismiss();
       
       // データベースから既存のwork_orderを検索
       try {
+        console.log(`[handleFilePreviewRequest] データベース検索開始: ${file.name}`);
         const { getWorkOrderByFileName } = await import('@/lib/api');
         const workOrder = await getWorkOrderByFileName(file.name);
         
-        if (workOrder && workOrder.status === 'completed') {
+        console.log(`[handleFilePreviewRequest] 検索結果:`, workOrder);
+        
+        if (workOrder) {
           // 既存のwork_orderが見つかった場合、その内容を表示
+          console.log(`[handleFilePreviewRequest] 処理済みデータを表示: status=${workOrder.status}`);
+          
           setGeneratedText(workOrder.generated_text || '');
           setEditedText(workOrder.edited_text || '');
           setLastWorkOrderId(workOrder.id);
@@ -489,14 +498,42 @@ const WorkOrderTool: React.FC = () => {
             file: file,
             companyLabel: workOrder.company_name || '',
           });
+          clearProcess(); // プロセス状態をクリア
           
-          toast.success(`「${file.name}」の処理済みデータを表示しています。`);
+          // ステータスに応じてメッセージを変更
+          if (workOrder.status === 'completed') {
+            toast.success(`「${file.name}」の処理済みデータを表示しています。`);
+          } else if (workOrder.status === 'processing') {
+            toast.info(`「${file.name}」は処理中です。完了までお待ちください。`);
+          } else if (workOrder.status === 'error') {
+            toast.warning(`「${file.name}」の処理でエラーが発生しています。`);
+          } else {
+            toast.info(`「${file.name}」のデータを表示しています。`);
+          }
         } else {
-          toast.info(`「${file.name}」をプレビュー中です。`);
+          console.log(`[handleFilePreviewRequest] 処理済みデータなし - プレビュー状態に設定`);
+          // データがない場合はプレビュー状態をクリア
+          setGeneratedText('');
+          setEditedText('');
+          setProcessedCompanyInfo({ file: undefined, companyLabel: '' });
+          setLastDetectionResult(null);
+          setLastWorkOrderId(null);
+          clearProcess();
+          
+          toast.info(`「${file.name}」をプレビュー中です。AI実行ボタンを押して処理を開始してください。`);
         }
       } catch (error) {
-        console.error('既存データの取得エラー:', error);
-        toast.info(`「${file.name}」をプレビュー中です。`);
+        console.error('[handleFilePreviewRequest] 既存データの取得エラー:', error);
+        
+        // エラー時もプレビュー状態をクリア
+        setGeneratedText('');
+        setEditedText('');
+        setProcessedCompanyInfo({ file: undefined, companyLabel: '' });
+        setLastDetectionResult(null);
+        setLastWorkOrderId(null);
+        clearProcess();
+        
+        toast.error(`「${file.name}」のデータ取得中にエラーが発生しました。`);
       }
     },
     [
@@ -504,7 +541,10 @@ const WorkOrderTool: React.FC = () => {
       setPdfFileToDisplay,
       setProcessingFile,
       setGeneratedText,
+      setEditedText,
       setProcessedCompanyInfo,
+      setLastDetectionResult,
+      setLastWorkOrderId,
       clearProcess,
     ]
   );
@@ -567,6 +607,9 @@ const WorkOrderTool: React.FC = () => {
       return;
     }
 
+    // バッチ処理開始時に状態をクリア
+    setBatchProcessedFiles({});
+    
     setShowBatchProgress(true);
     await startBatchProcess(filesToProcess, {
       companyId: selectedCompanyId,
@@ -673,6 +716,8 @@ const WorkOrderTool: React.FC = () => {
           onBatchProcess={handleBatchProcess}
           batchProcessing={batchState.isProcessing}
           onBatchModeToggle={handleBatchModeToggle}
+          // バッチ処理完了ファイル状態
+          batchProcessedFiles={batchProcessedFiles}
         />
 
         <main className="flex-1 flex flex-row overflow-hidden">
@@ -704,7 +749,6 @@ const WorkOrderTool: React.FC = () => {
             isLoading={isLoading && !!processingFile} // AI処理中かつ対象ファイルがある場合
             processingFile={processingFile} // プレースホルダー用 (AI処理中のファイル)
             pdfFileToDisplayForPlaceholder={pdfFileToDisplay} // プレースホルダー用 (プレビュー中のファイル)
-            selectedCompanyIdForPlaceholder={selectedCompanyId} // プレースホルダー用
             processedCompanyInfo={processedCompanyInfo}
             lastDetectionResult={lastDetectionResult}
             onRequestFeedback={() => setShowFeedbackModal(true)}
