@@ -125,6 +125,7 @@ export interface ProcessedCompanyInfo {
   processedAt?: string;
   workOrderId?: string;
   file?: File; // 実際のファイル情報
+  status?: 'completed' | 'processing' | 'error' | 'pending'; // 処理ステータス
 }
 
 // Work Order関連の型定義
@@ -350,4 +351,42 @@ export interface WorkOrderStatusResponse {
     error_message?: string;
   };
   error?: string;
+}
+
+// バッチ処理関連の型定義
+export interface BatchProcessOptions {
+  companyId?: CompanyOptionValue;
+  autoDetectEnabled?: boolean;
+  concurrentLimit?: number;
+  pauseOnError?: boolean;
+  retryFailedFiles?: boolean;
+}
+
+export interface BatchProcessResult {
+  fileName: string;
+  status: 'success' | 'error' | 'cancelled' | 'processing' | 'pending';
+  workOrderId?: string;
+  errorMessage?: string;
+  processingTime?: number;
+  startedAt?: Date;
+  completedAt?: Date;
+  detectionResult?: CompanyDetectionResult;
+  companyId?: CompanyOptionValue;
+}
+
+export interface BatchProcessingState {
+  isProcessing: boolean;
+  isPaused: boolean;
+  processedCount: number;
+  totalCount: number;
+  successCount: number;
+  errorCount: number;
+  currentFile?: string;
+  currentFileIndex?: number;
+  results: BatchProcessResult[];
+  startTime?: Date;
+  endTime?: Date;
+  totalFiles?: number;
+  processedFiles?: number;
+  failedFiles?: number;
 }

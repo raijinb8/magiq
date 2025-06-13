@@ -5,6 +5,7 @@ import { pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 import { supabase } from '@/lib/supabase';
+import { Button } from '@/components/ui/button';
 
 // 型定義と定数
 import type {
@@ -23,12 +24,15 @@ import { usePdfControls } from '@/hooks/usePdfControls';
 import { usePdfProcessor } from '@/hooks/usePdfProcessor';
 import { useDragAndDrop } from '@/hooks/useDragAndDrop';
 import { useWorkOrderStatus } from '@/hooks/useWorkOrderStatus';
+import { useBatchProcessor } from '@/hooks/useBatchProcessor';
 
 // 子コンポーネント
 import { FileManagementPanel } from '@/components/workOrderTool/FileManagementPanel';
 import { PdfPreviewPanel } from '@/components/workOrderTool/PdfPreviewPanel';
 import { GeneratedTextPanel } from '@/components/workOrderTool/GeneratedTextPanel';
 import { DetectionFeedbackModal } from '@/components/workOrderTool/DetectionFeedbackModal';
+import { BatchProgressPanel } from '@/components/workOrderTool/BatchProgressPanel';
+import { BatchHistoryPanel } from '@/components/workOrderTool/BatchHistoryPanel';
 
 // PDFのレンダリングを効率的に行うための Web Worker を設定
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -62,6 +66,15 @@ const WorkOrderTool: React.FC = () => {
     useState<CompanyDetectionResult | null>(null);
   const [showFeedbackModal, setShowFeedbackModal] = useState<boolean>(false);
   const [lastWorkOrderId, setLastWorkOrderId] = useState<string | null>(null);
+
+  // バッチ処理用の状態
+  const [batchMode, setBatchMode] = useState<boolean>(false);
+  const [selectedFiles, setSelectedFiles] = useState<{ [fileName: string]: boolean }>({});
+  const [showBatchProgress, setShowBatchProgress] = useState<boolean>(false);
+  const [showBatchHistory, setShowBatchHistory] = useState<boolean>(false);
+  
+  // バッチ処理完了ファイルを追跡する状態
+  const [batchProcessedFiles, setBatchProcessedFiles] = useState<{ [fileName: string]: 'success' | 'error' | 'processing' | 'cancelled' | 'pending' }>({});
 
   // --- カスタムフックの利用 ---
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -211,6 +224,11 @@ const WorkOrderTool: React.FC = () => {
       // Work Order IDを保存（フィードバック用）
       if (data.dbRecordId) {
         setLastWorkOrderId(data.dbRecordId);
+        // バッチ処理用に結果を保存
+        lastProcessResultRef.current = {
+          workOrderId: data.dbRecordId,
+          detectionResult: data.detectionResult || undefined,
+        };
         // 処理完了状態に遷移
         completeProcess();
       }
@@ -218,7 +236,11 @@ const WorkOrderTool: React.FC = () => {
       const companyLabel =
         ALL_COMPANY_OPTIONS.find((opt) => opt.value === data.identifiedCompany)
           ?.label || String(data.identifiedCompany);
-      setProcessedCompanyInfo({ file, companyLabel });
+      setProcessedCompanyInfo({ 
+        file, 
+        companyLabel,
+        status: 'completed' // 処理成功時はcompletedステータスを設定
+      });
 
       // 最終的な生成テキストを設定
       if (data.generatedText && !data.ocrOnly) {
@@ -241,6 +263,7 @@ const WorkOrderTool: React.FC = () => {
       setProcessedCompanyInfo({
         file,
         companyLabel: `エラー (${companyLabelForError})`,
+        status: 'error' // エラー時はerrorステータスを設定
       });
 
       // プロセス状態をエラーに更新
@@ -252,12 +275,202 @@ const WorkOrderTool: React.FC = () => {
     },
   });
 
-  // 統合された中断処理：ワークオーダーステータス中断とAPIリクエスト中断の両方を実行
+
+  // processFileの結果を保持するためのRef
+  const lastProcessResultRef = useRef<{ workOrderId?: string; detectionResult?: CompanyDetectionResult } | null>(null);
+
+  // バッチ処理用のAbortController（永続化）
+  const batchAbortControllerRef = useRef<AbortController | null>(null);
+  
+  // バッチ処理用AbortControllerを初期化（一度だけ）
+  React.useEffect(() => {
+    if (!batchAbortControllerRef.current) {
+      batchAbortControllerRef.current = new AbortController();
+    }
+  }, []);
+  
+  // バッチ処理専用のPDFプロセッサ
+  const { processFile: batchProcessFile } = usePdfProcessor({
+    onSuccess: (data: PdfProcessSuccessResponse, file: File) => {
+      // バッチ処理の成功処理は個別ファイル処理と同じロジック
+      console.log('[batchProcessFile onSuccess] APIレスポンス:', {
+        fileName: file.name,
+        dbRecordId: data.dbRecordId,
+        generatedText: data.generatedText ? 'あり' : 'なし',
+        ocrOnly: data.ocrOnly,
+        identifiedCompany: data.identifiedCompany,
+      });
+      
+      // レスポンスデータの検証
+      if (!data.generatedText && !data.ocrOnly) {
+        console.error('[batchProcessFile] Empty generatedText received:', data);
+        return;
+      }
+
+      // 自動判定結果を保存
+      if (data.detectionResult) {
+        setLastDetectionResult(data.detectionResult);
+      }
+
+      // Work Order IDを保存（フィードバック用）
+      if (data.dbRecordId) {
+        setLastWorkOrderId(data.dbRecordId);
+        // バッチ処理用に結果を保存
+        lastProcessResultRef.current = {
+          workOrderId: data.dbRecordId,
+          detectionResult: data.detectionResult || undefined,
+        };
+      }
+    },
+    onError: (errorMessage: string, file: File, companyLabelForError: string) => {
+      console.error(`[batchProcessFile onError] ファイル処理エラー:`, {
+        fileName: file.name,
+        errorMessage,
+        companyLabel: companyLabelForError,
+      });
+      // エラー時も結果をrefに保存（エラー状態として）
+      lastProcessResultRef.current = null;
+    },
+    // バッチ処理専用のAbortSignalを渡す
+    externalAbortSignal: batchAbortControllerRef.current?.signal,
+  });
+
+  // バッチ処理フック
+  const {
+    batchState,
+    startBatchProcess,
+    pauseBatchProcess,
+    resumeBatchProcess,
+    cancelBatchProcess,
+    getProgress,
+    getElapsedTime,
+  } = useBatchProcessor({
+    processFile: async (file, companyId, companyLabel, enableAutoDetection, ocrOnly) => {
+      // バッチ処理がキャンセルされている場合は早期リターン
+      if (batchAbortControllerRef.current?.signal.aborted) {
+        console.log(`[Batch Processing] Skipping ${file.name} - batch was cancelled`);
+        return null;
+      }
+      
+      // processFileを呼び出す前にrefをクリア
+      lastProcessResultRef.current = null;
+      
+      // バッチ処理専用のprocessFileを呼び出し
+      await batchProcessFile(file, companyId, companyLabel, enableAutoDetection, ocrOnly);
+      
+      // 処理結果をrefから取得して返す
+      return lastProcessResultRef.current;
+    },
+    onFileProcessed: (result) => {
+      // 各ファイルの処理完了時の処理
+      console.log('[onFileProcessed] バッチ処理ファイル完了:', {
+        fileName: result.fileName,
+        status: result.status,
+        workOrderId: result.workOrderId,
+        errorMessage: result.errorMessage,
+      });
+      
+      // バッチ処理完了ファイルの状態を更新
+      setBatchProcessedFiles(prev => ({
+        ...prev,
+        [result.fileName]: result.status,
+      }));
+      
+      // 処理済みファイルのリストを更新（現在プレビュー中の場合は自動的に生成文言を表示）
+      if (result.status === 'success' && result.workOrderId && pdfFileToDisplay?.name === result.fileName) {
+        // 現在プレビュー中のファイルが処理完了した場合、自動的にデータを取得して表示
+        import('@/lib/api').then(({ getWorkOrderByFileName }) => {
+          getWorkOrderByFileName(result.fileName).then(workOrder => {
+            if (workOrder) {
+              setGeneratedText(workOrder.generated_text || '');
+              setEditedText(workOrder.edited_text || '');
+              setLastWorkOrderId(workOrder.id);
+              setProcessedCompanyInfo({
+                file: pdfFileToDisplay,
+                companyLabel: workOrder.company_name || '',
+                status: 'completed', // バッチ処理成功時は完了ステータスを設定
+              });
+            }
+          });
+        });
+      }
+    },
+    onBatchComplete: (results) => {
+      // バッチ処理完了時の処理
+      setShowBatchProgress(false);
+      setBatchMode(false);
+      setSelectedFiles({});
+      
+      // バッチ処理用AbortControllerをクリーンアップ
+      if (batchAbortControllerRef.current) {
+        batchAbortControllerRef.current = null;
+      }
+      
+      // 処理中状態をクリア
+      setProcessingFile(null);
+      clearProcess();
+      
+      // 成功したファイル数を通知
+      const successCount = results.filter(r => r.status === 'success').length;
+      if (successCount > 0) {
+        toast.success(`${successCount}個のファイルの処理が完了しました。ファイルをクリックして結果を確認してください。`);
+      }
+    },
+    getCompanyLabel: (companyId) => 
+      ALL_COMPANY_OPTIONS.find(opt => opt.value === companyId)?.label || companyId,
+  });
+
+  // 統合された中断処理：バッチ処理中か単体処理中かを判定して適切にキャンセル
   const cancelProcess = useCallback(() => {
-    cancelWorkOrderStatus(); // ワークオーダーステータスを中断状態にする
-    abortRequest(); // 進行中のAPIリクエストを中断する
-    toast.info('処理を中断しました');
-  }, [cancelWorkOrderStatus, abortRequest]);
+    if (batchState.isProcessing) {
+      // バッチ処理中の場合
+      console.log('[cancelProcess] Cancelling batch process');
+      
+      // バッチレベルのAbortControllerを中断
+      if (batchAbortControllerRef.current) {
+        batchAbortControllerRef.current.abort();
+        batchAbortControllerRef.current = null;
+      }
+      
+      // バッチ処理をキャンセル
+      cancelBatchProcess();
+      
+      // UI状態もクリア
+      setShowBatchProgress(false);
+      setProcessingFile(null);
+      clearProcess();
+      
+      // バッチ処理済みファイル状態を更新（成功済みは保持、それ以外はキャンセル）
+      setBatchProcessedFiles(prev => {
+        const updated = { ...prev };
+        
+        // 既に成功したファイルは保持
+        const successfulFiles = batchState.results
+          .filter(result => result.status === 'success')
+          .map(result => result.fileName);
+        
+        // 全てのファイルを確認
+        Object.keys(updated).forEach(fileName => {
+          // 成功済みファイル以外をキャンセル状態に更新
+          if (!successfulFiles.includes(fileName) && updated[fileName] !== 'success') {
+            updated[fileName] = 'cancelled';
+          }
+        });
+        
+        return updated;
+      });
+      
+      toast.info('バッチ処理を中断しました');
+    } else {
+      // 単体処理中の場合
+      console.log('[cancelProcess] Cancelling single file process');
+      
+      cancelWorkOrderStatus(); // ワークオーダーステータスを中断状態にする
+      abortRequest(); // 進行中のAPIリクエストを中断する
+      
+      toast.info('処理を中断しました');
+    }
+  }, [batchState.isProcessing, batchState.results, cancelBatchProcess, cancelWorkOrderStatus, abortRequest, clearProcess, setProcessingFile, setBatchProcessedFiles]);
 
   /**
    * 2段階処理：OCR+会社判定 → 手配書作成
@@ -374,10 +587,10 @@ const WorkOrderTool: React.FC = () => {
 
   /**
    * ファイルリスト内のファイルがクリックされたときの処理。
-   * 該当ファイルのPDFプレビューのみを行います。
+   * 該当ファイルのPDFプレビューを行い、既存のwork_orderデータがあれば表示します。
    */
   const handleFilePreviewRequest = useCallback(
-    (file: PdfFile) => {
+    async (file: PdfFile) => {
       if (isLoading) {
         // AI処理中は何もしない（またはトースト表示）
         toast.info(
@@ -385,24 +598,108 @@ const WorkOrderTool: React.FC = () => {
         );
         return;
       }
+      
+      console.log(`[handleFilePreviewRequest] ファイルクリック: ${file.name}`);
+      
       setPdfFileToDisplay(file);
       setProcessingFile(file); // ★ プレビュー中のファイルを「次にAI実行する対象」としてマーク
-      setGeneratedText(''); // プレビュー変更時は生成テキストをクリア
-      setEditedText(''); // 編集テキストもクリア
-      setProcessedCompanyInfo({ file: undefined, companyLabel: '' }); // 処理情報もクリア
-      setLastDetectionResult(null); // 前回の判定結果もクリア
-      setLastWorkOrderId(null); // work_order IDもクリア
-      clearProcess(); // プロセス状態もクリア
-      // ページ数などは Document の onLoadSuccess でリセットされる (handleDocumentLoadSuccess経由)
-      toast.dismiss(); // 既存の通知があれば消す
-      toast.info(`「${file.name}」をプレビュー中です。`);
+      
+      // 既存の通知を消す
+      toast.dismiss();
+      
+      // データベースから既存のwork_orderを検索
+      try {
+        console.log(`[handleFilePreviewRequest] データベース検索開始: ${file.name}`);
+        const { getWorkOrderByFileName } = await import('@/lib/api');
+        const workOrder = await getWorkOrderByFileName(file.name);
+        
+        console.log(`[handleFilePreviewRequest] 検索結果:`, workOrder);
+        console.log(`[handleFilePreviewRequest] バッチ処理状態:`, batchProcessedFiles[file.name]);
+        
+        if (workOrder) {
+          // 既存のwork_orderが見つかった場合、その内容を表示
+          console.log(`[handleFilePreviewRequest] 処理済みデータを表示: status=${workOrder.status}, generated_text=${workOrder.generated_text ? 'あり' : 'なし'}`);
+          
+          // completedステータスまたはバッチ処理で成功したファイルの場合は処理済みとして扱う
+          const isBatchProcessSuccess = batchProcessedFiles[file.name] === 'success';
+          if (workOrder.status === 'completed' || isBatchProcessSuccess) {
+            setGeneratedText(workOrder.generated_text || '');
+            setEditedText(workOrder.edited_text || '');
+            setLastWorkOrderId(workOrder.id);
+            setProcessedCompanyInfo({
+              file: file,
+              companyLabel: workOrder.company_name || '',
+              status: 'completed', // ステータスを明示的に設定
+            });
+            clearProcess(); // プロセス状態をクリア
+            
+            toast.success(`「${file.name}」の処理済みデータを表示しています。`);
+          } else {
+            // completed以外のステータス（processing, error等）の場合は処理済み扱いしない
+            setGeneratedText('');
+            setEditedText('');
+            setProcessedCompanyInfo({ 
+              file: undefined, 
+              companyLabel: '',
+              status: undefined // ステータスもクリア
+            });
+            setLastDetectionResult(null);
+            setLastWorkOrderId(workOrder.id); // IDだけは保持（再処理用）
+            clearProcess();
+            
+            // ステータスに応じてメッセージを変更
+            if (workOrder.status === 'processing') {
+              toast.info(`「${file.name}」は処理中です。完了までお待ちください。`);
+            } else if (workOrder.status === 'error') {
+              toast.warning(`「${file.name}」の処理でエラーが発生しています。再処理が可能です。`);
+            } else {
+              toast.info(`「${file.name}」をプレビュー中です。AI実行ボタンを押して処理を開始してください。`);
+            }
+          }
+        } else {
+          console.log(`[handleFilePreviewRequest] 処理済みデータなし - プレビュー状態に設定`);
+          // データがない場合はプレビュー状態をクリア
+          setGeneratedText('');
+          setEditedText('');
+          setProcessedCompanyInfo({ 
+            file: undefined, 
+            companyLabel: '',
+            status: undefined
+          });
+          setLastDetectionResult(null);
+          setLastWorkOrderId(null);
+          clearProcess();
+          
+          toast.info(`「${file.name}」をプレビュー中です。AI実行ボタンを押して処理を開始してください。`);
+        }
+      } catch (error) {
+        console.error('[handleFilePreviewRequest] 既存データの取得エラー:', error);
+        
+        // エラー時もプレビュー状態をクリア
+        setGeneratedText('');
+        setEditedText('');
+        setProcessedCompanyInfo({ 
+          file: undefined, 
+          companyLabel: '',
+          status: undefined
+        });
+        setLastDetectionResult(null);
+        setLastWorkOrderId(null);
+        clearProcess();
+        
+        toast.error(`「${file.name}」のデータ取得中にエラーが発生しました。`);
+      }
     },
     [
       isLoading,
+      batchProcessedFiles,
       setPdfFileToDisplay,
       setProcessingFile,
       setGeneratedText,
+      setEditedText,
       setProcessedCompanyInfo,
+      setLastDetectionResult,
+      setLastWorkOrderId,
       clearProcess,
     ]
   );
@@ -429,6 +726,64 @@ const WorkOrderTool: React.FC = () => {
     handleFileSelectFromHook(event); // useFileHandler の関数を呼び出すだけ
     // ★ ここでは自動プレビューや自動処理は行わない
   };
+
+  /**
+   * バッチ処理関連の関数
+   */
+  const handleFileSelectionChange = useCallback((fileName: string, selected: boolean) => {
+    setSelectedFiles(prev => ({
+      ...prev,
+      [fileName]: selected,
+    }));
+  }, []);
+
+  const handleSelectAll = useCallback(() => {
+    const newSelection: { [fileName: string]: boolean } = {};
+    uploadedFiles.forEach(file => {
+      newSelection[file.name] = true;
+    });
+    setSelectedFiles(newSelection);
+  }, [uploadedFiles]);
+
+  const handleDeselectAll = useCallback(() => {
+    setSelectedFiles({});
+  }, []);
+
+  const handleBatchProcess = useCallback(async () => {
+    const filesToProcess = uploadedFiles.filter(file => selectedFiles[file.name]);
+    
+    if (filesToProcess.length === 0) {
+      toast.error('処理するファイルを選択してください');
+      return;
+    }
+
+    if (!selectedCompanyId && !autoDetectEnabled) {
+      toast.error('会社を選択してください');
+      return;
+    }
+
+    // バッチ処理開始時に状態をクリア
+    setBatchProcessedFiles({});
+    
+    // バッチ処理用のAbortControllerを作成（前回がabortされている場合は新しく作成）
+    if (!batchAbortControllerRef.current || batchAbortControllerRef.current.signal.aborted) {
+      batchAbortControllerRef.current = new AbortController();
+    }
+    
+    setShowBatchProgress(true);
+    await startBatchProcess(filesToProcess, {
+      companyId: selectedCompanyId,
+      autoDetectEnabled,
+      concurrentLimit: 1, // 1つずつ処理
+      pauseOnError: true,
+    });
+  }, [uploadedFiles, selectedFiles, selectedCompanyId, autoDetectEnabled, startBatchProcess]);
+
+  const handleBatchModeToggle = useCallback(() => {
+    setBatchMode(!batchMode);
+    setSelectedFiles({});
+    setShowBatchProgress(false);
+  }, [batchMode]);
 
   /**
    * 判定フィードバックの送信
@@ -482,6 +837,15 @@ const WorkOrderTool: React.FC = () => {
       {/* ツールヘッダー */}
       <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent">
         <h1 className="text-xl font-semibold">業務手配書 作成ツール</h1>
+        <div className="ml-auto flex items-center gap-2">
+          <Button
+            variant={showBatchHistory ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setShowBatchHistory(!showBatchHistory)}
+          >
+            履歴
+          </Button>
+        </div>
       </header>
 
       {/* メインコンテンツエリア (3ペイン) */}
@@ -503,6 +867,17 @@ const WorkOrderTool: React.FC = () => {
           autoDetectEnabled={autoDetectEnabled}
           onAutoDetectToggle={() => setAutoDetectEnabled(!autoDetectEnabled)}
           lastDetectionResult={lastDetectionResult}
+          // バッチ処理用のプロパティ
+          batchMode={batchMode}
+          selectedFiles={selectedFiles}
+          onFileSelectionChange={handleFileSelectionChange}
+          onSelectAll={handleSelectAll}
+          onDeselectAll={handleDeselectAll}
+          onBatchProcess={handleBatchProcess}
+          batchProcessing={batchState.isProcessing}
+          onBatchModeToggle={handleBatchModeToggle}
+          // バッチ処理完了ファイル状態
+          batchProcessedFiles={batchProcessedFiles}
         />
 
         <main className="flex-1 flex flex-row overflow-hidden">
@@ -534,7 +909,6 @@ const WorkOrderTool: React.FC = () => {
             isLoading={isLoading && !!processingFile} // AI処理中かつ対象ファイルがある場合
             processingFile={processingFile} // プレースホルダー用 (AI処理中のファイル)
             pdfFileToDisplayForPlaceholder={pdfFileToDisplay} // プレースホルダー用 (プレビュー中のファイル)
-            selectedCompanyIdForPlaceholder={selectedCompanyId} // プレースホルダー用
             processedCompanyInfo={processedCompanyInfo}
             lastDetectionResult={lastDetectionResult}
             onRequestFeedback={() => setShowFeedbackModal(true)}
@@ -562,6 +936,43 @@ const WorkOrderTool: React.FC = () => {
         currentFileName={processingFile?.name || ''}
         onSubmitFeedback={handleDetectionFeedback}
       />
+
+      {/* バッチ処理進捗パネル */}
+      {showBatchProgress && (
+        <div className="fixed bottom-4 right-4 z-50 w-96">
+          <BatchProgressPanel
+            batchState={batchState}
+            onPause={pauseBatchProcess}
+            onResume={resumeBatchProcess}
+            onCancel={cancelProcess}
+            progress={getProgress()}
+            elapsedTime={getElapsedTime()}
+          />
+        </div>
+      )}
+
+      {/* バッチ処理履歴パネル */}
+      {showBatchHistory && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm">
+          <div className="fixed inset-y-0 right-0 w-full max-w-2xl bg-background shadow-lg">
+            <div className="flex h-full flex-col">
+              <div className="flex items-center justify-between border-b p-4">
+                <h2 className="text-lg font-semibold">バッチ処理履歴</h2>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setShowBatchHistory(false)}
+                >
+                  閉じる
+                </Button>
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <BatchHistoryPanel />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
