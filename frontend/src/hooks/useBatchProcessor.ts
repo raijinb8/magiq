@@ -152,8 +152,23 @@ export const useBatchProcessor = ({
               true
             );
             
-            // TODO: OCR結果から会社IDを取得する処理
-            // 現在の実装では、processFileのコールバックで処理される
+            // OCR結果から会社IDを取得してStage 2を実行
+            if (processResult?.detectionResult?.detectedCompanyId) {
+              const detectedCompanyId = processResult.detectionResult.detectedCompanyId;
+              const detectedCompanyLabel = getCompanyLabel(detectedCompanyId);
+              
+              // Stage 2: 手配書作成
+              processResult = await processFile(
+                file,
+                detectedCompanyId,
+                detectedCompanyLabel,
+                false, // enableAutoDetection = false (判定は完了済み)
+                false  // ocrOnly = false (手配書作成を実行)
+              );
+            } else {
+              // 会社判定に失敗した場合はエラーとして扱う
+              throw new Error('会社の自動判定に失敗しました');
+            }
           } else {
             // 通常処理
             const companyLabel = getCompanyLabel(companyId);
@@ -182,7 +197,7 @@ export const useBatchProcessor = ({
           const result: BatchProcessResult = {
             fileName: file.name,
             status: 'success',
-            companyId: companyId,
+            companyId: processResult?.detectionResult?.detectedCompanyId || companyId,
             workOrderId: processResult?.workOrderId,
             detectionResult: processResult?.detectionResult,
             processingTime: completedAt.getTime() - startedAt.getTime(),

@@ -128,6 +128,7 @@ export async function updateBatchProcessFile(
     completed_at?: string;
     work_order_id?: string;
     detection_result?: unknown;
+    company_id?: string;
   }
 
   const updateData: UpdateData = {
@@ -144,6 +145,10 @@ export async function updateBatchProcessFile(
 
   if (result.detectionResult) {
     updateData.detection_result = result.detectionResult;
+  }
+
+  if (result.companyId) {
+    updateData.company_id = result.companyId;
   }
 
   const { data, error } = await supabase
