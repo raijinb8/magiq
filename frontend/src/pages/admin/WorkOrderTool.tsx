@@ -313,11 +313,12 @@ const WorkOrderTool: React.FC = () => {
       }
 
       // Work Order IDを保存（フィードバック用）
-      if (data.dbRecordId) {
-        setLastWorkOrderId(data.dbRecordId);
+      if (data.dbRecordId || data.workOrderId) {
+        const workOrderId = data.workOrderId || data.dbRecordId;
+        setLastWorkOrderId(workOrderId);
         // バッチ処理用に結果を保存
         lastProcessResultRef.current = {
-          workOrderId: data.dbRecordId,
+          workOrderId: workOrderId,
           detectionResult: data.detectionResult || undefined,
         };
       }
@@ -361,6 +362,7 @@ const WorkOrderTool: React.FC = () => {
       // 処理結果をrefから取得して返す
       return lastProcessResultRef.current;
     },
+    getLastProcessResult: () => lastProcessResultRef.current,
     onFileProcessed: (result) => {
       // 各ファイルの処理完了時の処理
       console.log('[onFileProcessed] バッチ処理ファイル完了:', {

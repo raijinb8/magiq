@@ -27,6 +27,7 @@ interface UseBatchProcessorProps {
   onFileProcessed?: (result: BatchProcessResult) => void;
   onBatchComplete?: (results: BatchProcessResult[]) => void;
   getCompanyLabel?: (companyId: CompanyOptionValue) => string;
+  getLastProcessResult?: () => { workOrderId?: string; detectionResult?: CompanyDetectionResult } | null;
 }
 
 export const useBatchProcessor = ({
@@ -34,6 +35,7 @@ export const useBatchProcessor = ({
   onFileProcessed,
   onBatchComplete,
   getCompanyLabel = (id) => id,
+  getLastProcessResult,
 }: UseBatchProcessorProps) => {
   const [batchState, setBatchState] = useState<BatchProcessingState>({
     isProcessing: false,
@@ -139,12 +141,12 @@ export const useBatchProcessor = ({
         }));
 
         try {
-          let processResult: { workOrderId?: string; detectionResult?: CompanyDetectionResult } | null | void = null;
+          let actualResult: { workOrderId?: string; detectionResult?: CompanyDetectionResult } = { workOrderId: undefined, detectionResult: undefined };
           
           // 2段階処理の場合
           if (autoDetectEnabled) {
             // Stage 1: OCR + 会社判定
-            processResult = await processFile(
+            await processFile(
               file,
               '',
               'OCR処理',
@@ -152,33 +154,47 @@ export const useBatchProcessor = ({
               true
             );
             
-            // OCR結果から会社IDを取得してStage 2を実行
-            if (processResult?.detectionResult?.detectedCompanyId) {
-              const detectedCompanyId = processResult.detectionResult.detectedCompanyId;
-              const detectedCompanyLabel = getCompanyLabel(detectedCompanyId);
+            // Stage 1完了後、少し待機してからlastProcessResultRefを確認
+            await new Promise(resolve => setTimeout(resolve, 200));
+            
+            // Stage 1の結果を取得
+            const stage1Result = getLastProcessResult?.();
+            if (stage1Result?.detectionResult?.detectedCompanyId) {
+              const detectedCompanyId = stage1Result.detectionResult.detectedCompanyId;
+              const companyLabel = getCompanyLabel(detectedCompanyId);
+              
+              console.log(`[useBatchProcessor] Stage 2開始: ${file.name} (会社: ${companyLabel})`);
               
               // Stage 2: 手配書作成
-              processResult = await processFile(
+              await processFile(
                 file,
                 detectedCompanyId,
-                detectedCompanyLabel,
+                companyLabel,
                 false, // enableAutoDetection = false (判定は完了済み)
-                false  // ocrOnly = false (手配書作成を実行)
+                false // ocrOnly = false (手配書作成を実行)
               );
+              
+              // Stage 2完了後、再度結果を取得
+              await new Promise(resolve => setTimeout(resolve, 200));
+              actualResult = getLastProcessResult?.() || actualResult;
             } else {
-              // 会社判定に失敗した場合はエラーとして扱う
+              // 会社判定に失敗した場合
               throw new Error('会社の自動判定に失敗しました');
             }
           } else {
             // 通常処理
             const companyLabel = getCompanyLabel(companyId);
-            processResult = await processFile(
+            await processFile(
               file,
               companyId,
               companyLabel,
               false,
               false
             );
+            
+            // 処理完了後、結果を取得
+            await new Promise(resolve => setTimeout(resolve, 200));
+            actualResult = getLastProcessResult?.() || actualResult;
           }
 
           // 処理完了後にキャンセルされていないかチェック
@@ -194,12 +210,13 @@ export const useBatchProcessor = ({
           }
 
           const completedAt = new Date();
+            
           const result: BatchProcessResult = {
             fileName: file.name,
             status: 'success',
-            companyId: processResult?.detectionResult?.detectedCompanyId || companyId,
-            workOrderId: processResult?.workOrderId,
-            detectionResult: processResult?.detectionResult,
+            companyId: actualResult.detectionResult?.detectedCompanyId || companyId,
+            workOrderId: actualResult.workOrderId,
+            detectionResult: actualResult.detectionResult,
             processingTime: completedAt.getTime() - startedAt.getTime(),
             startedAt,
             completedAt,
