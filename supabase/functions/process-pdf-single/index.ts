@@ -61,7 +61,7 @@ async function performOcrCompanyDetection(
       console.log(`[OCR Detection] Gemini API呼び出し試行 ${attempt + 1}/${maxRetries}`);
       
       const response = await genAI.models.generateContent({
-        model: 'gemini-2.5-flash-preview-04-17',
+        model: 'gemini-2.5-flash-preview-05-20',
         contents: [
           {
             role: 'user',
@@ -344,8 +344,8 @@ Deno.serve(async (req: Request) => {
 
     // 2. Genクライアントの初期化
     const genAI = new GoogleGenAI({ apiKey: GEMINI_API_KEY })
-    const model = 'gemini-2.5-flash-preview-04-17' // または "gen-pro", "gen-1.5-pro-latest" など。速度とコストで選択。
-    // gemini-2.5-flash-preview-04-17 適応的思考、費用対効果
+    const model = 'gemini-2.5-flash-preview-05-20' // または "gen-pro", "gen-1.5-pro-latest" など。速度とコストで選択。
+    // gemini-2.5-flash-preview-05-20 最新版、改善された性能
     // gemini-2.5-pro-preview-05-06 思考と推論の強化、マルチモーダル理解、高度なコーディングなど
     // gemini-2.0-flash 次世代の機能、速度。
 
