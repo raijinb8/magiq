@@ -69,7 +69,7 @@ const WorkOrderTool: React.FC = () => {
   const [lastWorkOrderId, setLastWorkOrderId] = useState<string | null>(null);
 
   // バッチ処理用の状態
-  const [batchMode, setBatchMode] = useState<boolean>(false);
+  const [batchMode, setBatchMode] = useState<boolean>(true);
   const [selectedFiles, setSelectedFiles] = useState<{ [fileName: string]: boolean }>({});
   const [showBatchProgress, setShowBatchProgress] = useState<boolean>(false);
   const [showBatchHistory, setShowBatchHistory] = useState<boolean>(false);
