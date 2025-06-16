@@ -120,6 +120,15 @@ export async function updateBatchProcessFile(
   fileName: string,
   result: BatchProcessResult
 ) {
+  console.log(`[updateBatchProcessFile] ${fileName}のDB更新開始`, {
+    batchProcessId,
+    fileName,
+    status: result.status,
+    errorMessage: result.errorMessage,
+    workOrderId: result.workOrderId,
+    companyId: result.companyId,
+  });
+  
   interface UpdateData {
     status: string;
     error_message?: string;
@@ -151,6 +160,8 @@ export async function updateBatchProcessFile(
     updateData.company_id = result.companyId;
   }
 
+  console.log(`[updateBatchProcessFile] ${fileName}の更新データ:`, updateData);
+
   const { data, error } = await supabase
     .from('batch_process_files')
     .update(updateData)
@@ -160,10 +171,16 @@ export async function updateBatchProcessFile(
     .single();
 
   if (error) {
-    console.error('❌ バッチファイル更新エラー:', error);
+    console.error(`[updateBatchProcessFile] ${fileName}のDB更新エラー:`, {
+      error,
+      batchProcessId,
+      fileName,
+      updateData,
+    });
     throw error;
   }
 
+  console.log(`[updateBatchProcessFile] ${fileName}のDB更新成功:`, data);
   return data;
 }
 

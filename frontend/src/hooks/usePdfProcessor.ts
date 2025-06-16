@@ -140,9 +140,24 @@ export const usePdfProcessor = ({
           // エラーレスポンスを先に処理
           let errorMsg = `HTTPエラー: ${response.status} ${response.statusText}`;
           let errorData: PdfProcessErrorResponse | null = null;
+          
+          console.error(`[usePdfProcessor] ${fileToProcess.name}のAPIエラーレスポンス:`, {
+            status: response.status,
+            statusText: response.statusText,
+            companyId,
+            enableAutoDetection,
+            ocrOnly,
+          });
+          
           try {
             errorData = (await response.json()) as PdfProcessErrorResponse;
             errorMsg = errorData?.error || errorMsg; // APIが返すエラーメッセージを優先
+            
+            console.error(`[usePdfProcessor] ${fileToProcess.name}のエラー詳細:`, {
+              errorMessage: errorData?.error,
+              details: errorData?.details,
+              detectionResult: errorData?.detectionResult,
+            });
 
             // 自動判定に失敗した場合の特別な処理
             if (
@@ -158,12 +173,14 @@ export const usePdfProcessor = ({
             }
           } catch (jsonError) {
             // JSONパースに失敗した場合など
-            console.warn('Failed to parse error response as JSON:', jsonError);
+            console.warn(`[usePdfProcessor] ${fileToProcess.name}のエラーJSONパース失敗:`, jsonError);
           }
-          console.error('Backend API Error Response:', response);
-          toast.error(`処理エラー: ${errorMsg}`, {
-            description: `ファイル「${fileToProcess.name}」の処理中に問題が発生しました。`,
+          
+          console.error(`[usePdfProcessor] ${fileToProcess.name} onError()呼び出し前`, {
+            errorMsg,
+            companyLabelForError,
           });
+          
           onError(errorMsg, fileToProcess, companyLabelForError);
           return;
         }
@@ -171,11 +188,21 @@ export const usePdfProcessor = ({
         // response.ok の場合のみ .json() を安全に呼び出せる
         const responseData =
           (await response.json()) as PdfProcessSuccessResponse; // 成功レスポンスとして型付け
+        
+        console.log(`[usePdfProcessor] ${fileToProcess.name}の成功レスポンス:`, {
+          workOrderId: responseData.workOrderId,
+          dbRecordId: responseData.dbRecordId,
+          detectionResult: responseData.detectionResult,
+          ocrOnly: responseData.ocrOnly,
+          companyId,
+          enableAutoDetection,
+        });
+        
         onSuccess(responseData, fileToProcess);
       } catch (error: unknown) {
         // 中断された場合は通常のエラー処理をスキップ
         if (error instanceof Error && error.name === 'AbortError') {
-          console.log('API request was aborted');
+          console.log(`[usePdfProcessor] ${fileToProcess.name} APIリクエストが中断されました`);
           return; // 中断時は何もしない（エラー表示なし）
         }
 
@@ -183,8 +210,19 @@ export const usePdfProcessor = ({
         if (error instanceof Error) {
           errorMessage = error.message;
         }
-        console.error('Frontend API Call/Network Error:', error);
+        
+        console.error(`[usePdfProcessor] ${fileToProcess.name}のネットワーク/フロントエンドエラー:`, {
+          error,
+          errorMessage,
+          companyId,
+          enableAutoDetection,
+          ocrOnly,
+          companyLabelForError,
+        });
+        
         toast.error('クライアントサイドエラー', { description: errorMessage });
+        
+        console.log(`[usePdfProcessor] ${fileToProcess.name} onError()呼び出し`);
         onError(errorMessage, fileToProcess, companyLabelForError);
       } finally {
         setIsLoading(false);

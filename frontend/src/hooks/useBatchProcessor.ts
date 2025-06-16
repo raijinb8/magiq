@@ -204,14 +204,27 @@ export const useBatchProcessor = ({
                 console.error(`[useBatchProcessor] Stage 2エラー: ${file.name}`, stage2Error);
                 const completedAt = new Date();
                 
-                return {
+                const stage2ErrorResult = {
                   fileName: file.name,
-                  status: 'error',
+                  status: 'error' as const,
                   errorMessage: `手配書作成に失敗しました: ${stage2Error instanceof Error ? stage2Error.message : String(stage2Error)}`,
                   processingTime: completedAt.getTime() - startedAt.getTime(),
                   startedAt,
                   completedAt,
                 };
+                
+                // Stage 2エラーもDBに記録
+                if (batchProcessIdRef.current) {
+                  try {
+                    console.log(`[useBatchProcessor] ${file.name}のStage 2エラー状態をDBに記録中...`);
+                    await updateBatchProcessFile(batchProcessIdRef.current, file.name, stage2ErrorResult);
+                    console.log(`[useBatchProcessor] ${file.name}のStage 2エラー状態をDBに記録完了`);
+                  } catch (dbError) {
+                    console.error(`[useBatchProcessor] ${file.name}のStage 2エラーDB記録に失敗:`, dbError);
+                  }
+                }
+                
+                return stage2ErrorResult;
               }
             } else {
               // 会社判定に失敗した場合は、エラーとして記録するが処理は継続
@@ -227,14 +240,27 @@ export const useBatchProcessor = ({
               
               const completedAt = new Date();
               
-              return {
+              const detectionErrorResult = {
                 fileName: file.name,
-                status: 'error',
+                status: 'error' as const,
                 errorMessage: `会社の自動判定に失敗しました。${errorDetails}`,
                 processingTime: completedAt.getTime() - startedAt.getTime(),
                 startedAt,
                 completedAt,
               };
+              
+              // 会社判定失敗もDBに記録
+              if (batchProcessIdRef.current) {
+                try {
+                  console.log(`[useBatchProcessor] ${file.name}の会社判定失敗状態をDBに記録中...`);
+                  await updateBatchProcessFile(batchProcessIdRef.current, file.name, detectionErrorResult);
+                  console.log(`[useBatchProcessor] ${file.name}の会社判定失敗状態をDBに記録完了`);
+                } catch (dbError) {
+                  console.error(`[useBatchProcessor] ${file.name}の会社判定失敗DB記録に失敗:`, dbError);
+                }
+              }
+              
+              return detectionErrorResult;
             }
           } else {
             // 通常処理
@@ -300,6 +326,8 @@ export const useBatchProcessor = ({
           return result;
 
         } catch (error) {
+          console.error(`[useBatchProcessor] ${file.name}の処理中にエラーが発生:`, error);
+          
           const completedAt = new Date();
           const errorMessage = error instanceof Error ? error.message : '不明なエラー';
           
@@ -322,7 +350,23 @@ export const useBatchProcessor = ({
 
           // データベースに結果を記録
           if (batchProcessIdRef.current) {
-            await updateBatchProcessFile(batchProcessIdRef.current, file.name, result);
+            try {
+              console.log(`[useBatchProcessor] ${file.name}のエラー状態をDBに記録中...`, {
+                batchProcessId: batchProcessIdRef.current,
+                fileName: file.name,
+                status: result.status,
+                errorMessage: result.errorMessage,
+              });
+              
+              await updateBatchProcessFile(batchProcessIdRef.current, file.name, result);
+              
+              console.log(`[useBatchProcessor] ${file.name}のエラー状態をDBに記録完了`);
+            } catch (dbError) {
+              console.error(`[useBatchProcessor] ${file.name}のDBエラー記録に失敗:`, dbError);
+              // DB更新エラーでもバッチ処理は継続
+            }
+          } else {
+            console.warn(`[useBatchProcessor] ${file.name}エラー時にbatchProcessIdが未設定`);
           }
 
           onFileProcessed?.(result);
