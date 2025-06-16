@@ -37,6 +37,7 @@ export interface PdfProcessSuccessResponse {
   ocrOnly?: boolean; // OCRのみの実行か
   detectionResult?: CompanyDetectionResult | null; // 自動判定結果
   dbRecordId?: string; // データベースレコードID
+  workOrderId?: string; // バッチ処理用のWork Order ID
   identifiedCompany?: string; // 特定された会社
   originalFileName?: string; // 元のファイル名
   promptUsedIdentifier?: string; // 使用されたプロンプト識別子

@@ -535,6 +535,7 @@ Deno.serve(async (req: Request) => {
       identifiedCompany: companyIdFromFrontend,
       usageMetadata: usageMetadata, // トークン使用量も返す
       dbRecordId: dbRecordId, // DBに保存されたレコードのIDも返す (オプション)
+      workOrderId: dbRecordId, // フロントエンドの互換性のため追加
       // 自動判定の結果を含める
       detectionResult: detectionResult
         ? {
