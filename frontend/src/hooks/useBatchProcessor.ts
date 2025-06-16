@@ -213,6 +213,21 @@ export const useBatchProcessor = ({
                   completedAt,
                 };
                 
+                console.log(`[useBatchProcessor] Stage 2エラー結果を作成:`, {
+                  fileName: stage2ErrorResult.fileName,
+                  status: stage2ErrorResult.status,
+                  errorMessage: stage2ErrorResult.errorMessage,
+                });
+                
+                // バッチ状態を更新
+                setBatchState(prev => ({
+                  ...prev,
+                  processedCount: prev.processedCount + 1,
+                  errorCount: prev.errorCount + 1,
+                  failedFiles: (prev.failedFiles || 0) + 1,
+                  results: [...prev.results, stage2ErrorResult],
+                }));
+                
                 // Stage 2エラーもDBに記録
                 if (batchProcessIdRef.current) {
                   try {
@@ -222,6 +237,15 @@ export const useBatchProcessor = ({
                   } catch (dbError) {
                     console.error(`[useBatchProcessor] ${file.name}のStage 2エラーDB記録に失敗:`, dbError);
                   }
+                }
+                
+                // onFileProcessedコールバックを確実に呼び出す
+                try {
+                  console.log(`[useBatchProcessor] Stage 2エラーでonFileProcessedコールバック呼び出し: ${file.name}`);
+                  onFileProcessed?.(stage2ErrorResult);
+                  console.log(`[useBatchProcessor] Stage 2エラーでonFileProcessedコールバック完了: ${file.name}`);
+                } catch (callbackError) {
+                  console.error(`[useBatchProcessor] Stage 2エラーでonFileProcessedコールバックエラー:`, callbackError);
                 }
                 
                 return stage2ErrorResult;
@@ -249,6 +273,21 @@ export const useBatchProcessor = ({
                 completedAt,
               };
               
+              console.log(`[useBatchProcessor] 会社判定エラー結果を作成:`, {
+                fileName: detectionErrorResult.fileName,
+                status: detectionErrorResult.status,
+                errorMessage: detectionErrorResult.errorMessage,
+              });
+              
+              // バッチ状態を更新
+              setBatchState(prev => ({
+                ...prev,
+                processedCount: prev.processedCount + 1,
+                errorCount: prev.errorCount + 1,
+                failedFiles: (prev.failedFiles || 0) + 1,
+                results: [...prev.results, detectionErrorResult],
+              }));
+              
               // 会社判定失敗もDBに記録
               if (batchProcessIdRef.current) {
                 try {
@@ -258,6 +297,15 @@ export const useBatchProcessor = ({
                 } catch (dbError) {
                   console.error(`[useBatchProcessor] ${file.name}の会社判定失敗DB記録に失敗:`, dbError);
                 }
+              }
+              
+              // onFileProcessedコールバックを確実に呼び出す
+              try {
+                console.log(`[useBatchProcessor] 会社判定エラーでonFileProcessedコールバック呼び出し: ${file.name}`);
+                onFileProcessed?.(detectionErrorResult);
+                console.log(`[useBatchProcessor] 会社判定エラーでonFileProcessedコールバック完了: ${file.name}`);
+              } catch (callbackError) {
+                console.error(`[useBatchProcessor] 会社判定エラーでonFileProcessedコールバックエラー:`, callbackError);
               }
               
               return detectionErrorResult;
@@ -340,6 +388,13 @@ export const useBatchProcessor = ({
             completedAt,
           };
 
+          console.log(`[useBatchProcessor] エラー結果を作成:`, {
+            fileName: result.fileName,
+            status: result.status,
+            errorMessage: result.errorMessage,
+            callbackAvailable: !!onFileProcessed,
+          });
+
           setBatchState(prev => ({
             ...prev,
             processedCount: prev.processedCount + 1,
@@ -369,7 +424,14 @@ export const useBatchProcessor = ({
             console.warn(`[useBatchProcessor] ${file.name}エラー時にbatchProcessIdが未設定`);
           }
 
-          onFileProcessed?.(result);
+          // onFileProcessedコールバックを確実に呼び出す
+          try {
+            console.log(`[useBatchProcessor] onFileProcessedコールバック呼び出し開始: ${file.name}`);
+            onFileProcessed?.(result);
+            console.log(`[useBatchProcessor] onFileProcessedコールバック呼び出し完了: ${file.name}`);
+          } catch (callbackError) {
+            console.error(`[useBatchProcessor] onFileProcessedコールバックでエラー:`, callbackError);
+          }
 
           if (pauseOnError) {
             pauseBatchProcess();

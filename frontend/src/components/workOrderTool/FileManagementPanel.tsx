@@ -89,38 +89,54 @@ export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
     // 選択状態の判定
     const isSelected = pdfFileToDisplay?.name === file.name;
     const isCurrentlyProcessing = processingFile?.name === file.name && isLoading;
+    const batchStatus = batchProcessedFiles[file.name];
+    
+    // デバッグ情報（開発時のみ）
+    if (batchStatus) {
+      console.log(`[FileManagementPanel] ファイル ${file.name} のバッチ状態: ${batchStatus}`, {
+        isSelected,
+        isCurrentlyProcessing,
+        batchProcessedFiles,
+      });
+    }
     
     // 現在AI処理中（最優先）
     if (isCurrentlyProcessing) {
       return `${baseClasses} bg-blue-100 dark:bg-blue-800/30 ring-2 ring-blue-500 animate-pulse`;
     }
     
-    // 選択状態でのスタイル組み合わせ
+    // バッチ処理の状態を最優先で表示（選択状態に関係なく）
+    if (batchStatus === 'error') {
+      const selectedStyle = isSelected ? 'ring-4 ring-blue-500 shadow-lg border-2 border-blue-400' : 'ring-2 ring-red-500';
+      return `${baseClasses} bg-red-100 dark:bg-red-800/30 ${selectedStyle}`;
+    }
+    
+    if (batchStatus === 'success') {
+      const selectedStyle = isSelected ? 'ring-4 ring-blue-500 shadow-lg border-2 border-blue-400' : 'ring-2 ring-green-500';
+      return `${baseClasses} bg-green-100 dark:bg-green-800/30 ${selectedStyle}`;
+    }
+    
+    if (batchStatus === 'processing') {
+      const selectedStyle = isSelected ? 'ring-4 ring-blue-500 shadow-lg border-2 border-blue-400' : 'ring-2 ring-orange-500';
+      return `${baseClasses} bg-orange-100 dark:bg-orange-800/30 ${selectedStyle} animate-pulse`;
+    }
+    
+    if (batchStatus === 'cancelled') {
+      const selectedStyle = isSelected ? 'ring-4 ring-blue-500 shadow-lg border-2 border-blue-400' : 'ring-2 ring-gray-500';
+      return `${baseClasses} bg-gray-100 dark:bg-gray-800/30 ${selectedStyle}`;
+    }
+    
+    if (batchStatus === 'pending') {
+      const selectedStyle = isSelected ? 'ring-4 ring-blue-500 shadow-lg border-2 border-blue-400' : 'ring-2 ring-yellow-300';
+      return `${baseClasses} bg-yellow-50 dark:bg-yellow-900/20 ${selectedStyle}`;
+    }
+    
+    // バッチ処理状態がない場合、選択状態に応じた表示
     if (isSelected) {
-      // 選択状態での処理結果表示
-      
-      // バッチ処理結果がある場合
-      if (batchProcessedFiles[file.name] === 'success') {
-        return `${baseClasses} bg-green-100 dark:bg-green-800/30 ring-4 ring-blue-500 shadow-lg border-2 border-blue-400`;
-      }
-      if (batchProcessedFiles[file.name] === 'error') {
-        return `${baseClasses} bg-red-100 dark:bg-red-800/30 ring-4 ring-blue-500 shadow-lg border-2 border-blue-400`;
-      }
-      if (batchProcessedFiles[file.name] === 'processing') {
-        return `${baseClasses} bg-orange-100 dark:bg-orange-800/30 ring-4 ring-blue-500 shadow-lg border-2 border-blue-400 animate-pulse`;
-      }
-      if (batchProcessedFiles[file.name] === 'cancelled') {
-        return `${baseClasses} bg-gray-100 dark:bg-gray-800/30 ring-4 ring-blue-500 shadow-lg border-2 border-blue-400`;
-      }
-      if (batchProcessedFiles[file.name] === 'pending') {
-        return `${baseClasses} bg-yellow-50 dark:bg-yellow-900/20 ring-4 ring-blue-500 shadow-lg border-2 border-blue-400`;
-      }
-      
-      // 単体処理結果またはバッチ処理成功がある場合
+      // 単体処理結果がある場合
       const isSingleProcessCompleted = processedCompanyInfo.file?.name === file.name && processedCompanyInfo.status === 'completed' && generatedText;
-      const isBatchProcessSuccess = batchProcessedFiles[file.name] === 'success';
       
-      if (isSingleProcessCompleted || isBatchProcessSuccess) {
+      if (isSingleProcessCompleted) {
         if (generatedText && generatedText.startsWith('エラー')) {
           return `${baseClasses} bg-red-100 dark:bg-red-800/30 ring-4 ring-blue-500 shadow-lg border-2 border-blue-400`;
         }
@@ -131,38 +147,10 @@ export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
       return `${baseClasses} bg-blue-50 dark:bg-blue-900/20 ring-4 ring-blue-500 shadow-lg border-2 border-blue-400`;
     }
     
-    // 非選択状態での表示（従来通り）
-    
-    // バッチ処理でエラーが発生したファイル
-    if (batchProcessedFiles[file.name] === 'error') {
-      return `${baseClasses} bg-red-100 dark:bg-red-800/30 ring-1 ring-red-500`;
-    }
-    
-    // バッチ処理で成功したファイル
-    if (batchProcessedFiles[file.name] === 'success') {
-      return `${baseClasses} bg-green-100 dark:bg-green-800/30 ring-1 ring-green-500`;
-    }
-    
-    // バッチ処理中のファイル
-    if (batchProcessedFiles[file.name] === 'processing') {
-      return `${baseClasses} bg-orange-100 dark:bg-orange-800/30 ring-1 ring-orange-500 animate-pulse`;
-    }
-    
-    // バッチ処理でキャンセルされたファイル
-    if (batchProcessedFiles[file.name] === 'cancelled') {
-      return `${baseClasses} bg-gray-100 dark:bg-gray-800/30 ring-1 ring-gray-500`;
-    }
-    
-    // バッチ処理待機中のファイル
-    if (batchProcessedFiles[file.name] === 'pending') {
-      return `${baseClasses} bg-yellow-50 dark:bg-yellow-900/20 ring-1 ring-yellow-300`;
-    }
-    
-    // 単体処理結果またはバッチ処理成功（非選択状態）
+    // 非選択状態で単体処理結果がある場合
     const isSingleProcessCompleted = processedCompanyInfo.file?.name === file.name && processedCompanyInfo.status === 'completed' && generatedText;
-    const isBatchProcessSuccess = batchProcessedFiles[file.name] === 'success';
     
-    if (isSingleProcessCompleted || isBatchProcessSuccess) {
+    if (isSingleProcessCompleted) {
       if (generatedText && generatedText.startsWith('エラー')) {
         return `${baseClasses} bg-red-100 dark:bg-red-800/30 ring-1 ring-red-500`;
       }
@@ -349,56 +337,56 @@ export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
                       <span className="ml-2 text-xs text-blue-600 dark:text-blue-400 font-semibold">
                         (選択中)
                       </span>
-                      {/* 選択中のファイルの処理状態を追加表示 */}
+                      {/* 選択中のファイルの処理状態を追加表示（より明確に） */}
                       {batchProcessedFiles[file.name] === 'success' && (
-                        <span className="ml-1 text-xs text-green-600 dark:text-green-400">
-                          ✓
+                        <span className="ml-1 text-xs text-green-600 dark:text-green-400 font-bold">
+                          ✓完了
                         </span>
                       )}
                       {batchProcessedFiles[file.name] === 'error' && (
-                        <span className="ml-1 text-xs text-red-600 dark:text-red-400">
-                          ✗
+                        <span className="ml-1 text-xs text-red-600 dark:text-red-400 font-bold bg-red-50 dark:bg-red-900/30 px-1 rounded">
+                          ✗エラー
                         </span>
                       )}
                       {batchProcessedFiles[file.name] === 'processing' && (
-                        <span className="ml-1 text-xs text-orange-600 dark:text-orange-400">
-                          ⟳
+                        <span className="ml-1 text-xs text-orange-600 dark:text-orange-400 font-bold">
+                          ⟳処理中
                         </span>
                       )}
                       {batchProcessedFiles[file.name] === 'cancelled' && (
                         <span className="ml-1 text-xs text-gray-600 dark:text-gray-400">
-                          ⊘
+                          ⊘キャンセル
                         </span>
                       )}
                     </>
                   )}
                   
-                  {/* 非選択時のバッチ処理結果表示 */}
+                  {/* 非選択時のバッチ処理結果表示（より目立つように） */}
                   {pdfFileToDisplay?.name !== file.name && !isLoading && (
                     <>
                       {batchProcessedFiles[file.name] === 'success' && (
-                        <span className="ml-2 text-xs text-green-600 dark:text-green-400">
+                        <span className="ml-2 text-xs text-green-600 dark:text-green-400 font-semibold">
                           (バッチ処理完了)
                         </span>
                       )}
                       {batchProcessedFiles[file.name] === 'error' && (
-                        <span className="ml-2 text-xs text-red-600 dark:text-red-400">
-                          (バッチ処理エラー)
+                        <span className="ml-2 text-xs text-red-600 dark:text-red-400 font-bold bg-red-50 dark:bg-red-900/30 px-1 rounded">
+                          (エラー)
                         </span>
                       )}
                       {batchProcessedFiles[file.name] === 'processing' && (
-                        <span className="ml-2 text-xs text-orange-600 dark:text-orange-400">
-                          (バッチ処理中...)
+                        <span className="ml-2 text-xs text-orange-600 dark:text-orange-400 font-semibold">
+                          (処理中...)
                         </span>
                       )}
                       {batchProcessedFiles[file.name] === 'cancelled' && (
                         <span className="ml-2 text-xs text-gray-600 dark:text-gray-400">
-                          (バッチ処理キャンセル)
+                          (キャンセル)
                         </span>
                       )}
                       {batchProcessedFiles[file.name] === 'pending' && (
                         <span className="ml-2 text-xs text-yellow-600 dark:text-yellow-400">
-                          (バッチ処理待機中)
+                          (待機中)
                         </span>
                       )}
                     </>

@@ -385,27 +385,56 @@ const WorkOrderTool: React.FC = () => {
         errorMessage: result.errorMessage,
       });
       
-      // バッチ処理完了ファイルの状態を更新
-      setBatchProcessedFiles(prev => ({
-        ...prev,
-        [result.fileName]: result.status,
-      }));
-      
-      // 処理済みファイルのリストを更新（現在プレビュー中の場合は自動的に生成文言を表示）
-      if (result.status === 'success' && result.workOrderId && pdfFileToDisplay?.name === result.fileName) {
-        // 現在プレビュー中のファイルが処理完了した場合、自動的にデータを取得して表示
-        getWorkOrderByFileName(result.fileName).then(workOrder => {
-          if (workOrder) {
-            setGeneratedText(workOrder.generated_text || '');
-            setEditedText(workOrder.edited_text || '');
-            setLastWorkOrderId(workOrder.id);
-            setProcessedCompanyInfo({
-              file: pdfFileToDisplay,
-              companyLabel: workOrder.company_name || '',
-              status: 'completed', // バッチ処理成功時は完了ステータスを設定
-            });
-          }
+      try {
+        // バッチ処理完了ファイルの状態を更新
+        console.log(`[onFileProcessed] ファイル状態を更新: ${result.fileName} -> ${result.status}`);
+        setBatchProcessedFiles(prev => {
+          const updated = {
+            ...prev,
+            [result.fileName]: result.status,
+          };
+          console.log(`[onFileProcessed] 更新された状態:`, updated);
+          return updated;
         });
+        
+        // エラー時は追加でログ出力
+        if (result.status === 'error') {
+          console.warn(`[onFileProcessed] エラーファイルの状態更新完了: ${result.fileName}`, {
+            errorMessage: result.errorMessage,
+            currentBatchFiles: batchProcessedFiles,
+          });
+        }
+        
+        // 処理済みファイルのリストを更新（現在プレビュー中の場合は自動的に生成文言を表示）
+        if (result.status === 'success' && result.workOrderId && pdfFileToDisplay?.name === result.fileName) {
+          // 現在プレビュー中のファイルが処理完了した場合、自動的にデータを取得して表示
+          getWorkOrderByFileName(result.fileName).then(workOrder => {
+            if (workOrder) {
+              setGeneratedText(workOrder.generated_text || '');
+              setEditedText(workOrder.edited_text || '');
+              setLastWorkOrderId(workOrder.id);
+              setProcessedCompanyInfo({
+                file: pdfFileToDisplay,
+                companyLabel: workOrder.company_name || '',
+                status: 'completed', // バッチ処理成功時は完了ステータスを設定
+              });
+            }
+          }).catch(error => {
+            console.error(`[onFileProcessed] 処理済みデータの取得エラー: ${result.fileName}`, error);
+          });
+        }
+        
+        // エラー時でプレビュー中の場合は、エラー状態を表示
+        if (result.status === 'error' && pdfFileToDisplay?.name === result.fileName) {
+          setProcessedCompanyInfo({
+            file: pdfFileToDisplay,
+            companyLabel: `エラー: ${result.errorMessage || '不明なエラー'}`,
+            status: 'error',
+          });
+          setGeneratedText(`バッチ処理エラーが発生しました:\n${result.errorMessage || '不明なエラー'}\n\n再度処理を実行するか、ファイルの内容を確認してください。`);
+        }
+      } catch (error) {
+        console.error(`[onFileProcessed] 状態更新中にエラーが発生: ${result.fileName}`, error);
       }
     },
     onBatchComplete: (results) => {
