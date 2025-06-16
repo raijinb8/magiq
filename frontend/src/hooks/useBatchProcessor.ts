@@ -23,7 +23,7 @@ interface UseBatchProcessorProps {
     companyLabelForError: string,
     enableAutoDetection?: boolean,
     ocrOnly?: boolean
-  ) => Promise<{ workOrderId?: string; detectionResult?: CompanyDetectionResult } | null | void>;
+  ) => Promise<{ success: boolean; errorMessage?: string }>;
   onFileProcessed?: (result: BatchProcessResult) => void;
   onBatchComplete?: (results: BatchProcessResult[]) => void;
   getCompanyLabel?: (companyId: CompanyOptionValue) => string;
@@ -152,13 +152,28 @@ export const useBatchProcessor = ({
             }
             
             // Stage 1: OCR + 会社判定
-            await processFile(
+            const stage1ProcessResult = await processFile(
               file,
               '',
               'OCR処理',
               true,
               true
             );
+            
+            // Stage 1でエラーが発生した場合
+            if (!stage1ProcessResult.success) {
+              console.error(`[useBatchProcessor] Stage 1エラー: ${file.name}`, stage1ProcessResult.errorMessage);
+              const completedAt = new Date();
+              
+              return {
+                fileName: file.name,
+                status: 'error' as const,
+                errorMessage: `OCR処理に失敗しました: ${stage1ProcessResult.errorMessage}`,
+                processingTime: completedAt.getTime() - startedAt.getTime(),
+                startedAt,
+                completedAt,
+              };
+            }
             
             // Stage 1完了後、少し待機してからlastProcessResultRefを確認
             await new Promise(resolve => setTimeout(resolve, 500));
@@ -184,13 +199,18 @@ export const useBatchProcessor = ({
                 await new Promise(resolve => setTimeout(resolve, 1000));
                 
                 // Stage 2: 手配書作成
-                await processFile(
+                const stage2ProcessResult = await processFile(
                   file,
                   detectedCompanyId,
                   companyLabel,
                   false, // enableAutoDetection = false (判定は完了済み)
                   false // ocrOnly = false (手配書作成を実行)
                 );
+                
+                // Stage 2でエラーが発生した場合
+                if (!stage2ProcessResult.success) {
+                  throw new Error(`手配書作成に失敗しました: ${stage2ProcessResult.errorMessage}`);
+                }
                 
                 // Stage 2完了後、再度結果を取得
                 await new Promise(resolve => setTimeout(resolve, 500));
@@ -319,13 +339,28 @@ export const useBatchProcessor = ({
             }
             
             const companyLabel = getCompanyLabel(companyId);
-            await processFile(
+            const normalProcessResult = await processFile(
               file,
               companyId,
               companyLabel,
               false,
               false
             );
+            
+            // 通常処理でエラーが発生した場合
+            if (!normalProcessResult.success) {
+              console.error(`[useBatchProcessor] 通常処理エラー: ${file.name}`, normalProcessResult.errorMessage);
+              const completedAt = new Date();
+              
+              return {
+                fileName: file.name,
+                status: 'error' as const,
+                errorMessage: `処理に失敗しました: ${normalProcessResult.errorMessage}`,
+                processingTime: completedAt.getTime() - startedAt.getTime(),
+                startedAt,
+                completedAt,
+              };
+            }
             
             // 処理完了後、結果を取得
             await new Promise(resolve => setTimeout(resolve, 500));

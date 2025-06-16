@@ -363,17 +363,22 @@ const WorkOrderTool: React.FC = () => {
       // バッチ処理がキャンセルされている場合は早期リターン
       if (batchAbortControllerRef.current?.signal.aborted) {
         console.log(`[Batch Processing] Skipping ${file.name} - batch was cancelled`);
-        return null;
+        return { success: false, errorMessage: 'バッチ処理がキャンセルされました' };
       }
       
       // processFileを呼び出す前にrefをクリア
       lastProcessResultRef.current = null;
       
       // バッチ処理専用のprocessFileを呼び出し
-      await batchProcessFile(file, companyId, companyLabel, enableAutoDetection, ocrOnly);
+      const result = await batchProcessFile(file, companyId, companyLabel, enableAutoDetection, ocrOnly);
       
-      // 処理結果をrefから取得して返す
-      return lastProcessResultRef.current;
+      // エラーが発生した場合はそのまま返す
+      if (!result.success) {
+        return result;
+      }
+      
+      // 成功時は処理結果をrefから取得して返す（後方互換性のため）
+      return { success: true };
     },
     getLastProcessResult: () => lastProcessResultRef.current,
     onFileProcessed: (result) => {

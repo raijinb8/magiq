@@ -29,7 +29,7 @@ export interface UsePdfProcessorReturn {
     companyLabelForError: string, // エラーメッセージ表示用の会社ラベル
     enableAutoDetection?: boolean, // 自動判定を有効にするかどうか
     ocrOnly?: boolean // OCRと会社判定のみを実行するかどうか
-  ) => Promise<void>;
+  ) => Promise<{ success: boolean; errorMessage?: string }>;
   abortRequest: () => void; // APIリクエスト中断機能
 }
 
@@ -57,13 +57,14 @@ export const usePdfProcessor = ({
       companyLabelForError: string, // エラーメッセージ用に会社ラベルを受け取る
       enableAutoDetection = false, // デフォルトは自動判定無効
       ocrOnly = false // デフォルトはOCRのみは無効
-    ): Promise<void> => {
+    ): Promise<{ success: boolean; errorMessage?: string }> => {
       // 自動判定が有効な場合は、会社IDが未選択でも処理を続行
       if (!enableAutoDetection && !companyId) {
         // companyId の存在チェックを追加
-        toast.error('会社が選択されていません。');
+        const errorMsg = '会社が選択されていません。';
+        toast.error(errorMsg);
         onError('会社未選択', fileToProcess, companyLabelForError);
-        return;
+        return { success: false, errorMessage: errorMsg };
       }
       // AbortControllerを作成（内部用）
       const abortController = new AbortController();
@@ -96,23 +97,25 @@ export const usePdfProcessor = ({
       try {
         const session = (await supabase.auth.getSession()).data.session;
         if (!session) {
-          toast.error('認証されていません。ログインしてください。');
+          const errorMsg = '認証されていません。ログインしてください。';
+          toast.error(errorMsg);
           // setIsLoading(false); // finally で処理
           onError('認証エラー', fileToProcess, companyLabelForError);
-          return;
+          return { success: false, errorMessage: errorMsg };
         }
 
         const functionUrl = import.meta.env
           .VITE_PUBLIC_PROCESS_PDF_FUNCTION_URL;
         if (!functionUrl) {
-          toast.error('設定エラー: Function URLが未設定です。');
+          const errorMsg = '設定エラー: Function URLが未設定です。';
+          toast.error(errorMsg);
           // setIsLoading(false); // finally で処理
           onError(
             '設定エラー: Function URL未設定',
             fileToProcess,
             companyLabelForError
           );
-          return;
+          return { success: false, errorMessage: errorMsg };
         }
 
         // FormDataオブジェクトを作成してファイルと他のデータを格納
@@ -182,7 +185,7 @@ export const usePdfProcessor = ({
           });
           
           onError(errorMsg, fileToProcess, companyLabelForError);
-          return;
+          return { success: false, errorMessage: errorMsg };
         }
 
         // response.ok の場合のみ .json() を安全に呼び出せる
@@ -199,11 +202,12 @@ export const usePdfProcessor = ({
         });
         
         onSuccess(responseData, fileToProcess);
+        return { success: true };
       } catch (error: unknown) {
         // 中断された場合は通常のエラー処理をスキップ
         if (error instanceof Error && error.name === 'AbortError') {
           console.log(`[usePdfProcessor] ${fileToProcess.name} APIリクエストが中断されました`);
-          return; // 中断時は何もしない（エラー表示なし）
+          return { success: false, errorMessage: '処理が中断されました' }; // 中断時も結果を返す
         }
 
         let errorMessage = 'API呼び出し中に予期せぬエラーが発生しました。';
@@ -224,6 +228,7 @@ export const usePdfProcessor = ({
         
         console.log(`[usePdfProcessor] ${fileToProcess.name} onError()呼び出し`);
         onError(errorMessage, fileToProcess, companyLabelForError);
+        return { success: false, errorMessage };
       } finally {
         setIsLoading(false);
         
