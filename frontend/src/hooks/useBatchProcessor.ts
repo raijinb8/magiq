@@ -145,6 +145,12 @@ export const useBatchProcessor = ({
           
           // 2段階処理の場合
           if (autoDetectEnabled) {
+            // バッチ処理でのAPI負荷軽減のため、ファイル間に待機時間を追加
+            if (index > 0) {
+              console.log(`[useBatchProcessor] API負荷軽減のため1秒待機: ${file.name}`);
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            
             // Stage 1: OCR + 会社判定
             await processFile(
               file,
@@ -155,7 +161,7 @@ export const useBatchProcessor = ({
             );
             
             // Stage 1完了後、少し待機してからlastProcessResultRefを確認
-            await new Promise(resolve => setTimeout(resolve, 200));
+            await new Promise(resolve => setTimeout(resolve, 500));
             
             // Stage 1の結果を取得
             const stage1Result = getLastProcessResult?.();
@@ -172,18 +178,41 @@ export const useBatchProcessor = ({
               
               console.log(`[useBatchProcessor] Stage 2開始: ${file.name} (会社: ${companyLabel})`);
               
-              // Stage 2: 手配書作成
-              await processFile(
-                file,
-                detectedCompanyId,
-                companyLabel,
-                false, // enableAutoDetection = false (判定は完了済み)
-                false // ocrOnly = false (手配書作成を実行)
-              );
-              
-              // Stage 2完了後、再度結果を取得
-              await new Promise(resolve => setTimeout(resolve, 200));
-              actualResult = getLastProcessResult?.() || actualResult;
+              try {
+                // Stage 1とStage 2の間にも待機時間を追加（API負荷軽減）
+                console.log(`[useBatchProcessor] Stage 1→2間で1秒待機: ${file.name}`);
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // Stage 2: 手配書作成
+                await processFile(
+                  file,
+                  detectedCompanyId,
+                  companyLabel,
+                  false, // enableAutoDetection = false (判定は完了済み)
+                  false // ocrOnly = false (手配書作成を実行)
+                );
+                
+                // Stage 2完了後、再度結果を取得
+                await new Promise(resolve => setTimeout(resolve, 500));
+                actualResult = getLastProcessResult?.() || actualResult;
+                
+                // Stage 2が成功したかチェック
+                if (!actualResult.workOrderId) {
+                  throw new Error('手配書作成でwork_orderが作成されませんでした');
+                }
+              } catch (stage2Error) {
+                console.error(`[useBatchProcessor] Stage 2エラー: ${file.name}`, stage2Error);
+                const completedAt = new Date();
+                
+                return {
+                  fileName: file.name,
+                  status: 'error',
+                  errorMessage: `手配書作成に失敗しました: ${stage2Error instanceof Error ? stage2Error.message : String(stage2Error)}`,
+                  processingTime: completedAt.getTime() - startedAt.getTime(),
+                  startedAt,
+                  completedAt,
+                };
+              }
             } else {
               // 会社判定に失敗した場合は、エラーとして記録するが処理は継続
               const detectionDetails = stage1Result?.detectionResult;
@@ -209,6 +238,12 @@ export const useBatchProcessor = ({
             }
           } else {
             // 通常処理
+            // バッチ処理でのAPI負荷軽減のため、ファイル間に待機時間を追加
+            if (index > 0) {
+              console.log(`[useBatchProcessor] API負荷軽減のため1秒待機: ${file.name}`);
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            
             const companyLabel = getCompanyLabel(companyId);
             await processFile(
               file,
@@ -219,7 +254,7 @@ export const useBatchProcessor = ({
             );
             
             // 処理完了後、結果を取得
-            await new Promise(resolve => setTimeout(resolve, 200));
+            await new Promise(resolve => setTimeout(resolve, 500));
             actualResult = getLastProcessResult?.() || actualResult;
           }
 

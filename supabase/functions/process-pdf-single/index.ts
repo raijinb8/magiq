@@ -52,49 +52,70 @@ async function performOcrCompanyDetection(
   pdfBase64Data: string
 ): Promise<OcrDetectionResponse> {
   const genAI = new GoogleGenAI({ apiKey: geminiApiKey })
-
-  try {
-    const response = await genAI.models.generateContent({
-      model: 'gemini-2.5-flash-preview-04-17',
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            { text: OCR_COMPANY_DETECTION_PROMPT },
-            {
-              inlineData: {
-                mimeType: pdfFile.type,
-                data: pdfBase64Data,
+  
+  const maxRetries = 3;
+  let attempt = 0;
+  
+  while (attempt < maxRetries) {
+    try {
+      console.log(`[OCR Detection] Gemini API呼び出し試行 ${attempt + 1}/${maxRetries}`);
+      
+      const response = await genAI.models.generateContent({
+        model: 'gemini-2.5-flash-preview-04-17',
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              { text: OCR_COMPANY_DETECTION_PROMPT },
+              {
+                inlineData: {
+                  mimeType: pdfFile.type,
+                  data: pdfBase64Data,
+                },
               },
-            },
-          ],
-        },
-      ],
-    })
+            ],
+          },
+        ],
+      })
 
-    const responseText = response.text || ''
-    console.log('[OCR Detection] Gemini raw response:', responseText)
+      const responseText = response.text || ''
+      console.log('[OCR Detection] Gemini raw response:', responseText)
 
-    // JSONレスポンスをパース
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) {
-      throw new Error('No JSON found in OCR response')
+      // JSONレスポンスをパース
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/)
+      if (!jsonMatch) {
+        throw new Error('No JSON found in OCR response')
+      }
+
+      const result = JSON.parse(jsonMatch[0]) as OcrDetectionResponse
+
+      // バリデーション
+      return {
+        company_id: result.company_id || null,
+        confidence: typeof result.confidence === 'number' ? result.confidence : 0,
+        detected_text: result.detected_text || '',
+        found_keywords: Array.isArray(result.found_keywords) ? result.found_keywords : [],
+        reasoning: result.reasoning || '',
+      }
+    } catch (error) {
+      attempt++;
+      console.error(`[OCR Detection] Gemini API呼び出し失敗 (試行 ${attempt}/${maxRetries}):`, error);
+      
+      // 最後の試行でない場合は待機してリトライ
+      if (attempt < maxRetries) {
+        const waitTime = Math.pow(2, attempt) * 1000; // 指数バックオフ: 2秒, 4秒, 8秒
+        console.log(`[OCR Detection] ${waitTime}ms待機後にリトライします...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      } else {
+        // 最後の試行でも失敗した場合
+        console.error(`[OCR Detection] 全ての試行が失敗しました: ${maxRetries}回試行`);
+        throw error;
+      }
     }
-
-    const result = JSON.parse(jsonMatch[0]) as OcrDetectionResponse
-
-    // バリデーション
-    return {
-      company_id: result.company_id || null,
-      confidence: typeof result.confidence === 'number' ? result.confidence : 0,
-      detected_text: result.detected_text || '',
-      found_keywords: Array.isArray(result.found_keywords) ? result.found_keywords : [],
-      reasoning: result.reasoning || '',
-    }
-  } catch (error) {
-    console.error('[OCR Detection] Error calling Gemini API:', error)
-    throw error
   }
+  
+  // この行には到達しないはずだが、TypeScriptの型チェックのため
+  throw new Error('Unexpected error in performOcrCompanyDetection');
 }
 
 Deno.serve(async (req: Request) => {
@@ -348,14 +369,21 @@ Deno.serve(async (req: Request) => {
     console.log(`[${new Date().toISOString()}] Sending prompt with PDF data to Gemini API for file: ${fileName}`)
     // console.debug("Full Prompt to Gen:", prompt); // デバッグ時に必要ならコメント解除 (非常に長くなる可能性)
 
-    // 4. Gemini API呼び出し
+    // 4. Gemini API呼び出し（リトライ機能付き）
     let generatedTextByGen: string = ''
     let usageMetadata: any = null
-    try {
-      // API Ref https://ai.google.dev/api/generate-content?hl=ja#v1beta.GenerateContentResponse
-      const response = await genAI.models.generateContent({
-        model: model,
-        contents: [{ role: 'user', parts: requestParts }], // マルチモーダル入力形式
+    
+    const maxRetries = 3;
+    let attempt = 0;
+    
+    while (attempt < maxRetries) {
+      try {
+        console.log(`[${new Date().toISOString()}] Gemini API呼び出し試行 ${attempt + 1}/${maxRetries} for ${fileName}`);
+        
+        // API Ref https://ai.google.dev/api/generate-content?hl=ja#v1beta.GenerateContentResponse
+        const response = await genAI.models.generateContent({
+          model: model,
+          contents: [{ role: 'user', parts: requestParts }], // マルチモーダル入力形式
         // role: 'user' はユーザーのメッセージを、role: 'model' はAIモデル自身の応答を示す
         // 安全性設定の例 (必要に応じて調整)
         // safetySettings: [
@@ -376,61 +404,75 @@ Deno.serve(async (req: Request) => {
         //     threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
         //   },
         // ],
-        // デベロッパーがシステム指示を設定
-        // systemInstruction: "",
-      })
-      if (typeof response.text === 'string' && response.text.trim().length > 0) {
-        generatedTextByGen = response.text
-      } else {
-        // response.text が undefined または空文字列だった場合の処理
-        console.error('response.text is undefined or empty:', response)
-        throw new Error('Gemini APIからの応答が空です。PDFの内容を確認してください。')
-      }
-      console.log(`[${new Date().toISOString()}] Successfully received response from Gemini API for: ${fileName}`)
-      usageMetadata = response.usageMetadata
+          // デベロッパーがシステム指示を設定
+          // systemInstruction: "",
+        })
+        
+        if (typeof response.text === 'string' && response.text.trim().length > 0) {
+          generatedTextByGen = response.text
+        } else {
+          // response.text が undefined または空文字列だった場合の処理
+          console.error('response.text is undefined or empty:', response)
+          throw new Error('Gemini APIからの応答が空です。PDFの内容を確認してください。')
+        }
+        
+        console.log(`[${new Date().toISOString()}] Successfully received response from Gemini API for: ${fileName}`)
+        usageMetadata = response.usageMetadata
 
-      // usageMetadata が存在する場合、トークン数をログに出力
-      if (usageMetadata) {
-        console.log(`Token Usage for ${fileName}:`)
-        console.log(`  Prompt Token Count: ${usageMetadata.promptTokenCount}`)
-        // candidatesTokenCount は存在する場合のみログに出力 (モデルや設定により異なる)
-        if (usageMetadata.candidatesTokenCount !== undefined) {
-          console.log(`  Candidates Token Count: ${usageMetadata.candidatesTokenCount}`)
+        // usageMetadata が存在する場合、トークン数をログに出力
+        if (usageMetadata) {
+          console.log(`Token Usage for ${fileName}:`)
+          console.log(`  Prompt Token Count: ${usageMetadata.promptTokenCount}`)
+          // candidatesTokenCount は存在する場合のみログに出力 (モデルや設定により異なる)
+          if (usageMetadata.candidatesTokenCount !== undefined) {
+            console.log(`  Candidates Token Count: ${usageMetadata.candidatesTokenCount}`)
+          }
+          // totalTokenCount は存在する場合のみログに出力
+          if (usageMetadata.totalTokenCount !== undefined) {
+            console.log(`  Total Token Count: ${usageMetadata.totalTokenCount}`)
+          }
+          // cachedContentTokenCount も存在する場合がある
+          if (usageMetadata.cachedContentTokenCount !== undefined) {
+            console.log(`  Cached Content Token Count: ${usageMetadata.cachedContentTokenCount}`)
+          }
+        } else {
+          console.log(`[${new Date().toISOString()}] usageMetadata not found in Gemini API response for: ${fileName}`)
         }
-        // totalTokenCount は存在する場合のみログに出力
-        if (usageMetadata.totalTokenCount !== undefined) {
-          console.log(`  Total Token Count: ${usageMetadata.totalTokenCount}`)
-        }
-        // cachedContentTokenCount も存在する場合がある
-        if (usageMetadata.cachedContentTokenCount !== undefined) {
-          console.log(`  Cached Content Token Count: ${usageMetadata.cachedContentTokenCount}`)
-        }
-      } else {
-        console.log(`[${new Date().toISOString()}] usageMetadata not found in Gemini API response for: ${fileName}`)
-      }
 
-      // console.debug("Gen Raw Response Text:", generatedTextByGen); // デバッグ時に必要ならコメント解除
-    } catch (genError: any) {
-      console.error(`[${new Date().toISOString()}] Error calling Gemini API for ${fileName}:`, genError)
-      let userFriendlyErrorMessage = 'AIによるテキスト生成に失敗しました。'
-      // Gemini APIからのエラーレスポンスに詳細が含まれていれば、それをログに出力
-      // genError.message にも情報が含まれることがある
-      // if (genError.response && genError.response.promptFeedback) {
-      //   console.error("Gemini API Prompt Feedback:", genError.response.promptFeedback);
-      //   if(genError.response.promptFeedback.blockReason){
-      //       userFriendlyErrorMessage += ` 理由: ${genError.response.promptFeedback.blockReason}`;
-      //   }
-      // }
-      return new Response(
-        JSON.stringify({
-          error: userFriendlyErrorMessage,
-          details: genError.message,
-        }),
-        {
-          status: 502, // Bad Gateway (外部APIとの連携で問題があった場合)
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        // 成功したらループを抜ける
+        break;
+        
+      } catch (genError: any) {
+        attempt++;
+        console.error(`[${new Date().toISOString()}] Gemini API呼び出し失敗 (試行 ${attempt}/${maxRetries}) for ${fileName}:`, genError);
+        
+        // 最後の試行でない場合は待機してリトライ
+        if (attempt < maxRetries) {
+          const waitTime = Math.pow(2, attempt) * 1000; // 指数バックオフ: 2秒, 4秒, 8秒
+          console.log(`[${new Date().toISOString()}] ${waitTime}ms待機後にリトライします...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+        } else {
+          // 最後の試行でも失敗した場合
+          console.error(`[${new Date().toISOString()}] 全ての試行が失敗しました for ${fileName}: ${maxRetries}回試行`);
+          let userFriendlyErrorMessage = `AIによるテキスト生成に失敗しました（${maxRetries}回試行）。`;
+          
+          // サーバーエラーの場合は一時的な問題の可能性を示唆
+          if (genError.message && genError.message.includes('500')) {
+            userFriendlyErrorMessage += ' 一時的なサーバーエラーの可能性があります。しばらく待ってから再度お試しください。';
+          }
+          
+          return new Response(
+            JSON.stringify({
+              error: userFriendlyErrorMessage,
+              details: genError.message,
+            }),
+            {
+              status: 502, // Bad Gateway (外部APIとの連携で問題があった場合)
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            }
+          )
         }
-      )
+      }
     }
 
     // --- データベースへの保存処理 ---
