@@ -6,6 +6,7 @@ import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
+import { getWorkOrderByFileName } from '@/lib/api';
 
 // 型定義と定数
 import type {
@@ -326,11 +327,11 @@ const WorkOrderTool: React.FC = () => {
 
       // Work Order IDを保存（フィードバック用）
       if (data.dbRecordId || data.workOrderId) {
-        const workOrderId = data.workOrderId || data.dbRecordId;
+        const workOrderId = data.workOrderId || data.dbRecordId || null;
         setLastWorkOrderId(workOrderId);
         // バッチ処理用に結果を保存（手配書作成完了時）
         lastProcessResultRef.current = {
-          workOrderId: workOrderId,
+          workOrderId: workOrderId || undefined,
           detectionResult: data.detectionResult || lastProcessResultRef.current?.detectionResult,
         };
       }
@@ -393,19 +394,17 @@ const WorkOrderTool: React.FC = () => {
       // 処理済みファイルのリストを更新（現在プレビュー中の場合は自動的に生成文言を表示）
       if (result.status === 'success' && result.workOrderId && pdfFileToDisplay?.name === result.fileName) {
         // 現在プレビュー中のファイルが処理完了した場合、自動的にデータを取得して表示
-        import('@/lib/api').then(({ getWorkOrderByFileName }) => {
-          getWorkOrderByFileName(result.fileName).then(workOrder => {
-            if (workOrder) {
-              setGeneratedText(workOrder.generated_text || '');
-              setEditedText(workOrder.edited_text || '');
-              setLastWorkOrderId(workOrder.id);
-              setProcessedCompanyInfo({
-                file: pdfFileToDisplay,
-                companyLabel: workOrder.company_name || '',
-                status: 'completed', // バッチ処理成功時は完了ステータスを設定
-              });
-            }
-          });
+        getWorkOrderByFileName(result.fileName).then(workOrder => {
+          if (workOrder) {
+            setGeneratedText(workOrder.generated_text || '');
+            setEditedText(workOrder.edited_text || '');
+            setLastWorkOrderId(workOrder.id);
+            setProcessedCompanyInfo({
+              file: pdfFileToDisplay,
+              companyLabel: workOrder.company_name || '',
+              status: 'completed', // バッチ処理成功時は完了ステータスを設定
+            });
+          }
         });
       }
     },
@@ -624,7 +623,6 @@ const WorkOrderTool: React.FC = () => {
       // データベースから既存のwork_orderを検索
       try {
         console.log(`[handleFilePreviewRequest] データベース検索開始: ${file.name}`);
-        const { getWorkOrderByFileName } = await import('@/lib/api');
         const workOrder = await getWorkOrderByFileName(file.name);
         
         console.log(`[handleFilePreviewRequest] 検索結果:`, workOrder);
