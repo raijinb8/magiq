@@ -159,6 +159,13 @@ export const useBatchProcessor = ({
             
             // Stage 1の結果を取得
             const stage1Result = getLastProcessResult?.();
+            console.log(`[useBatchProcessor] Stage 1結果確認: ${file.name}`, {
+              stage1Result: stage1Result,
+              detectionResult: stage1Result?.detectionResult,
+              detectedCompanyId: stage1Result?.detectionResult?.detectedCompanyId,
+              confidence: stage1Result?.detectionResult?.confidence,
+            });
+            
             if (stage1Result?.detectionResult?.detectedCompanyId) {
               const detectedCompanyId = stage1Result.detectionResult.detectedCompanyId;
               const companyLabel = getCompanyLabel(detectedCompanyId);
@@ -178,8 +185,27 @@ export const useBatchProcessor = ({
               await new Promise(resolve => setTimeout(resolve, 200));
               actualResult = getLastProcessResult?.() || actualResult;
             } else {
-              // 会社判定に失敗した場合
-              throw new Error('会社の自動判定に失敗しました');
+              // 会社判定に失敗した場合は、エラーとして記録するが処理は継続
+              const detectionDetails = stage1Result?.detectionResult;
+              const errorDetails = detectionDetails ? 
+                `信頼度: ${detectionDetails.confidence}, 検出キーワード: ${detectionDetails.details?.foundKeywords?.join(', ') || 'なし'}` :
+                'OCR処理の結果が取得できませんでした';
+                
+              console.warn(`[useBatchProcessor] 会社判定に失敗: ${file.name}`, {
+                detectionResult: detectionDetails,
+                errorDetails,
+              });
+              
+              const completedAt = new Date();
+              
+              return {
+                fileName: file.name,
+                status: 'error',
+                errorMessage: `会社の自動判定に失敗しました。${errorDetails}`,
+                processingTime: completedAt.getTime() - startedAt.getTime(),
+                startedAt,
+                completedAt,
+              };
             }
           } else {
             // 通常処理

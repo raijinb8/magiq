@@ -310,16 +310,28 @@ const WorkOrderTool: React.FC = () => {
       // 自動判定結果を保存
       if (data.detectionResult) {
         setLastDetectionResult(data.detectionResult);
+        
+        // OCR専用処理の場合、ここでlastProcessResultRefに結果を設定
+        if (data.ocrOnly) {
+          lastProcessResultRef.current = {
+            workOrderId: undefined, // OCR段階ではwork_order_idはまだ存在しない
+            detectionResult: data.detectionResult,
+          };
+          console.log(`[batchProcessFile] OCR結果を保存: ${file.name}`, {
+            detectedCompanyId: data.detectionResult.detectedCompanyId,
+            confidence: data.detectionResult.confidence,
+          });
+        }
       }
 
       // Work Order IDを保存（フィードバック用）
       if (data.dbRecordId || data.workOrderId) {
         const workOrderId = data.workOrderId || data.dbRecordId;
         setLastWorkOrderId(workOrderId);
-        // バッチ処理用に結果を保存
+        // バッチ処理用に結果を保存（手配書作成完了時）
         lastProcessResultRef.current = {
           workOrderId: workOrderId,
-          detectionResult: data.detectionResult || undefined,
+          detectionResult: data.detectionResult || lastProcessResultRef.current?.detectionResult,
         };
       }
     },
