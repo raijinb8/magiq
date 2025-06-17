@@ -786,10 +786,11 @@ const WorkOrderTool: React.FC = () => {
   const handleSelectAll = useCallback(() => {
     const newSelection: { [fileName: string]: boolean } = {};
     uploadedFiles.forEach(file => {
-      newSelection[file.name] = true;
+      // 成功済みファイルは選択しない
+      newSelection[file.name] = batchProcessedFiles[file.name] !== 'success';
     });
     setSelectedFiles(newSelection);
-  }, [uploadedFiles]);
+  }, [uploadedFiles, batchProcessedFiles]);
 
   const handleDeselectAll = useCallback(() => {
     setSelectedFiles({});
