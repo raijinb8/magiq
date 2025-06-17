@@ -571,6 +571,12 @@ const WorkOrderTool: React.FC = () => {
       toast.info('現在別のファイルを処理中です。少々お待ちください。');
       return;
     }
+    
+    // バッチ処理中は単体処理を無効化
+    if (batchState.isProcessing) {
+      toast.info('バッチ処理中です。バッチ処理完了後に単体処理をご利用ください。');
+      return;
+    }
 
     setLastDetectionResult(null); // 前回の判定結果をクリア
     clearProcess(); // 前回のプロセス状態をクリア
@@ -604,6 +610,7 @@ const WorkOrderTool: React.FC = () => {
     selectedCompanyId,
     autoDetectEnabled,
     isLoading,
+    batchState.isProcessing,
     processFile,
     handleTwoStageProcess,
     clearProcess,
@@ -638,10 +645,18 @@ const WorkOrderTool: React.FC = () => {
    */
   const handleFilePreviewRequest = useCallback(
     async (file: PdfFile) => {
+      // 単体処理中の場合はファイル切り替えを阻止
       if (isLoading) {
-        // AI処理中は何もしない（またはトースト表示）
         toast.info(
           '現在AI処理中です。完了後に別のファイルをプレビューできます。'
+        );
+        return;
+      }
+      
+      // バッチ処理中でも成功済みファイルの閲覧は許可
+      if (batchState.isProcessing && batchProcessedFiles[file.name] !== 'success') {
+        toast.info(
+          'バッチ処理中です。成功済みファイルのみ閲覧できます。'
         );
         return;
       }
@@ -649,7 +664,12 @@ const WorkOrderTool: React.FC = () => {
       console.log(`[handleFilePreviewRequest] ファイルクリック: ${file.name}`);
       
       setPdfFileToDisplay(file);
-      setProcessingFile(file); // ★ プレビュー中のファイルを「次にAI実行する対象」としてマーク
+      
+      // バッチ処理中で成功済みファイルの場合は、プレビューのみでprocessingFileは設定しない
+      const isBatchSuccessFile = batchState.isProcessing && batchProcessedFiles[file.name] === 'success';
+      if (!isBatchSuccessFile) {
+        setProcessingFile(file); // ★ プレビュー中のファイルを「次にAI実行する対象」としてマーク
+      }
       
       // 既存の通知を消す
       toast.dismiss();
@@ -738,6 +758,7 @@ const WorkOrderTool: React.FC = () => {
     },
     [
       isLoading,
+      batchState.isProcessing,
       batchProcessedFiles,
       setPdfFileToDisplay,
       setProcessingFile,
@@ -947,8 +968,8 @@ const WorkOrderTool: React.FC = () => {
             processingFileForHeader={pdfFileToDisplay} // ヘッダー表示用 (プレビュー中のファイル)
             onExecuteAi={handleAiExecution} // AI実行関数を渡す
             canExecuteAi={
-              !!processingFile && (!!selectedCompanyId || autoDetectEnabled)
-            } // 実行可能条件を渡す (自動判定有効時は会社未選択でもOK)
+              !!processingFile && (!!selectedCompanyId || autoDetectEnabled) && !batchState.isProcessing
+            } // 実行可能条件を渡す (自動判定有効時は会社未選択でもOK、バッチ処理中は無効)
           />
 
           <GeneratedTextPanel
