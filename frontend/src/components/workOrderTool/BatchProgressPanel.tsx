@@ -61,7 +61,7 @@ export const BatchProgressPanel: React.FC<BatchProgressPanelProps> = ({
     <Card className="w-full">
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
-          <span>バッチ処理進捗</span>
+          <span>一括処理進捗</span>
           <div className="flex gap-2">
             {batchState.isProcessing && (
               <>

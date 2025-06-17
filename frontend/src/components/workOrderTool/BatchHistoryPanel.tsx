@@ -97,7 +97,7 @@ export const BatchHistoryPanel: React.FC = () => {
     <Card className="h-full">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle>バッチ処理履歴</CardTitle>
+          <CardTitle>一括処理履歴</CardTitle>
           <Button size="sm" variant="outline" onClick={loadHistory}>
             更新
           </Button>
@@ -108,7 +108,7 @@ export const BatchHistoryPanel: React.FC = () => {
           <div className="p-4">
             {history.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">
-                バッチ処理の履歴がありません
+                一括処理の履歴がありません
               </p>
             ) : (
               <div className="space-y-4">

@@ -539,11 +539,11 @@ export const useBatchProcessor = ({
 
       if (cancelledCount > 0) {
         toast.warning(
-          `バッチ処理を中断しました。成功: ${successCount}件、失敗: ${errorCount}件、キャンセル: ${cancelledCount}件`
+          `一括処理を中断しました。成功: ${successCount}件、失敗: ${errorCount}件、キャンセル: ${cancelledCount}件`
         );
       } else {
         toast.success(
-          `バッチ処理が完了しました。成功: ${successCount}件、失敗: ${errorCount}件`
+          `一括処理が完了しました。成功: ${successCount}件、失敗: ${errorCount}件`
         );
       }
 
@@ -551,14 +551,14 @@ export const useBatchProcessor = ({
 
       // ブラウザ通知
       if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification('MagIQ - バッチ処理完了', {
+        new Notification('MagIQ - 一括処理完了', {
           body: `${files.length}個のファイルの処理が完了しました`,
           icon: '/vite.svg',
         });
       }
     } catch (error) {
       console.error('バッチ処理の開始エラー:', error);
-      toast.error('バッチ処理の開始に失敗しました');
+      toast.error('一括処理の開始に失敗しました');
       setBatchState(prev => ({ ...prev, isProcessing: false }));
     }
     },
@@ -571,7 +571,7 @@ export const useBatchProcessor = ({
     if (batchState.isProcessing && !batchState.isPaused) {
       pausedRef.current = true;
       setBatchState(prev => ({ ...prev, isPaused: true }));
-      toast.info('バッチ処理を一時停止しました');
+      toast.info('一括処理を一時停止しました');
     }
   }, [batchState.isProcessing, batchState.isPaused]);
 
@@ -580,7 +580,7 @@ export const useBatchProcessor = ({
     if (batchState.isProcessing && batchState.isPaused) {
       pausedRef.current = false;
       setBatchState(prev => ({ ...prev, isPaused: false }));
-      toast.info('バッチ処理を再開しました');
+      toast.info('一括処理を再開しました');
     }
   }, [batchState.isProcessing, batchState.isPaused]);
 
@@ -595,7 +595,7 @@ export const useBatchProcessor = ({
         isPaused: false,
         endTime: new Date(),
       }));
-      toast.warning('バッチ処理をキャンセルしました');
+      toast.warning('一括処理をキャンセルしました');
     }
   }, [batchState.isProcessing]);
 

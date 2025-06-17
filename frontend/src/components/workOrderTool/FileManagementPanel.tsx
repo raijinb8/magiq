@@ -172,7 +172,7 @@ export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
           disabled={batchProcessing}
           className="text-xs px-2 py-1 h-7"
         >
-          {batchMode ? 'バッチ' : '単体'}
+          {batchMode ? '一括' : '単体'}
         </Button>
       </div>
       {/* 会社選択ドロップダウン */}

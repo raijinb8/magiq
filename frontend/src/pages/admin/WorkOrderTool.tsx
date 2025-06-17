@@ -436,7 +436,7 @@ const WorkOrderTool: React.FC = () => {
             companyLabel: `エラー: ${result.errorMessage || '不明なエラー'}`,
             status: 'error',
           });
-          setGeneratedText(`バッチ処理エラーが発生しました:\n${result.errorMessage || '不明なエラー'}\n\n再度処理を実行するか、ファイルの内容を確認してください。`);
+          setGeneratedText(`一括処理エラーが発生しました:\n${result.errorMessage || '不明なエラー'}\n\n再度処理を実行するか、ファイルの内容を確認してください。`);
         }
       } catch (error) {
         console.error(`[onFileProcessed] 状態更新中にエラーが発生: ${result.fileName}`, error);
@@ -507,7 +507,7 @@ const WorkOrderTool: React.FC = () => {
         return updated;
       });
       
-      toast.info('バッチ処理を中断しました');
+      toast.info('一括処理を中断しました');
     } else {
       // 単体処理中の場合
       console.log('[cancelProcess] Cancelling single file process');
@@ -574,7 +574,7 @@ const WorkOrderTool: React.FC = () => {
     
     // バッチ処理中は単体処理を無効化
     if (batchState.isProcessing) {
-      toast.info('バッチ処理中です。バッチ処理完了後に単体処理をご利用ください。');
+      toast.info('一括処理中です。一括処理完了後に単体処理をご利用ください。');
       return;
     }
 
@@ -656,7 +656,7 @@ const WorkOrderTool: React.FC = () => {
       // バッチ処理中でも成功済みファイルの閲覧は許可
       if (batchState.isProcessing && batchProcessedFiles[file.name] !== 'success') {
         toast.info(
-          'バッチ処理中です。成功済みファイルのみ閲覧できます。'
+          '一括処理中です。成功済みファイルのみ閲覧できます。'
         );
         return;
       }
@@ -1025,7 +1025,7 @@ const WorkOrderTool: React.FC = () => {
           <div className="fixed inset-y-0 right-0 w-full max-w-2xl bg-background shadow-lg">
             <div className="flex h-full flex-col">
               <div className="flex items-center justify-between border-b p-4">
-                <h2 className="text-lg font-semibold">バッチ処理履歴</h2>
+                <h2 className="text-lg font-semibold">一括処理履歴</h2>
                 <Button
                   size="sm"
                   variant="ghost"
