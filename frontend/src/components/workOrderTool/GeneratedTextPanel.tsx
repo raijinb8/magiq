@@ -112,7 +112,7 @@ export const GeneratedTextPanel: React.FC<GeneratedTextPanelProps> = ({
   };
 
   return (
-    <div className="w-1/2 p-4 flex flex-col overflow-hidden">
+    <div className="w-1/2 p-4 flex flex-col min-h-0">
       <div className="mb-2 flex items-center justify-between">
         <h2 className="text-lg font-semibold">
           業務手配書 文言
@@ -205,7 +205,7 @@ export const GeneratedTextPanel: React.FC<GeneratedTextPanelProps> = ({
         )}
 
         <Textarea
-          className={`flex-1 resize-none rounded-md text-sm font-mono ${
+          className={`flex-1 resize-none rounded-md text-sm font-mono overflow-auto min-h-0 ${
             isEditMode
               ? 'border-orange-300 focus:border-orange-500 bg-orange-50/30'
               : editedText
