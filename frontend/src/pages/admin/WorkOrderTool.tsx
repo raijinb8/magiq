@@ -455,7 +455,6 @@ const WorkOrderTool: React.FC = () => {
     onBatchComplete: (results) => {
       // バッチ処理完了時の処理
       setShowBatchProgress(false);
-      setBatchMode(false);
       setSelectedFiles({});
       
       // バッチ処理用AbortControllerをクリーンアップ
