@@ -44,6 +44,49 @@ export async function getWorkOrderByFileName(fileName: string) {
   return data && data.length > 0 ? data[0] : null;
 }
 
+/**
+ * 複数ファイルの処理状態を取得
+ */
+export async function getWorkOrderStatusByFileNames(fileNames: string[]): Promise<{ [fileName: string]: 'success' | 'error' | 'processing' | 'pending' }> {
+  if (fileNames.length === 0) {
+    return {};
+  }
+
+  const { data, error } = await supabase
+    .from('work_orders')
+    .select('file_name, status')
+    .in('file_name', fileNames)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('❌ 複数work_order取得エラー:', error);
+    return {};
+  }
+
+  const statusMap: { [fileName: string]: 'success' | 'error' | 'processing' | 'pending' } = {};
+  
+  // 重複ファイル名がある場合は最新のもの（created_atが最新）を優先
+  const processedFiles = new Set<string>();
+  
+  data?.forEach((workOrder) => {
+    if (!processedFiles.has(workOrder.file_name)) {
+      processedFiles.add(workOrder.file_name);
+      
+      // statusを適切にマッピング
+      if (workOrder.status === 'completed') {
+        statusMap[workOrder.file_name] = 'success';
+      } else if (workOrder.status === 'error') {
+        statusMap[workOrder.file_name] = 'error';
+      } else if (workOrder.status === 'processing') {
+        statusMap[workOrder.file_name] = 'processing';
+      }
+      // pending状態は設定しない（データベースに存在しないファイルのみpending扱い）
+    }
+  });
+
+  return statusMap;
+}
+
 // バッチ処理関連のAPI
 
 /**

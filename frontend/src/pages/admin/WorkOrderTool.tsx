@@ -665,16 +665,9 @@ const WorkOrderTool: React.FC = () => {
         return;
       }
       
-      // バッチ処理中でも成功済みファイルの閲覧は許可
-      if (batchState.isProcessing && batchProcessedFiles[file.name] !== 'success') {
-        toast.info(
-          '一括処理中です。成功済みファイルのみ閲覧できます。'
-        );
-        return;
-      }
-      
       console.log(`[handleFilePreviewRequest] ファイルクリック: ${file.name}`);
       
+      // まずファイル選択（UI状態）を無条件で実行
       setPdfFileToDisplay(file);
       
       // バッチ処理中で成功済みファイルの場合は、プレビューのみでprocessingFileは設定しない
@@ -686,86 +679,87 @@ const WorkOrderTool: React.FC = () => {
       // 既存の通知を消す
       toast.dismiss();
       
-      // データベースから既存のwork_orderを検索
-      try {
-        console.log(`[handleFilePreviewRequest] データベース検索開始: ${file.name}`);
-        const workOrder = await getWorkOrderByFileName(file.name);
+      // バッチ処理中かつ成功済みファイル以外の場合、データ表示のみ制限（ファイル選択は継続）
+      let shouldDisplayData = true;
+      
+      if (batchState.isProcessing) {
+        console.log(`[handleFilePreviewRequest] バッチ処理中 - データ表示判定: ${file.name}`);
+        console.log(`[handleFilePreviewRequest] メモリ状態:`, batchProcessedFiles[file.name]);
         
-        console.log(`[handleFilePreviewRequest] 検索結果:`, workOrder);
-        console.log(`[handleFilePreviewRequest] バッチ処理状態:`, batchProcessedFiles[file.name]);
+        const isMemorySuccess = batchProcessedFiles[file.name] === 'success';
         
-        if (workOrder) {
-          // 既存のwork_orderが見つかった場合、その内容を表示
-          console.log(`[handleFilePreviewRequest] 処理済みデータを表示: status=${workOrder.status}, generated_text=${workOrder.generated_text ? 'あり' : 'なし'}`);
+        if (!isMemorySuccess) {
+          // データベースから直接チェック
+          console.log(`[handleFilePreviewRequest] データベースから状態確認: ${file.name}`);
+          try {
+            const workOrder = await getWorkOrderByFileName(file.name);
+            const isDbSuccess = workOrder && workOrder.status === 'completed';
+            
+            if (!isDbSuccess) {
+              shouldDisplayData = false;
+              toast.info('一括処理中です。成功済みファイルのみ内容を閲覧できます。');
+            } else {
+              // データベースで成功確認できた場合、メモリ状態も更新
+              setBatchProcessedFiles(prev => ({
+                ...prev,
+                [file.name]: 'success'
+              }));
+            }
+          } catch (error) {
+            console.error(`[handleFilePreviewRequest] DB確認エラー: ${file.name}`, error);
+            shouldDisplayData = false;
+            toast.info('一括処理中です。成功済みファイルのみ内容を閲覧できます。');
+          }
+        }
+      }
+      
+      // データ表示判定に基づいてwork_orderを検索・表示
+      if (shouldDisplayData) {
+        try {
+          console.log(`[handleFilePreviewRequest] データベース検索開始: ${file.name}`);
+          const workOrder = await getWorkOrderByFileName(file.name);
           
-          // completedステータスまたはバッチ処理で成功したファイルの場合は処理済みとして扱う
-          const isBatchProcessSuccess = batchProcessedFiles[file.name] === 'success';
-          if (workOrder.status === 'completed' || isBatchProcessSuccess) {
+          if (workOrder && workOrder.status === 'completed') {
             setGeneratedText(workOrder.generated_text || '');
             setEditedText(workOrder.edited_text || '');
             setLastWorkOrderId(workOrder.id);
             setProcessedCompanyInfo({
               file: file,
               companyLabel: workOrder.company_name || '',
-              status: 'completed', // ステータスを明示的に設定
+              status: 'completed',
             });
-            clearProcess(); // プロセス状態をクリア
+            clearProcess();
             
             toast.success(`「${file.name}」の処理済みデータを表示しています。`);
           } else {
-            // completed以外のステータス（processing, error等）の場合は処理済み扱いしない
+            // 処理済みデータなし、またはcompleted以外
             setGeneratedText('');
             setEditedText('');
-            setProcessedCompanyInfo({ 
-              file: undefined, 
-              companyLabel: '',
-              status: undefined // ステータスもクリア
-            });
+            setProcessedCompanyInfo({ file: undefined, companyLabel: '', status: undefined });
             setLastDetectionResult(null);
-            setLastWorkOrderId(workOrder.id); // IDだけは保持（再処理用）
+            setLastWorkOrderId(workOrder?.id || null);
             clearProcess();
             
-            // ステータスに応じてメッセージを変更
-            if (workOrder.status === 'processing') {
+            if (workOrder?.status === 'processing') {
               toast.info(`「${file.name}」は処理中です。完了までお待ちください。`);
-            } else if (workOrder.status === 'error') {
+            } else if (workOrder?.status === 'error') {
               toast.warning(`「${file.name}」の処理でエラーが発生しています。再処理が可能です。`);
             } else {
               toast.info(`「${file.name}」をプレビュー中です。AI実行ボタンを押して処理を開始してください。`);
             }
           }
-        } else {
-          console.log(`[handleFilePreviewRequest] 処理済みデータなし - プレビュー状態に設定`);
-          // データがない場合はプレビュー状態をクリア
-          setGeneratedText('');
-          setEditedText('');
-          setProcessedCompanyInfo({ 
-            file: undefined, 
-            companyLabel: '',
-            status: undefined
-          });
-          setLastDetectionResult(null);
-          setLastWorkOrderId(null);
-          clearProcess();
-          
-          toast.info(`「${file.name}」をプレビュー中です。AI実行ボタンを押して処理を開始してください。`);
+        } catch (error) {
+          console.error('[handleFilePreviewRequest] データ取得エラー:', error);
+          toast.error(`「${file.name}」のデータ取得中にエラーが発生しました。`);
         }
-      } catch (error) {
-        console.error('[handleFilePreviewRequest] 既存データの取得エラー:', error);
-        
-        // エラー時もプレビュー状態をクリア
+      } else {
+        // バッチ処理中でデータ表示が制限されている場合
         setGeneratedText('');
         setEditedText('');
-        setProcessedCompanyInfo({ 
-          file: undefined, 
-          companyLabel: '',
-          status: undefined
-        });
+        setProcessedCompanyInfo({ file: undefined, companyLabel: '', status: undefined });
         setLastDetectionResult(null);
         setLastWorkOrderId(null);
         clearProcess();
-        
-        toast.error(`「${file.name}」のデータ取得中にエラーが発生しました。`);
       }
     },
     [
@@ -842,8 +836,21 @@ const WorkOrderTool: React.FC = () => {
       return;
     }
 
-    // バッチ処理開始時に状態をクリア
-    setBatchProcessedFiles({});
+    // バッチ処理開始時に既存の成功済みファイルの状態のみ保持（上書きしない）
+    setBatchProcessedFiles(prev => {
+      const preservedSuccessFiles: { [fileName: string]: 'success' | 'error' | 'processing' | 'cancelled' | 'pending' } = {};
+      
+      // 既存の成功済みファイルのみ保持
+      Object.entries(prev).forEach(([fileName, status]) => {
+        if (status === 'success') {
+          preservedSuccessFiles[fileName] = status;
+          console.log(`[handleBatchProcess] 成功済みファイル状態を保持: ${fileName}`);
+        }
+      });
+      
+      console.log('[handleBatchProcess] 保持される成功済みファイル状態:', preservedSuccessFiles);
+      return preservedSuccessFiles;
+    });
     
     // バッチ処理用のAbortControllerを作成（前回がabortされている場合は新しく作成）
     if (!batchAbortControllerRef.current || batchAbortControllerRef.current.signal.aborted) {
