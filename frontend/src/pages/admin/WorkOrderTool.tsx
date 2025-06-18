@@ -882,12 +882,13 @@ const WorkOrderTool: React.FC = () => {
     
     setShowBatchProgress(true);
     await startBatchProcess(filesToProcess, {
-      companyId: selectedCompanyId,
-      autoDetectEnabled,
+      companyId: '', // 一括処理では自動判定を使用するため空文字
+      autoDetectEnabled: true, // 一括処理では常に自動判定を有効
       concurrentLimit: 1, // 1つずつ処理
       pauseOnError: true,
     });
-  }, [uploadedFiles, selectedFiles, selectedCompanyId, autoDetectEnabled, startBatchProcess]);
+  }, [uploadedFiles, selectedFiles, startBatchProcess]); // eslint-disable-line react-hooks/exhaustive-deps
+  // selectedCompanyId, autoDetectEnabledは一括処理では固定値を使用するため依存配列から除外
 
   const handleBatchModeToggle = useCallback(() => {
     setBatchMode(!batchMode);
