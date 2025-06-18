@@ -3,11 +3,75 @@
 
 // 会社関連の型定義
 export type CompanyOptionValue = 
+  // 既存実装済み（2社）
   | 'NOHARA_G' 
   | 'KATOUBENIYA_MISAWA' 
   | 'YAMADA_K' 
   | 'UNKNOWN_OR_NOT_SET' 
-  | '';
+  | ''
+  // 親会社単体（27社）
+  | 'SONOTA'
+  | 'AIBUILD'
+  | 'GOODHOUSER'
+  | 'JAPAN_KENZAI'
+  | 'JUTEC'
+  | 'CHIYODA_UTE'
+  | 'TOWA_KENKO'
+  | 'YUTAKA_KENSETSU'
+  | 'ITO_KENSETSU'
+  | 'KOSHIN_KENSETSU'
+  | 'RIKOU_KENSETSU'
+  | 'KATOUBENIYA_ASAGIRI'
+  | 'KATOUBENIYA_IKEBUKURO'
+  | 'YOSHINO_SEKKO'
+  | 'WAIMI'
+  | 'JONAN_SATO'
+  | 'TAISEI_MOKUZAI'
+  | 'MIYAKEN_HOUSING'
+  | 'TOKUSAN_ZAIMOKU'
+  | 'TOKYO_SHINKENZAI'
+  | 'SAKAE_KENSETSU'
+  | 'YAMAFUJI'
+  | 'WATANABE_BENIYA_CHIBA'
+  | 'WATANABE_BENIYA_JONANSHIMA'
+  | 'WATABE_KOUMUTEN'
+  | 'ISHIDA_MOKUZAI'
+  | 'BENCHU'
+  | 'MINOHIRO'
+  // サブ会社組み合わせ（29社）
+  // ジャパン建材系（3社）
+  | 'JAPAN_KENZAI_AIDA'
+  | 'JAPAN_KENZAI_APPLEHOME'
+  | 'JAPAN_KENZAI_ECOHOUSE'
+  // ジューテック系（4社）
+  | 'JUTEC_KEFI'
+  | 'JUTEC_FSTAGE'
+  | 'JUTEC_CAREN'
+  | 'JUTEC_RENOVESIA'
+  // 加藤ベニヤ朝霧系（5社）
+  | 'KATOUBENIYA_ASAGIRI_AIDA'
+  | 'KATOUBENIYA_ASAGIRI_ACURA'
+  | 'KATOUBENIYA_ASAGIRI_TAMURA'
+  | 'KATOUBENIYA_ASAGIRI_DAIWA'
+  | 'KATOUBENIYA_ASAGIRI_ASAHI'
+  // 加藤ベニヤ池袋系（1社）
+  | 'KATOUBENIYA_IKEBUKURO_HAWKONE'
+  // 大成木材系（1社）
+  | 'TAISEI_MOKUZAI_SEKISUI'
+  // 渡辺ベニヤ城南島系（2社）
+  | 'WATANABE_JONANSHIMA_TOYOTA'
+  | 'WATANABE_JONANSHIMA_SUMIRIN'
+  // 野原G住環境系（10社）
+  | 'NOHARA_G_TAMAC'
+  | 'NOHARA_G_MISAWA'
+  | 'NOHARA_G_MELDIA'
+  | 'NOHARA_G_YAMATO'
+  | 'NOHARA_G_ISHO'
+  | 'NOHARA_G_UCHIUMI'
+  | 'NOHARA_G_SAKAE'
+  | 'NOHARA_G_YOSHINO'
+  | 'NOHARA_G_BUSHU'
+  | 'NOHARA_G_MORO';
 
 export interface CompanyOption {
   value: CompanyOptionValue;
