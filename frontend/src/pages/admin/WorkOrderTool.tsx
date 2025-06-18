@@ -699,7 +699,7 @@ const WorkOrderTool: React.FC = () => {
           try {
             const workOrder = await getWorkOrderByFileName(file.name);
             console.log(`[handleFilePreviewRequest] DB workOrder:`, workOrder);
-            const isDbSuccess = workOrder && workOrder.status === 'completed';
+            const isDbSuccess = workOrder && (workOrder.status === 'completed' || workOrder.status === 'completed_from_ai');
             console.log(`[handleFilePreviewRequest] isDbSuccess: ${isDbSuccess}`);
             
             if (!isDbSuccess) {
@@ -734,7 +734,7 @@ const WorkOrderTool: React.FC = () => {
           const workOrder = await getWorkOrderByFileName(file.name);
           console.log(`[handleFilePreviewRequest] 取得したworkOrder:`, workOrder);
           
-          if (workOrder && workOrder.status === 'completed') {
+          if (workOrder && (workOrder.status === 'completed' || workOrder.status === 'completed_from_ai')) {
             console.log(`[handleFilePreviewRequest] workOrder.status === 'completed' - データ表示実行`);
             console.log(`[handleFilePreviewRequest] generated_text: ${workOrder.generated_text ? 'あり' : 'なし'}`);
             
