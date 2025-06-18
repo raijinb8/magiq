@@ -38,6 +38,18 @@ export const useFileHandler = (): UseFileHandlerReturn => {
           });
           return;
         }
+        
+        // ファイルサイズ制限チェック（5MB）
+        const maxFileSize = 5 * 1024 * 1024; // 5MB in bytes
+        if (newFile.size > maxFileSize) {
+          const fileSizeMB = (newFile.size / (1024 * 1024)).toFixed(2);
+          toast.error(`ファイルサイズが制限を超えています: 「${newFile.name}」`, {
+            description: `ファイルサイズ: ${fileSizeMB}MB（制限: 5MB）`,
+            duration: 5000,
+          });
+          return;
+        }
+        
         const isDuplicate = uploadedFiles.some(
           (existingFile) =>
             existingFile.name === newFile.name &&

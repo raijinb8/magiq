@@ -385,7 +385,7 @@ describe('usePdfProcessor Hook', () => {
       expect(result.current.isLoading).toBe(false);
 
       // 処理開始
-      let processPromise: Promise<void>;
+      let processPromise: Promise<{ success: boolean; errorMessage?: string }>;
       await act(async () => {
         processPromise = result.current.processFile(
           mockFile,
