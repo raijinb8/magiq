@@ -267,7 +267,7 @@ export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
             onClick={onBatchProcess}
             disabled={
               selectedCount === 0 || 
-              (!selectedCompanyId && !autoDetectEnabled) || 
+              (!batchMode && !selectedCompanyId && !autoDetectEnabled) || 
               batchProcessing
             }
           >
