@@ -666,9 +666,13 @@ const WorkOrderTool: React.FC = () => {
       }
       
       console.log(`[handleFilePreviewRequest] ファイルクリック: ${file.name}`);
+      console.log(`[handleFilePreviewRequest] 現在のpdfFileToDisplay:`, pdfFileToDisplay?.name);
+      console.log(`[handleFilePreviewRequest] バッチ処理中:`, batchState.isProcessing);
+      console.log(`[handleFilePreviewRequest] 現在のbatchProcessedFiles:`, batchProcessedFiles);
       
       // まずファイル選択（UI状態）を無条件で実行
       setPdfFileToDisplay(file);
+      console.log(`[handleFilePreviewRequest] setPdfFileToDisplay実行完了: ${file.name}`);
       
       // バッチ処理中で成功済みファイルの場合は、プレビューのみでprocessingFileは設定しない
       const isBatchSuccessFile = batchState.isProcessing && batchProcessedFiles[file.name] === 'success';
@@ -774,6 +778,7 @@ const WorkOrderTool: React.FC = () => {
       setLastDetectionResult,
       setLastWorkOrderId,
       clearProcess,
+      pdfFileToDisplay?.name,
     ]
   );
 

@@ -91,14 +91,14 @@ export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
     const isCurrentlyProcessing = processingFile?.name === file.name && isLoading;
     const batchStatus = batchProcessedFiles[file.name];
     
-    // デバッグ情報（開発時のみ）
-    if (batchStatus) {
-      console.log(`[FileManagementPanel] ファイル ${file.name} のバッチ状態: ${batchStatus}`, {
-        isSelected,
-        isCurrentlyProcessing,
-        batchProcessedFiles,
-      });
-    }
+    // デバッグ情報（詳細版）
+    console.log(`[FileManagementPanel] ${file.name} 状態詳細:`, {
+      isSelected,
+      isCurrentlyProcessing,
+      batchStatus,
+      pdfFileToDisplayName: pdfFileToDisplay?.name,
+      batchProcessingFlag: batchProcessing,
+    });
     
     // 現在AI処理中（最優先）
     if (isCurrentlyProcessing) {
