@@ -106,8 +106,8 @@ export const GeneratedTextPanel: React.FC<GeneratedTextPanelProps> = ({
   };
 
   return (
-    <div className="w-1/2 p-4 flex flex-col overflow-hidden">
-      <div className="mb-2 flex items-center justify-between">
+    <div className="w-1/2 p-4 flex flex-col min-h-0">
+      <div className="mb-2 flex items-center justify-between flex-shrink-0">
         <h2 className="text-lg font-semibold">
           業務手配書 文言
           {processedCompanyInfo.file && (
@@ -176,30 +176,30 @@ export const GeneratedTextPanel: React.FC<GeneratedTextPanelProps> = ({
           </Button>
         </div>
       </div>
-      <div className="flex flex-col flex-1 gap-2">
+      <div className="flex flex-col flex-1 gap-2 min-h-0">
         {/* プロセス状態表示 */}
         {processState && (
           <ProcessStatusIndicator
             processState={processState}
             onCancel={onCancelProcess}
-            className="mb-2"
+            className="mb-2 flex-shrink-0"
           />
         )}
 
         {/* 編集状態の表示 */}
         {isEditMode && (
-          <div className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded border-l-4 border-orange-400">
+          <div className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded border-l-4 border-orange-400 flex-shrink-0">
             📝 編集モード - 内容を修正して「保存」ボタンを押してください
           </div>
         )}
         {editedText && !isEditMode && (
-          <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded border-l-4 border-blue-400">
+          <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded border-l-4 border-blue-400 flex-shrink-0">
             ✓ 編集済み - この内容は編集されています
           </div>
         )}
 
         <Textarea
-          className={`flex-1 resize-none rounded-md text-sm font-mono ${
+          className={`flex-1 resize-none rounded-md text-sm font-mono overflow-auto min-h-0 ${
             isEditMode
               ? 'border-orange-300 focus:border-orange-500 bg-orange-50/30'
               : editedText
