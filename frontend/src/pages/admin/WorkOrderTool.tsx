@@ -365,8 +365,6 @@ const WorkOrderTool: React.FC = () => {
   const {
     batchState,
     startBatchProcess,
-    pauseBatchProcess,
-    resumeBatchProcess,
     cancelBatchProcess,
     getProgress,
     getElapsedTime,
@@ -1053,8 +1051,6 @@ const WorkOrderTool: React.FC = () => {
         <div className="fixed bottom-4 right-4 z-50 w-96">
           <BatchProgressPanel
             batchState={batchState}
-            onPause={pauseBatchProcess}
-            onResume={resumeBatchProcess}
             onCancel={cancelProcess}
             progress={getProgress()}
             elapsedTime={getElapsedTime()}

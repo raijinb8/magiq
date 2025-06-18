@@ -377,7 +377,6 @@ export interface BatchProcessResult {
 
 export interface BatchProcessingState {
   isProcessing: boolean;
-  isPaused: boolean;
   processedCount: number;
   totalCount: number;
   successCount: number;

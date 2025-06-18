@@ -8,8 +8,6 @@ import type { BatchProcessingState, BatchProcessResult } from '@/types';
 
 interface BatchProgressPanelProps {
   batchState: BatchProcessingState;
-  onPause?: () => void;
-  onResume?: () => void;
   onCancel?: () => void;
   progress: number;
   elapsedTime: number;
@@ -17,8 +15,6 @@ interface BatchProgressPanelProps {
 
 export const BatchProgressPanel: React.FC<BatchProgressPanelProps> = ({
   batchState,
-  onPause,
-  onResume,
   onCancel,
   progress,
   elapsedTime,
@@ -64,20 +60,9 @@ export const BatchProgressPanel: React.FC<BatchProgressPanelProps> = ({
           <span>一括処理進捗</span>
           <div className="flex gap-2">
             {batchState.isProcessing && (
-              <>
-                {batchState.isPaused ? (
-                  <Button size="sm" onClick={onResume}>
-                    再開
-                  </Button>
-                ) : (
-                  <Button size="sm" variant="outline" onClick={onPause}>
-                    一時停止
-                  </Button>
-                )}
-                <Button size="sm" variant="destructive" onClick={onCancel}>
-                  キャンセル
-                </Button>
-              </>
+              <Button size="sm" variant="destructive" onClick={onCancel}>
+                キャンセル
+              </Button>
             )}
             {!batchState.isProcessing && batchState.results.length > 0 && (
               <Button size="sm" variant="secondary" disabled>
@@ -179,7 +164,7 @@ export const BatchProgressPanel: React.FC<BatchProgressPanelProps> = ({
         )}
 
         {/* 現在処理中のファイル */}
-        {batchState.isProcessing && !batchState.isPaused && (
+        {batchState.isProcessing && (
           <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
             <div className="flex items-center gap-2">
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
@@ -191,14 +176,6 @@ export const BatchProgressPanel: React.FC<BatchProgressPanelProps> = ({
           </div>
         )}
 
-        {/* 一時停止中の表示 */}
-        {batchState.isPaused && (
-          <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-            <span className="text-sm text-yellow-600 dark:text-yellow-400">
-              処理を一時停止中です
-            </span>
-          </div>
-        )}
       </CardContent>
     </Card>
   );

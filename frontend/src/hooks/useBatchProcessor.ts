@@ -39,7 +39,6 @@ export const useBatchProcessor = ({
 }: UseBatchProcessorProps) => {
   const [batchState, setBatchState] = useState<BatchProcessingState>({
     isProcessing: false,
-    isPaused: false,
     processedCount: 0,
     totalCount: 0,
     successCount: 0,
@@ -52,7 +51,6 @@ export const useBatchProcessor = ({
   });
 
   const abortControllerRef = useRef<AbortController | null>(null);
-  const pausedRef = useRef(false);
   const batchProcessIdRef = useRef<string | null>(null);
 
   // バッチ処理の開始
@@ -94,7 +92,6 @@ export const useBatchProcessor = ({
         // 処理開始
         setBatchState({
           isProcessing: true,
-          isPaused: false,
           processedCount: 0,
           totalCount: files.length,
           successCount: 0,
@@ -107,7 +104,6 @@ export const useBatchProcessor = ({
           startTime: new Date(),
         });
 
-        pausedRef.current = false;
         abortControllerRef.current = new AbortController();
 
         toast.info(`${files.length}個のファイルの処理を開始します`);
@@ -119,11 +115,6 @@ export const useBatchProcessor = ({
         file: PdfFile,
         index: number
       ): Promise<BatchProcessResult> => {
-        // 一時停止チェック
-        while (pausedRef.current && !abortControllerRef.current?.signal.aborted) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
-
         if (abortControllerRef.current?.signal.aborted) {
           return {
             fileName: file.name,
@@ -469,8 +460,9 @@ export const useBatchProcessor = ({
           }
 
           if (pauseOnError) {
-            pauseBatchProcess();
-            toast.error(`エラーが発生したため処理を一時停止しました: ${file.name}`);
+            // 一時停止機能削除により、エラー時は処理を停止
+            abortControllerRef.current?.abort();
+            toast.error(`エラーが発生したため処理を停止しました: ${file.name}`);
           }
 
           return result;
@@ -566,33 +558,14 @@ export const useBatchProcessor = ({
     [processFile, onFileProcessed, onBatchComplete, getCompanyLabel]
   );
 
-  // バッチ処理の一時停止
-  const pauseBatchProcess = useCallback(() => {
-    if (batchState.isProcessing && !batchState.isPaused) {
-      pausedRef.current = true;
-      setBatchState(prev => ({ ...prev, isPaused: true }));
-      toast.info('一括処理を一時停止しました');
-    }
-  }, [batchState.isProcessing, batchState.isPaused]);
-
-  // バッチ処理の再開
-  const resumeBatchProcess = useCallback(() => {
-    if (batchState.isProcessing && batchState.isPaused) {
-      pausedRef.current = false;
-      setBatchState(prev => ({ ...prev, isPaused: false }));
-      toast.info('一括処理を再開しました');
-    }
-  }, [batchState.isProcessing, batchState.isPaused]);
 
   // バッチ処理のキャンセル
   const cancelBatchProcess = useCallback(() => {
     if (batchState.isProcessing) {
       abortControllerRef.current?.abort();
-      pausedRef.current = false;
       setBatchState(prev => ({
         ...prev,
         isProcessing: false,
-        isPaused: false,
         endTime: new Date(),
       }));
       toast.warning('一括処理をキャンセルしました');
@@ -615,8 +588,6 @@ export const useBatchProcessor = ({
   return {
     batchState,
     startBatchProcess,
-    pauseBatchProcess,
-    resumeBatchProcess,
     cancelBatchProcess,
     getProgress,
     getElapsedTime,
