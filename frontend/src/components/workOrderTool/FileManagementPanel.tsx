@@ -186,12 +186,12 @@ export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
         <Select
           value={selectedCompanyId}
           onValueChange={onCompanyChange}
-          disabled={autoDetectEnabled && !batchMode}
+          disabled={batchMode || autoDetectEnabled}
         >
           <SelectTrigger id="company-select" className="w-full">
             <SelectValue
               placeholder={
-                autoDetectEnabled ? '自動判定中...' : '会社を選択してください'
+                batchMode || autoDetectEnabled ? '自動判定中...' : '会社を選択してください'
               }
             />
           </SelectTrigger>
