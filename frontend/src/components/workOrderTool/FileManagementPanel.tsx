@@ -301,10 +301,8 @@ export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
                     ) {
                       return;
                     }
-                    // バッチモードでも、チェックボックス以外の領域をクリックしたらプレビュー
-                    if (!batchProcessing) {
-                      onFilePreviewRequest(file);
-                    }
+                    // ファイルプレビューを常に許可（バッチ処理中の制限はhandleFilePreviewRequestで実装）
+                    onFilePreviewRequest(file);
                   }}
                 >
                   {/* バッチモードの場合はチェックボックスを表示 */}
