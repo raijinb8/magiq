@@ -691,19 +691,24 @@ const WorkOrderTool: React.FC = () => {
         console.log(`[handleFilePreviewRequest] メモリ状態:`, batchProcessedFiles[file.name]);
         
         const isMemorySuccess = batchProcessedFiles[file.name] === 'success';
+        console.log(`[handleFilePreviewRequest] isMemorySuccess: ${isMemorySuccess}`);
         
         if (!isMemorySuccess) {
           // データベースから直接チェック
           console.log(`[handleFilePreviewRequest] データベースから状態確認: ${file.name}`);
           try {
             const workOrder = await getWorkOrderByFileName(file.name);
+            console.log(`[handleFilePreviewRequest] DB workOrder:`, workOrder);
             const isDbSuccess = workOrder && workOrder.status === 'completed';
+            console.log(`[handleFilePreviewRequest] isDbSuccess: ${isDbSuccess}`);
             
             if (!isDbSuccess) {
               shouldDisplayData = false;
+              console.log(`[handleFilePreviewRequest] shouldDisplayData = false (DB確認失敗)`);
               toast.info('一括処理中です。成功済みファイルのみ内容を閲覧できます。');
             } else {
               // データベースで成功確認できた場合、メモリ状態も更新
+              console.log(`[handleFilePreviewRequest] DB確認成功、メモリ状態更新: ${file.name}`);
               setBatchProcessedFiles(prev => ({
                 ...prev,
                 [file.name]: 'success'
@@ -714,16 +719,25 @@ const WorkOrderTool: React.FC = () => {
             shouldDisplayData = false;
             toast.info('一括処理中です。成功済みファイルのみ内容を閲覧できます。');
           }
+        } else {
+          console.log(`[handleFilePreviewRequest] メモリ状態で成功確認済み: ${file.name}`);
         }
       }
       
+      console.log(`[handleFilePreviewRequest] 最終的なshouldDisplayData: ${shouldDisplayData}`);
+      
       // データ表示判定に基づいてwork_orderを検索・表示
       if (shouldDisplayData) {
+        console.log(`[handleFilePreviewRequest] データ表示処理開始: ${file.name}`);
         try {
           console.log(`[handleFilePreviewRequest] データベース検索開始: ${file.name}`);
           const workOrder = await getWorkOrderByFileName(file.name);
+          console.log(`[handleFilePreviewRequest] 取得したworkOrder:`, workOrder);
           
           if (workOrder && workOrder.status === 'completed') {
+            console.log(`[handleFilePreviewRequest] workOrder.status === 'completed' - データ表示実行`);
+            console.log(`[handleFilePreviewRequest] generated_text: ${workOrder.generated_text ? 'あり' : 'なし'}`);
+            
             setGeneratedText(workOrder.generated_text || '');
             setEditedText(workOrder.edited_text || '');
             setLastWorkOrderId(workOrder.id);
@@ -736,6 +750,9 @@ const WorkOrderTool: React.FC = () => {
             
             toast.success(`「${file.name}」の処理済みデータを表示しています。`);
           } else {
+            console.log(`[handleFilePreviewRequest] workOrder.status !== 'completed' またはworkOrderなし`);
+            console.log(`[handleFilePreviewRequest] workOrder.status: ${workOrder?.status}`);
+            
             // 処理済みデータなし、またはcompleted以外
             setGeneratedText('');
             setEditedText('');
@@ -757,6 +774,7 @@ const WorkOrderTool: React.FC = () => {
           toast.error(`「${file.name}」のデータ取得中にエラーが発生しました。`);
         }
       } else {
+        console.log(`[handleFilePreviewRequest] shouldDisplayData = false - データ表示制限`);
         // バッチ処理中でデータ表示が制限されている場合
         setGeneratedText('');
         setEditedText('');
