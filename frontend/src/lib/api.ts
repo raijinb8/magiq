@@ -1,6 +1,7 @@
 // lib/api.ts
 import { supabase } from './supabase';
 import { getTargetShiftWeek } from '@/utils/getTargetShiftWeek';
+import type { BatchProcessOptions, BatchProcessResult } from '@/types';
 
 export async function updateWorkOrderEditedText(
   workOrderId: string,
@@ -18,6 +19,290 @@ export async function updateWorkOrderEditedText(
 
   if (error) {
     console.error('❌ 編集テキスト保存エラー:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+/**
+ * ファイル名でwork_orderを取得
+ */
+export async function getWorkOrderByFileName(fileName: string) {
+  const { data, error } = await supabase
+    .from('work_orders')
+    .select('id, file_name, generated_text, edited_text, status, company_name, prompt_identifier')
+    .eq('file_name', fileName)
+    .order('created_at', { ascending: false })
+    .limit(1);
+
+  if (error) {
+    console.error('❌ work_order取得エラー:', error);
+    return null;
+  }
+
+  return data && data.length > 0 ? data[0] : null;
+}
+
+/**
+ * 複数ファイルの処理状態を取得
+ */
+export async function getWorkOrderStatusByFileNames(fileNames: string[]): Promise<{ [fileName: string]: 'success' | 'error' | 'processing' | 'pending' }> {
+  if (fileNames.length === 0) {
+    return {};
+  }
+
+  const { data, error } = await supabase
+    .from('work_orders')
+    .select('file_name, status')
+    .in('file_name', fileNames)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('❌ 複数work_order取得エラー:', error);
+    return {};
+  }
+
+  const statusMap: { [fileName: string]: 'success' | 'error' | 'processing' | 'pending' } = {};
+  
+  // 重複ファイル名がある場合は最新のもの（created_atが最新）を優先
+  const processedFiles = new Set<string>();
+  
+  data?.forEach((workOrder) => {
+    if (!processedFiles.has(workOrder.file_name)) {
+      processedFiles.add(workOrder.file_name);
+      
+      // statusを適切にマッピング
+      if (workOrder.status === 'completed') {
+        statusMap[workOrder.file_name] = 'success';
+      } else if (workOrder.status === 'error') {
+        statusMap[workOrder.file_name] = 'error';
+      } else if (workOrder.status === 'processing') {
+        statusMap[workOrder.file_name] = 'processing';
+      }
+      // pending状態は設定しない（データベースに存在しないファイルのみpending扱い）
+    }
+  });
+
+  return statusMap;
+}
+
+// バッチ処理関連のAPI
+
+/**
+ * バッチ処理ジョブを作成
+ */
+export async function createBatchProcess(
+  totalFiles: number,
+  options: BatchProcessOptions
+) {
+  const { data: session } = await supabase.auth.getSession();
+  const userId = session.session?.user?.id;
+
+  if (!userId) {
+    throw new Error('ユーザーが認証されていません');
+  }
+
+  const { data, error } = await supabase
+    .from('batch_processes')
+    .insert({
+      user_id: userId,
+      total_files: totalFiles,
+      company_id: options.companyId,
+      auto_detect_enabled: options.autoDetectEnabled,
+      options: {
+        concurrentLimit: options.concurrentLimit,
+        retryFailedFiles: options.retryFailedFiles,
+        pauseOnError: options.pauseOnError,
+      },
+      status: 'processing',
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('❌ バッチ処理作成エラー:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+/**
+ * バッチ処理ファイルを記録
+ */
+export async function recordBatchProcessFile(
+  batchProcessId: string,
+  fileName: string,
+  fileSize?: number
+) {
+  const { data, error } = await supabase
+    .from('batch_process_files')
+    .insert({
+      batch_process_id: batchProcessId,
+      file_name: fileName,
+      file_size: fileSize,
+      status: 'pending',
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('❌ バッチファイル記録エラー:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+/**
+ * バッチ処理ファイルのステータスを更新
+ */
+export async function updateBatchProcessFile(
+  batchProcessId: string,
+  fileName: string,
+  result: BatchProcessResult
+) {
+  console.log(`[updateBatchProcessFile] ${fileName}のDB更新開始`, {
+    batchProcessId,
+    fileName,
+    status: result.status,
+    errorMessage: result.errorMessage,
+    workOrderId: result.workOrderId,
+    companyId: result.companyId,
+  });
+  
+  interface UpdateData {
+    status: string;
+    error_message?: string;
+    processing_time_ms?: number;
+    started_at?: string;
+    completed_at?: string;
+    work_order_id?: string;
+    detection_result?: unknown;
+    company_id?: string;
+  }
+
+  const updateData: UpdateData = {
+    status: result.status,
+    error_message: result.errorMessage,
+    processing_time_ms: result.processingTime,
+    started_at: result.startedAt?.toISOString(),
+    completed_at: result.completedAt?.toISOString(),
+  };
+
+  if (result.workOrderId) {
+    updateData.work_order_id = result.workOrderId;
+  }
+
+  if (result.detectionResult) {
+    updateData.detection_result = result.detectionResult;
+  }
+
+  if (result.companyId) {
+    updateData.company_id = result.companyId;
+  }
+
+  console.log(`[updateBatchProcessFile] ${fileName}の更新データ:`, updateData);
+
+  const { data, error } = await supabase
+    .from('batch_process_files')
+    .update(updateData)
+    .eq('batch_process_id', batchProcessId)
+    .eq('file_name', fileName)
+    .select()
+    .single();
+
+  if (error) {
+    console.error(`[updateBatchProcessFile] ${fileName}のDB更新エラー:`, {
+      error,
+      batchProcessId,
+      fileName,
+      updateData,
+    });
+    throw error;
+  }
+
+  console.log(`[updateBatchProcessFile] ${fileName}のDB更新成功:`, data);
+  return data;
+}
+
+/**
+ * バッチ処理のステータスを更新
+ */
+export async function updateBatchProcessStatus(
+  batchProcessId: string,
+  status: string,
+  processedFiles?: number,
+  failedFiles?: number
+) {
+  interface BatchUpdateData {
+    status: string;
+    processed_files?: number;
+    failed_files?: number;
+    completed_at?: string;
+  }
+
+  const updateData: BatchUpdateData = { status };
+
+  if (processedFiles !== undefined) {
+    updateData.processed_files = processedFiles;
+  }
+
+  if (failedFiles !== undefined) {
+    updateData.failed_files = failedFiles;
+  }
+
+  if (status === 'completed' || status === 'cancelled' || status === 'error') {
+    updateData.completed_at = new Date().toISOString();
+  }
+
+  const { data, error } = await supabase
+    .from('batch_processes')
+    .update(updateData)
+    .eq('id', batchProcessId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('❌ バッチ処理ステータス更新エラー:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+/**
+ * バッチ処理の履歴を取得
+ */
+export async function getBatchProcessHistory(limit = 10) {
+  const { data: session } = await supabase.auth.getSession();
+  const userId = session.session?.user?.id;
+
+  if (!userId) {
+    throw new Error('ユーザーが認証されていません');
+  }
+
+  const { data, error } = await supabase
+    .from('batch_processes')
+    .select(`
+      *,
+      batch_process_files (
+        id,
+        file_name,
+        status,
+        error_message,
+        processing_time_ms,
+        company_id,
+        work_order_id
+      )
+    `)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error('❌ バッチ処理履歴取得エラー:', error);
     throw error;
   }
 

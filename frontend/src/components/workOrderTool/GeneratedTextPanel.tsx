@@ -7,7 +7,6 @@ import { updateWorkOrderEditedText } from '@/lib/api';
 import type {
   ProcessedCompanyInfo,
   PdfFile,
-  CompanyOptionValue,
   CompanyDetectionResult,
   ProcessState,
 } from '@/types';
@@ -18,7 +17,6 @@ interface GeneratedTextPanelProps {
   isLoading: boolean; // AI処理中か
   processingFile: PdfFile | null; // AI処理中のファイル (プレースホルダー用)
   pdfFileToDisplayForPlaceholder: PdfFile | null; // プレビュー中のファイル (プレースホルダー用)
-  selectedCompanyIdForPlaceholder: CompanyOptionValue; // 選択中の会社 (プレースホルダー用)
   processedCompanyInfo: ProcessedCompanyInfo; // 表示ヘッダー用 (ファイル名、会社名)
   lastDetectionResult?: CompanyDetectionResult | null; // 自動判定結果
   onRequestFeedback?: () => void; // フィードバックモーダルを開く
@@ -35,7 +33,6 @@ export const GeneratedTextPanel: React.FC<GeneratedTextPanelProps> = ({
   isLoading,
   processingFile,
   pdfFileToDisplayForPlaceholder,
-  selectedCompanyIdForPlaceholder,
   processedCompanyInfo,
   lastDetectionResult,
   onRequestFeedback,
@@ -103,10 +100,7 @@ export const GeneratedTextPanel: React.FC<GeneratedTextPanelProps> = ({
       return ''; // 生成テキストがあればプレースホルダーは不要
     }
     if (pdfFileToDisplayForPlaceholder) {
-      if (selectedCompanyIdForPlaceholder) {
-        return `「${pdfFileToDisplayForPlaceholder.name}」の処理結果がここに表示されます。\nAI処理が完了するまでお待ちください。`;
-      }
-      return `「${pdfFileToDisplayForPlaceholder.name}」の処理結果がここに表示されます。\n会社を選択し、リストのファイルをクリックして処理を開始してください。`;
+      return `「${pdfFileToDisplayForPlaceholder.name}」をプレビュー中です。\n\n処理結果を表示するには、AI実行ボタンを押して処理を開始してください。`;
     }
     return '処理するPDFを左の一覧から選択するか、新しいPDFをアップロードしてください。';
   };

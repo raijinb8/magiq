@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 // src/pages/admin/WorkOrderTool/hooks/usePdfProcessor.ts
-import { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import type {
@@ -16,6 +16,8 @@ export interface UsePdfProcessorProps {
     file: File,
     companyLabelForError: string
   ) => void;
+  // 外部からのAbortSignalを受け取るためのオプション
+  externalAbortSignal?: AbortSignal;
 }
 
 export interface UsePdfProcessorReturn {
@@ -27,16 +29,26 @@ export interface UsePdfProcessorReturn {
     companyLabelForError: string, // エラーメッセージ表示用の会社ラベル
     enableAutoDetection?: boolean, // 自動判定を有効にするかどうか
     ocrOnly?: boolean // OCRと会社判定のみを実行するかどうか
-  ) => Promise<void>;
+  ) => Promise<{ success: boolean; errorMessage?: string }>;
   abortRequest: () => void; // APIリクエスト中断機能
 }
 
 export const usePdfProcessor = ({
   onSuccess,
   onError,
+  externalAbortSignal,
 }: UsePdfProcessorProps): UsePdfProcessorReturn => {
   const [isLoading, setIsLoading] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  
+  // 外部AbortSignalが変更された場合の処理
+  React.useEffect(() => {
+    // 現在のリクエストが進行中で、外部シグナルが中断された場合
+    if (externalAbortSignal?.aborted && abortControllerRef.current && isLoading) {
+      console.log('[usePdfProcessor] External abort signal detected - aborting current request');
+      abortControllerRef.current.abort();
+    }
+  }, [externalAbortSignal?.aborted, isLoading]);
 
   const processFile = useCallback(
     async (
@@ -45,39 +57,65 @@ export const usePdfProcessor = ({
       companyLabelForError: string, // エラーメッセージ用に会社ラベルを受け取る
       enableAutoDetection = false, // デフォルトは自動判定無効
       ocrOnly = false // デフォルトはOCRのみは無効
-    ): Promise<void> => {
+    ): Promise<{ success: boolean; errorMessage?: string }> => {
       // 自動判定が有効な場合は、会社IDが未選択でも処理を続行
       if (!enableAutoDetection && !companyId) {
         // companyId の存在チェックを追加
-        toast.error('会社が選択されていません。');
+        const errorMsg = '会社が選択されていません。';
+        toast.error(errorMsg);
         onError('会社未選択', fileToProcess, companyLabelForError);
-        return;
+        return { success: false, errorMessage: errorMsg };
       }
-      // AbortControllerを作成
+      // AbortControllerを作成（内部用）
       const abortController = new AbortController();
       abortControllerRef.current = abortController;
+      
+      // 外部AbortSignalがある場合、それもリッスンする
+      const combinedSignal = abortController.signal;
+      if (externalAbortSignal) {
+        // 外部シグナルが既に中断されている場合は即座に中断
+        if (externalAbortSignal.aborted) {
+          abortController.abort();
+        } else {
+          // 外部シグナルが中断されたら内部のAbortControllerも中断
+          const externalAbortHandler = () => {
+            abortController.abort();
+          };
+          externalAbortSignal.addEventListener('abort', externalAbortHandler);
+          
+          // クリーンアップのため、処理完了後にイベントリスナーを削除
+          const originalFinally = () => {
+            externalAbortSignal.removeEventListener('abort', externalAbortHandler);
+          };
+          
+          // 後でクリーンアップするためにハンドラーを保存
+          (abortController as AbortController & { _cleanup?: () => void })._cleanup = originalFinally;
+        }
+      }
 
       setIsLoading(true);
       try {
         const session = (await supabase.auth.getSession()).data.session;
         if (!session) {
-          toast.error('認証されていません。ログインしてください。');
+          const errorMsg = '認証されていません。ログインしてください。';
+          toast.error(errorMsg);
           // setIsLoading(false); // finally で処理
           onError('認証エラー', fileToProcess, companyLabelForError);
-          return;
+          return { success: false, errorMessage: errorMsg };
         }
 
         const functionUrl = import.meta.env
           .VITE_PUBLIC_PROCESS_PDF_FUNCTION_URL;
         if (!functionUrl) {
-          toast.error('設定エラー: Function URLが未設定です。');
+          const errorMsg = '設定エラー: Function URLが未設定です。';
+          toast.error(errorMsg);
           // setIsLoading(false); // finally で処理
           onError(
             '設定エラー: Function URL未設定',
             fileToProcess,
             companyLabelForError
           );
-          return;
+          return { success: false, errorMessage: errorMsg };
         }
 
         // FormDataオブジェクトを作成してファイルと他のデータを格納
@@ -97,7 +135,7 @@ export const usePdfProcessor = ({
             // 'apikey': import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY, // Edge Functionの認証設定によっては必要
           },
           body: formData, // FormDataオブジェクトをbodyに設定
-          signal: abortController.signal, // 中断シグナルを追加
+          signal: combinedSignal, // 統合された中断シグナルを使用
         });
 
         // response.json() の前に response.ok をチェックする方が一般的
@@ -105,9 +143,24 @@ export const usePdfProcessor = ({
           // エラーレスポンスを先に処理
           let errorMsg = `HTTPエラー: ${response.status} ${response.statusText}`;
           let errorData: PdfProcessErrorResponse | null = null;
+          
+          console.error(`[usePdfProcessor] ${fileToProcess.name}のAPIエラーレスポンス:`, {
+            status: response.status,
+            statusText: response.statusText,
+            companyId,
+            enableAutoDetection,
+            ocrOnly,
+          });
+          
           try {
             errorData = (await response.json()) as PdfProcessErrorResponse;
             errorMsg = errorData?.error || errorMsg; // APIが返すエラーメッセージを優先
+            
+            console.error(`[usePdfProcessor] ${fileToProcess.name}のエラー詳細:`, {
+              errorMessage: errorData?.error,
+              details: errorData?.details,
+              detectionResult: errorData?.detectionResult,
+            });
 
             // 自動判定に失敗した場合の特別な処理
             if (
@@ -123,40 +176,72 @@ export const usePdfProcessor = ({
             }
           } catch (jsonError) {
             // JSONパースに失敗した場合など
-            console.warn('Failed to parse error response as JSON:', jsonError);
+            console.warn(`[usePdfProcessor] ${fileToProcess.name}のエラーJSONパース失敗:`, jsonError);
           }
-          console.error('Backend API Error Response:', response);
-          toast.error(`処理エラー: ${errorMsg}`, {
-            description: `ファイル「${fileToProcess.name}」の処理中に問題が発生しました。`,
+          
+          console.error(`[usePdfProcessor] ${fileToProcess.name} onError()呼び出し前`, {
+            errorMsg,
+            companyLabelForError,
           });
+          
           onError(errorMsg, fileToProcess, companyLabelForError);
-          return;
+          return { success: false, errorMessage: errorMsg };
         }
 
         // response.ok の場合のみ .json() を安全に呼び出せる
         const responseData =
           (await response.json()) as PdfProcessSuccessResponse; // 成功レスポンスとして型付け
+        
+        console.log(`[usePdfProcessor] ${fileToProcess.name}の成功レスポンス:`, {
+          workOrderId: responseData.workOrderId,
+          dbRecordId: responseData.dbRecordId,
+          detectionResult: responseData.detectionResult,
+          ocrOnly: responseData.ocrOnly,
+          companyId,
+          enableAutoDetection,
+        });
+        
         onSuccess(responseData, fileToProcess);
+        return { success: true };
       } catch (error: unknown) {
         // 中断された場合は通常のエラー処理をスキップ
         if (error instanceof Error && error.name === 'AbortError') {
-          console.log('API request was aborted');
-          return; // 中断時は何もしない（エラー表示なし）
+          console.log(`[usePdfProcessor] ${fileToProcess.name} APIリクエストが中断されました`);
+          return { success: false, errorMessage: '処理が中断されました' }; // 中断時も結果を返す
         }
 
         let errorMessage = 'API呼び出し中に予期せぬエラーが発生しました。';
         if (error instanceof Error) {
           errorMessage = error.message;
         }
-        console.error('Frontend API Call/Network Error:', error);
+        
+        console.error(`[usePdfProcessor] ${fileToProcess.name}のネットワーク/フロントエンドエラー:`, {
+          error,
+          errorMessage,
+          companyId,
+          enableAutoDetection,
+          ocrOnly,
+          companyLabelForError,
+        });
+        
         toast.error('クライアントサイドエラー', { description: errorMessage });
+        
+        console.log(`[usePdfProcessor] ${fileToProcess.name} onError()呼び出し`);
         onError(errorMessage, fileToProcess, companyLabelForError);
+        return { success: false, errorMessage };
       } finally {
         setIsLoading(false);
+        
+        // 外部AbortSignalのイベントリスナーをクリーンアップ
+        const controllerWithCleanup = abortControllerRef.current as AbortController & { _cleanup?: () => void };
+        if (controllerWithCleanup?._cleanup) {
+          controllerWithCleanup._cleanup();
+        }
+        
         abortControllerRef.current = null; // リクエスト完了後はリセット
       }
     },
-    [onSuccess, onError] // 依存配列
+    [onSuccess, onError, externalAbortSignal] // 依存配列
   );
 
   // APIリクエストを中断する関数
