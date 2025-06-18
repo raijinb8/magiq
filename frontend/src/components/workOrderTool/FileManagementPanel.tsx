@@ -366,7 +366,7 @@ export const FileManagementPanel: React.FC<FileManagementPanelProps> = ({
                     <>
                       {batchProcessedFiles[file.name] === 'success' && (
                         <span className="ml-2 text-xs text-green-600 dark:text-green-400 font-semibold">
-                          (バッチ処理完了)
+                          (処理完了)
                         </span>
                       )}
                       {batchProcessedFiles[file.name] === 'error' && (

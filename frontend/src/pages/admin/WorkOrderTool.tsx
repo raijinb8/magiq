@@ -74,7 +74,7 @@ const WorkOrderTool: React.FC = () => {
   const [showBatchProgress, setShowBatchProgress] = useState<boolean>(false);
   const [showBatchHistory, setShowBatchHistory] = useState<boolean>(false);
   
-  // バッチ処理完了ファイルを追跡する状態
+  // 処理完了ファイルを追跡する状態（バッチ処理・単体処理の両方で使用）
   const [batchProcessedFiles, setBatchProcessedFiles] = useState<{ [fileName: string]: 'success' | 'error' | 'processing' | 'cancelled' | 'pending' }>({});
 
   // --- カスタムフックの利用 ---
@@ -246,6 +246,12 @@ const WorkOrderTool: React.FC = () => {
       // 最終的な生成テキストを設定
       if (data.generatedText && !data.ocrOnly) {
         setGeneratedText(data.generatedText);
+        
+        // 単体処理でも処理済みファイル状態を保存
+        setBatchProcessedFiles(prev => ({
+          ...prev,
+          [file.name]: 'success'
+        }));
       }
 
       toast.success(
@@ -269,6 +275,12 @@ const WorkOrderTool: React.FC = () => {
 
       // プロセス状態をエラーに更新
       setErrorState(errorMessage);
+
+      // 単体処理でもエラー状態を保存 
+      setBatchProcessedFiles(prev => ({
+        ...prev,
+        [file.name]: 'error'
+      }));
 
       toast.error(`処理エラー: ${errorMessage}`, {
         description: `ファイル「${file.name}」の処理中に問題が発生しました。`,
