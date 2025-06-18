@@ -264,13 +264,6 @@ export const GeneratedTextPanel: React.FC<GeneratedTextPanelProps> = ({
               </Button>
             )}
 
-          {/* これらのボタンは現状ダミーなので、機能実装時にprops経由でハンドラを受け取る */}
-          <Button variant="outline" size="sm" disabled>
-            戻る (仮)
-          </Button>
-          <Button variant="outline" size="sm" disabled>
-            次へ (仮)
-          </Button>
         </div>
       </div>
       <div className="flex flex-col flex-1 gap-2 min-h-0">
