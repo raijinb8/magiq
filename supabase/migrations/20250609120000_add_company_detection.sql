@@ -61,11 +61,11 @@ INSERT INTO public.company_detection_rules (company_id, rule_type, rule_value, p
 ('NOHARA_G', 'pattern', '野原.*住環境', 70, '会社名のパターンマッチ'),
 
 -- 加藤ベニヤ池袋_ミサワホームのルール
-('KATOUBENIYA_MISAWA', 'keyword', '加藤ベニヤ', 100, '会社名の部分一致'),
-('KATOUBENIYA_MISAWA', 'keyword', 'ミサワホーム', 100, '発注元の一致'),
-('KATOUBENIYA_MISAWA', 'keyword', '加藤ベニヤ池袋', 95, '会社名の詳細一致'),
-('KATOUBENIYA_MISAWA', 'address', '池袋', 60, '地域名の一致'),
-('KATOUBENIYA_MISAWA', 'pattern', '加藤ベニヤ.*ミサワ', 85, 'パターンマッチ')
+('KATOUBENIYA_IKEBUKURO_MISAWA', 'keyword', '加藤ベニヤ', 100, '会社名の部分一致'),
+('KATOUBENIYA_IKEBUKURO_MISAWA', 'keyword', 'ミサワホーム', 100, '発注元の一致'),
+('KATOUBENIYA_IKEBUKURO_MISAWA', 'keyword', '加藤ベニヤ池袋', 95, '会社名の詳細一致'),
+('KATOUBENIYA_IKEBUKURO_MISAWA', 'address', '池袋', 60, '地域名の一致'),
+('KATOUBENIYA_IKEBUKURO_MISAWA', 'pattern', '加藤ベニヤ.*ミサワ', 85, 'パターンマッチ')
 ON CONFLICT DO NOTHING;
 
 -- 5. 更新日時の自動更新トリガー（detection_rulesテーブル用）
