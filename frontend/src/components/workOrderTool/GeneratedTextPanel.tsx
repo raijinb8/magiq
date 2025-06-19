@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import { Copy, CopyCheck, List, FileText } from 'lucide-react';
 import { updateWorkOrderEditedText } from '@/lib/api';
 import type {
   ProcessedCompanyInfo,
@@ -46,10 +47,17 @@ export const GeneratedTextPanel: React.FC<GeneratedTextPanelProps> = ({
   const [isEditMode, setIsEditMode] = useState<boolean>(false);
   const [localEditedText, setLocalEditedText] = useState<string>('');
   const [isSaving, setIsSaving] = useState<boolean>(false);
+  
+  // 行別コピー機能の状態管理
+  const [viewMode, setViewMode] = useState<'normal' | 'line-copy'>('normal');
+  const [copiedLines, setCopiedLines] = useState<Set<number>>(new Set());
 
   // 表示用テキストの決定（編集テキストがあれば優先、なければ生成テキスト）
   const displayText = editedText || generatedText;
   const currentEditText = isEditMode ? localEditedText : displayText;
+  
+  // テキストを行に分割（空行も含む）
+  const textLines = displayText ? displayText.split('\n') : [];
 
   // 編集モードに入る
   const handleEnterEditMode = () => {
@@ -62,6 +70,61 @@ export const GeneratedTextPanel: React.FC<GeneratedTextPanelProps> = ({
     setLocalEditedText('');
     setIsEditMode(false);
   };
+
+  // コピー機能のヘルパー関数
+  const copyToClipboard = async (text: string): Promise<boolean> => {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } else {
+        // フォールバック: 旧い方法
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-9999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        const result = document.execCommand('copy');
+        document.body.removeChild(textArea);
+        return result;
+      }
+    } catch (error) {
+      console.error('コピーエラー:', error);
+      return false;
+    }
+  };
+
+  // 単一行のコピー
+  const handleCopyLine = async (lineIndex: number, lineText: string) => {
+    const success = await copyToClipboard(lineText);
+    if (success) {
+      setCopiedLines(prev => new Set([...prev, lineIndex]));
+      toast.success(`行 ${lineIndex + 1} をコピーしました`);
+      // 3秒後にコピー状態をリセット
+      setTimeout(() => {
+        setCopiedLines(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(lineIndex);
+          return newSet;
+        });
+      }, 3000);
+    } else {
+      toast.error('コピーに失敗しました');
+    }
+  };
+
+  // 全行一括コピー
+  const handleCopyAllLines = async () => {
+    const success = await copyToClipboard(displayText);
+    if (success) {
+      toast.success('全テキストをコピーしました');
+    } else {
+      toast.error('コピーに失敗しました');
+    }
+  };
+
 
   // 編集内容を保存
   const handleSaveEdit = async () => {
@@ -106,8 +169,8 @@ export const GeneratedTextPanel: React.FC<GeneratedTextPanelProps> = ({
   };
 
   return (
-    <div className="w-1/2 p-4 flex flex-col overflow-hidden">
-      <div className="mb-2 flex items-center justify-between">
+    <div className="w-1/2 p-4 flex flex-col min-h-0">
+      <div className="mb-2 flex items-center justify-between flex-shrink-0">
         <h2 className="text-lg font-semibold">
           業務手配書 文言
           {processedCompanyInfo.file && (
@@ -123,8 +186,42 @@ export const GeneratedTextPanel: React.FC<GeneratedTextPanelProps> = ({
           )}
         </h2>
         <div className="flex gap-2">
+          {/* 表示モード切り替えボタン */}
+          {displayText && !isLoading && !isEditMode && (
+            <>
+              <Button
+                variant={viewMode === 'normal' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('normal')}
+              >
+                <FileText className="w-4 h-4 mr-1" />
+                通常表示
+              </Button>
+              <Button
+                variant={viewMode === 'line-copy' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('line-copy')}
+              >
+                <List className="w-4 h-4 mr-1" />
+                行別コピー
+              </Button>
+              {viewMode === 'line-copy' && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCopyAllLines}
+                  >
+                    <Copy className="w-4 h-4 mr-1" />
+                    全コピー
+                  </Button>
+                </>
+              )}
+            </>
+          )}
+          
           {/* 編集機能ボタン */}
-          {displayText && !isLoading && (
+          {displayText && !isLoading && viewMode === 'normal' && (
             <>
               {!isEditMode ? (
                 <Button
@@ -167,51 +264,99 @@ export const GeneratedTextPanel: React.FC<GeneratedTextPanelProps> = ({
               </Button>
             )}
 
-          {/* これらのボタンは現状ダミーなので、機能実装時にprops経由でハンドラを受け取る */}
-          <Button variant="outline" size="sm" disabled>
-            戻る (仮)
-          </Button>
-          <Button variant="outline" size="sm" disabled>
-            次へ (仮)
-          </Button>
         </div>
       </div>
-      <div className="flex flex-col flex-1 gap-2">
+      <div className="flex flex-col flex-1 gap-2 min-h-0">
         {/* プロセス状態表示 */}
         {processState && (
           <ProcessStatusIndicator
             processState={processState}
             onCancel={onCancelProcess}
-            className="mb-2"
+            className="mb-2 flex-shrink-0"
           />
         )}
 
         {/* 編集状態の表示 */}
         {isEditMode && (
-          <div className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded border-l-4 border-orange-400">
+          <div className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded border-l-4 border-orange-400 flex-shrink-0">
             📝 編集モード - 内容を修正して「保存」ボタンを押してください
           </div>
         )}
         {editedText && !isEditMode && (
-          <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded border-l-4 border-blue-400">
+          <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded border-l-4 border-blue-400 flex-shrink-0">
             ✓ 編集済み - この内容は編集されています
           </div>
         )}
 
-        <Textarea
-          className={`flex-1 resize-none rounded-md text-sm font-mono ${
-            isEditMode
-              ? 'border-orange-300 focus:border-orange-500 bg-orange-50/30'
-              : editedText
-                ? 'bg-blue-50/30 border-blue-200'
-                : ''
-          }`}
-          placeholder={getPlaceholderText()}
-          value={currentEditText}
-          readOnly={!isEditMode}
-          onChange={(e) => setLocalEditedText(e.target.value)}
-          disabled={isSaving}
-        />
+        {/* 表示モードによる切り替え */}
+        {viewMode === 'normal' ? (
+          <Textarea
+            className={`flex-1 resize-none rounded-md text-sm font-mono overflow-auto min-h-0 ${
+              isEditMode
+                ? 'border-orange-300 focus:border-orange-500 bg-orange-50/30'
+                : editedText
+                  ? 'bg-blue-50/30 border-blue-200'
+                  : ''
+            }`}
+            placeholder={getPlaceholderText()}
+            value={currentEditText}
+            readOnly={!isEditMode}
+            onChange={(e) => setLocalEditedText(e.target.value)}
+            disabled={isSaving}
+          />
+        ) : (
+          <div className="flex-1 overflow-auto min-h-0 border rounded-md bg-white">
+            {textLines.length > 0 ? (
+              <>
+                {/* 行別コピーモードのヘッダー */}
+                <div className="sticky top-0 bg-gray-50 border-b p-2">
+                  <div className="text-sm font-medium text-gray-700">
+                    全 {textLines.length} 行 - 行をクリックしてコピー
+                  </div>
+                </div>
+                
+                {/* 行別表示 */}
+                <div className="divide-y">
+                  {textLines.map((line, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center p-2 hover:bg-gray-50 cursor-pointer"
+                      onClick={() => handleCopyLine(index, line)}
+                      title={`クリックで行 ${index + 1} をコピー`}
+                    >
+                      {/* 行番号 */}
+                      <div className="w-12 text-xs text-gray-400 text-right mr-3 flex-shrink-0">
+                        {index + 1}
+                      </div>
+                      
+                      {/* 行内容 */}
+                      <div 
+                        className={`flex-1 text-sm font-mono mr-3 px-2 py-1 rounded transition-colors ${
+                          line.trim() === '' ? 'text-gray-300 italic' : ''
+                        } ${copiedLines.has(index) ? 'bg-green-50 border border-green-200' : 'hover:bg-blue-50'}`}
+                      >
+                        {line.trim() === '' ? '(空行)' : line}
+                      </div>
+                      
+                      {/* コピー状態表示アイコン */}
+                      <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
+                        {copiedLines.has(index) ? (
+                          <CopyCheck className="w-4 h-4 text-green-600" />
+                        ) : (
+                          <Copy className="w-4 h-4 text-gray-300" />
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center justify-center h-32 text-gray-500">
+                {getPlaceholderText()}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
