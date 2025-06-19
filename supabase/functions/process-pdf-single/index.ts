@@ -1,6 +1,6 @@
 // supabase/functions/process-pdf-single/index.ts
 
-import { GoogleGenAI } from '@google/genai'
+import { GoogleGenAI, Part } from '@google/genai'
 // Supabaseクライアントをインポート (Deno用)
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { getPrompt, PromptFunction } from './promptRegistry.ts'
@@ -529,7 +529,7 @@ Deno.serve(async (req: Request) => {
           if (detectionResult && enableAutoDetection) {
             const detector = new CompanyDetector(GEMINI_API_KEY, supabaseClient)
             await detector.saveDetectionHistory(
-              dbRecordId,
+              dbRecordId!,
               fileName,
               detectionResult,
               undefined // TODO: ユーザーIDを渡す場合はここで設定
