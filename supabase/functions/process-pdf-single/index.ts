@@ -41,7 +41,7 @@ try {
   console.error('Error initializing Supabase client:', e)
 }
 
-type CompanyIdentifier = 'NOHARA_G' | 'KATOUBENIYA_MISAWA' | 'UNKNOWN_OR_NOT_SET'
+type CompanyIdentifier = 'NOHARA_G' | 'KATOUBENIYA_IKEBUKURO_MISAWA' | 'UNKNOWN_OR_NOT_SET'
 
 /**
  * OCR専用の会社判定処理

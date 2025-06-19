@@ -12,17 +12,17 @@ PDFファイルから会社情報を抽出して判定してください。
    - 確定キーワード：「野原グループ株式会社」→ 必ずNOHARA_G
    - その他のキーワード：「野原G住環境」「野原G」「野原グループ」
    
-2. KATOUBENIYA_MISAWA（加藤ベニヤ池袋_ミサワホーム）
+2. KATOUBENIYA_IKEBUKURO_MISAWA（加藤ベニヤ池袋_ミサワホーム）
    - 検出キーワード：「加藤ベニヤ」「加藤ベニヤ池袋」「ミサワホーム」「MISAWA」
 
 判定ルール（優先順位順）：
 1. 「野原グループ株式会社」が含まれている → 必ずNOHARA_G（信頼度0.95以上）
-2. 「加藤ベニヤ」+「ミサワホーム」両方含まれている → KATOUBENIYA_MISAWA
+2. 「加藤ベニヤ」+「ミサワホーム」両方含まれている → KATOUBENIYA_IKEBUKURO_MISAWA
 3. その他のキーワードで判定
 
 必ず以下のJSON形式で回答してください：
 {
-  "company_id": "NOHARA_G" または "KATOUBENIYA_MISAWA" または null,
+  "company_id": "NOHARA_G" または "KATOUBENIYA_IKEBUKURO_MISAWA" または null,
   "confidence": 0.0から1.0の数値,
   "detected_text": "検出された主要な文字情報",
   "found_keywords": ["実際に検出されたキーワード1", "キーワード2"],
