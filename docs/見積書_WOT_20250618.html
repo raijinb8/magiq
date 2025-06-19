@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>見積書 - Work Order Tool単体提供</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 20mm;
+        }
+        
+        body {
+            font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 210mm;
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+        }
+        
+        h1 {
+            font-size: 28px;
+            border-bottom: 3px solid #2563eb;
+            padding-bottom: 10px;
+            margin-bottom: 30px;
+        }
+        
+        h2 {
+            font-size: 20px;
+            color: #1e40af;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            border-left: 4px solid #2563eb;
+            padding-left: 10px;
+        }
+        
+        h3 {
+            font-size: 16px;
+            color: #374151;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        
+        h4 {
+            font-size: 14px;
+            color: #4b5563;
+            margin-top: 15px;
+            margin-bottom: 8px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 14px;
+        }
+        
+        th {
+            background-color: #f3f4f6;
+            color: #1f2937;
+            padding: 10px;
+            text-align: left;
+            font-weight: 600;
+            border: 1px solid #d1d5db;
+        }
+        
+        td {
+            padding: 10px;
+            border: 1px solid #e5e7eb;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f9fafb;
+        }
+        
+        .header-info {
+            margin-bottom: 30px;
+            padding: 15px;
+            background-color: #f9fafb;
+            border-radius: 8px;
+        }
+        
+        .header-info p {
+            margin: 5px 0;
+        }
+        
+        .total-row {
+            font-weight: bold;
+            background-color: #eff6ff !important;
+        }
+        
+        .summary-box {
+            background-color: #eff6ff;
+            border: 2px solid #2563eb;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .contact-info {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #e5e7eb;
+        }
+        
+        ul, ol {
+            margin: 10px 0;
+            padding-left: 30px;
+        }
+        
+        li {
+            margin: 5px 0;
+        }
+        
+        .price-highlight {
+            font-size: 18px;
+            font-weight: bold;
+            color: #dc2626;
+        }
+        
+        @media print {
+            body {
+                margin: 0;
+                padding: 0;
+            }
+            
+            .page-break {
+                page-break-after: always;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>見積書</h1>
+    
+    <div class="header-info">
+        <p><strong>発行日</strong>: 2025年6月18日</p>
+        <p><strong>見積書番号</strong>: EST-WOT-202506-001</p>
+        <p><strong>有効期限</strong>: 発行日より30日間</p>
+    </div>
+
+    <h2>1. 案件概要</h2>
+    
+    <h3>プロジェクト名</h3>
+    <p>作業指示書管理ツール（Work Order Tool）単体提供</p>
+    
+    <h3>提供内容</h3>
+    <ul>
+        <li>PDF作業指示書自動処理システム</li>
+        <li>AI（Google Gemini）による自動テキスト抽出</li>
+        <li>マルチカンパニー対応（会社別プロンプト設定）</li>
+        <li>ドラッグ&ドロップによる簡単操作</li>
+        <li>抽出結果の編集・保存機能</li>
+        <li>バッチ処理機能</li>
+    </ul>
+
+    <h2>2. 開発コスト（人月計算）</h2>
+    
+    <h3>2.1 開発工数内訳</h3>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>項目</th>
+                <th>詳細</th>
+                <th>工数（人月）</th>
+                <th>単価（円/月）</th>
+                <th>金額（円）</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td colspan="5"><strong>フロントエンド開発</strong></td>
+            </tr>
+            <tr>
+                <td>- 基本UI設計・実装</td>
+                <td>React + TypeScript環境構築、基本コンポーネント</td>
+                <td>0.5</td>
+                <td>800,000</td>
+                <td>400,000</td>
+            </tr>
+            <tr>
+                <td>- PDF処理機能</td>
+                <td>アップロード、プレビュー、バッチ処理</td>
+                <td>1.0</td>
+                <td>800,000</td>
+                <td>800,000</td>
+            </tr>
+            <tr>
+                <td>- 状態管理・フック</td>
+                <td>カスタムフック、Zustand統合</td>
+                <td>0.5</td>
+                <td>800,000</td>
+                <td>400,000</td>
+            </tr>
+            <tr>
+                <td colspan="5"><strong>バックエンド開発</strong></td>
+            </tr>
+            <tr>
+                <td>- Supabase環境構築</td>
+                <td>データベース設計、認証設定</td>
+                <td>0.5</td>
+                <td>800,000</td>
+                <td>400,000</td>
+            </tr>
+            <tr>
+                <td>- Edge Functions開発</td>
+                <td>PDF処理API、Gemini統合</td>
+                <td>1.5</td>
+                <td>800,000</td>
+                <td>1,200,000</td>
+            </tr>
+            <tr>
+                <td>- 会社別プロンプト実装</td>
+                <td>マルチテナント対応、プロンプト管理</td>
+                <td>0.5</td>
+                <td>800,000</td>
+                <td>400,000</td>
+            </tr>
+            <tr>
+                <td colspan="5"><strong>品質保証・テスト</strong></td>
+            </tr>
+            <tr>
+                <td>- ユニットテスト作成</td>
+                <td>Vitest環境構築、テストカバレッジ80%</td>
+                <td>0.5</td>
+                <td>800,000</td>
+                <td>400,000</td>
+            </tr>
+            <tr>
+                <td>- 統合テスト・デバッグ</td>
+                <td>E2Eテスト、バグ修正</td>
+                <td>0.5</td>
+                <td>800,000</td>
+                <td>400,000</td>
+            </tr>
+            <tr>
+                <td colspan="5"><strong>その他</strong></td>
+            </tr>
+            <tr>
+                <td>- ドキュメント作成</td>
+                <td>技術文書、運用マニュアル</td>
+                <td>0.3</td>
+                <td>800,000</td>
+                <td>240,000</td>
+            </tr>
+            <tr>
+                <td>- デプロイ・環境設定</td>
+                <td>本番環境構築、CI/CD設定</td>
+                <td>0.2</td>
+                <td>800,000</td>
+                <td>160,000</td>
+            </tr>
+            <tr class="total-row">
+                <td><strong>合計</strong></td>
+                <td></td>
+                <td><strong>6.0人月</strong></td>
+                <td></td>
+                <td><strong>4,800,000円</strong></td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <h3>2.2 追加考慮事項</h3>
+    <ul>
+        <li>Google Gemini API利用料: 別途実費精算（目安：月額10,000〜50,000円）</li>
+        <li>Supabase利用料: 別途実費精算（目安：月額25ドル〜）</li>
+        <li>保守サポート: 別途月額契約（開発費の15%/年を推奨）</li>
+    </ul>
+
+    <h2>3. 顧客価値（ROI計算）</h2>
+    
+    <h3>3.1 現状の作業時間</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>役職</th>
+                <th>人数</th>
+                <th>1日の作業時間</th>
+                <th>月間作業時間（22日）</th>
+                <th>時給</th>
+                <th>月間コスト</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>社長</td>
+                <td>1名</td>
+                <td>2.5時間</td>
+                <td>55時間</td>
+                <td>5,000円</td>
+                <td>275,000円</td>
+            </tr>
+            <tr>
+                <td>正社員</td>
+                <td>2名</td>
+                <td>2.5時間×2</td>
+                <td>110時間</td>
+                <td>2,500円</td>
+                <td>275,000円</td>
+            </tr>
+            <tr>
+                <td>パート</td>
+                <td>2名</td>
+                <td>2.5時間×2</td>
+                <td>110時間</td>
+                <td>1,500円</td>
+                <td>165,000円</td>
+            </tr>
+            <tr class="total-row">
+                <td><strong>合計</strong></td>
+                <td><strong>5名</strong></td>
+                <td><strong>12.5時間</strong></td>
+                <td><strong>275時間</strong></td>
+                <td></td>
+                <td><strong>715,000円</strong></td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <h3>3.2 導入後の効果</h3>
+    
+    <h4>時間削減効果</h4>
+    <ul>
+        <li><strong>削減率</strong>: 95%以上（手作業2.5時間 → 自動処理5分以下）</li>
+        <li><strong>月間削減時間</strong>: 261時間（275時間の95%）</li>
+        <li><strong>月間削減コスト</strong>: 679,250円</li>
+    </ul>
+    
+    <h4>年間効果</h4>
+    <div class="summary-box">
+        <ul>
+            <li><strong>年間削減コスト</strong>: <span class="price-highlight">8,151,000円</span></li>
+            <li><strong>投資回収期間</strong>: 約7.1ヶ月（開発費 ÷ 月間削減コスト）</li>
+        </ul>
+    </div>
+    
+    <h3>3.3 定性的効果</h3>
+    <ol>
+        <li><strong>ヒューマンエラーの削減</strong>
+            <ul>
+                <li>手入力ミスの完全排除</li>
+                <li>作業品質の均一化</li>
+            </ul>
+        </li>
+        <li><strong>従業員満足度の向上</strong>
+            <ul>
+                <li>単純作業からの解放</li>
+                <li>より付加価値の高い業務への集中</li>
+            </ul>
+        </li>
+        <li><strong>業務スピードの向上</strong>
+            <ul>
+                <li>リアルタイム処理</li>
+                <li>繁忙期の業務負荷軽減</li>
+            </ul>
+        </li>
+        <li><strong>データ活用の促進</strong>
+            <ul>
+                <li>デジタル化による検索性向上</li>
+                <li>分析・レポート機能の活用</li>
+            </ul>
+        </li>
+    </ol>
+
+    <h2>4. 価格提案</h2>
+    
+    <h3>4.1 初期導入費用</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>項目</th>
+                <th>金額（税別）</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>システム開発費</td>
+                <td>4,800,000円</td>
+            </tr>
+            <tr>
+                <td>初期設定・導入支援</td>
+                <td>200,000円</td>
+            </tr>
+            <tr class="total-row">
+                <td><strong>初期費用合計</strong></td>
+                <td><strong>5,000,000円</strong></td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <h3>4.2 月額利用料</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>項目</th>
+                <th>金額（税別）</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>基本利用料（5ユーザー）</td>
+                <td>50,000円</td>
+            </tr>
+            <tr>
+                <td>保守サポート</td>
+                <td>60,000円</td>
+            </tr>
+            <tr class="total-row">
+                <td><strong>月額合計</strong></td>
+                <td><strong>110,000円</strong></td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <h3>4.3 オプション</h3>
+    <ul>
+        <li>追加ユーザー: 5,000円/月・人</li>
+        <li>カスタマイズ開発: 別途見積</li>
+        <li>オンサイト研修: 100,000円/日</li>
+    </ul>
+
+    <h2>5. 支払条件</h2>
+    <ul>
+        <li>契約時: 30%（1,500,000円）</li>
+        <li>開発完了時: 40%（2,000,000円）</li>
+        <li>検収完了時: 30%（1,500,000円）</li>
+    </ul>
+
+    <h2>6. 納期</h2>
+    <p>契約締結後、3ヶ月以内に本番稼働開始</p>
+
+    <h2>7. 保証・サポート</h2>
+    <ul>
+        <li>納品後1年間の瑕疵担保責任</li>
+        <li>月次定期メンテナンス</li>
+        <li>平日9:00-18:00の電話・メールサポート</li>
+        <li>年4回のバージョンアップ</li>
+    </ul>
+
+    <h2>8. 備考</h2>
+    <ul>
+        <li>本見積は概算であり、詳細な要件定義により変動する可能性があります</li>
+        <li>外部API利用料は実費精算となります</li>
+        <li>消費税は別途申し受けます</li>
+    </ul>
+
+    <div class="contact-info">
+        <p><strong>お問い合わせ先</strong></p>
+        <p>担当: [担当者名]</p>
+        <p>Email: [メールアドレス]</p>
+        <p>Tel: [電話番号]</p>
+    </div>
+</body>
+</html>
