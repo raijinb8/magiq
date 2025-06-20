@@ -538,7 +538,7 @@ export const testPresets = {
   // 企業別のワークオーダー
   companySpecificData: () => ({
     noharaG: createMockWorkOrderForCompany('NOHARA_G'),
-    katoubeniya: createMockWorkOrderForCompany('KATOUBENIYA_MISAWA'),
+    katoubeniya: createMockWorkOrderForCompany('KATOUBENIYA_IKEBUKURO_MISAWA'),
     yamadaK: createMockWorkOrderForCompany('YAMADA_K'),
   }),
 };

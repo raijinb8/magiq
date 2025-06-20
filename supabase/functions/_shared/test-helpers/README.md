@@ -74,7 +74,7 @@ import { GEMINI_MOCK_RESPONSES } from '../test-helpers.ts'
 mockGeminiAI.setCustomResponse(GEMINI_MOCK_RESPONSES.NOHARA_G)
 
 // ミサワホーム用のレスポンス
-mockGeminiAI.setCustomResponse(GEMINI_MOCK_RESPONSES.KATOUBENIYA_MISAWA)
+mockGeminiAI.setCustomResponse(GEMINI_MOCK_RESPONSES.KATOUBENIYA_IKEBUKURO_MISAWA)
 
 // エラーケース
 mockGeminiAI.setErrorResponse(GEMINI_MOCK_RESPONSES.ERROR_RATE_LIMIT)

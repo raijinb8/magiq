@@ -24,8 +24,8 @@ describe("promptRegistry", () => {
       }
     });
 
-    it("KATOUBENIYA_MISAWAエントリが正しく設定されている", () => {
-      const entry = PROMPT_REGISTRY["KATOUBENIYA_MISAWA"];
+    it("KATOUBENIYA_IKEBUKURO_MISAWAエントリが正しく設定されている", () => {
+      const entry = PROMPT_REGISTRY["KATOUBENIYA_IKEBUKURO_MISAWA"];
       assertExists(entry);
       if (entry) {
         assertEquals(entry.companyName, "加藤ベニヤ池袋_ミサワホーム");
@@ -90,8 +90,8 @@ describe("promptRegistry", () => {
       }
     });
 
-    it("KATOUBENIYA_MISAWAのプロンプト関数がファイル名を受け取り文字列を返す", () => {
-      const entry = getPrompt("KATOUBENIYA_MISAWA");
+    it("KATOUBENIYA_IKEBUKURO_MISAWAのプロンプト関数がファイル名を受け取り文字列を返す", () => {
+      const entry = getPrompt("KATOUBENIYA_IKEBUKURO_MISAWA");
       assertExists(entry);
       if (entry) {
         const result = entry.promptFunction("test.pdf");

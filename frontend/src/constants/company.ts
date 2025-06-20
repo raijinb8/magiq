@@ -4,7 +4,7 @@ import type { CompanyOption } from '@/types';
 export const COMPANY_OPTIONS: readonly CompanyOption[] = [
   // 既存実装済み（2社）
   { value: 'NOHARA_G', label: '野原G住環境' },
-  { value: 'KATOUBENIYA_MISAWA', label: '加藤ベニヤ池袋_ミサワホーム' },
+  { value: 'KATOUBENIYA_IKEBUKURO_MISAWA', label: '加藤ベニヤ池袋_ミサワホーム' },
   
   // 親会社単体（27社）
   { value: 'SONOTA', label: 'その他' },

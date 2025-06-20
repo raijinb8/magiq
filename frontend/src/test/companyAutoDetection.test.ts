@@ -27,7 +27,7 @@ describe('会社自動判定機能', () => {
         },
         {
           input: '加藤ベニヤ池袋 ミサワホーム 工事',
-          expected: 'KATOUBENIYA_MISAWA',
+          expected: 'KATOUBENIYA_IKEBUKURO_MISAWA',
           confidence: 0.85,
           description: '加藤ベニヤ + ミサワホームの組み合わせ',
         },
@@ -78,17 +78,17 @@ describe('会社自動判定機能', () => {
       const testCases = [
         {
           text: '加藤ベニヤ ミサワホーム',
-          expectedCompany: 'KATOUBENIYA_MISAWA',
+          expectedCompany: 'KATOUBENIYA_IKEBUKURO_MISAWA',
           minConfidence: 0.8,
         },
         {
           text: '加藤ベニヤ',
-          expectedCompany: 'KATOUBENIYA_MISAWA',
+          expectedCompany: 'KATOUBENIYA_IKEBUKURO_MISAWA',
           minConfidence: 0.6,
         },
         {
           text: 'ミサワホーム',
-          expectedCompany: 'KATOUBENIYA_MISAWA',
+          expectedCompany: 'KATOUBENIYA_IKEBUKURO_MISAWA',
           minConfidence: 0.6,
         },
       ];
@@ -167,24 +167,24 @@ function simulateOcrDetection(text: string): {
   // 加藤ベニヤ + ミサワホーム複合判定
   else if (text.includes('加藤ベニヤ') && text.includes('ミサワホーム')) {
     foundKeywords.push('加藤ベニヤ', 'ミサワホーム');
-    detectedCompany = 'KATOUBENIYA_MISAWA';
+    detectedCompany = 'KATOUBENIYA_IKEBUKURO_MISAWA';
     confidence = 0.85;
     reasoning = '加藤ベニヤとミサワホームの複合キーワードを検出';
   }
   // 個別キーワード
   else if (text.includes('加藤ベニヤ池袋')) {
     foundKeywords.push('加藤ベニヤ池袋');
-    detectedCompany = 'KATOUBENIYA_MISAWA';
+    detectedCompany = 'KATOUBENIYA_IKEBUKURO_MISAWA';
     confidence = 0.8;
     reasoning = '加藤ベニヤ池袋キーワードを検出';
   } else if (text.includes('加藤ベニヤ')) {
     foundKeywords.push('加藤ベニヤ');
-    detectedCompany = 'KATOUBENIYA_MISAWA';
+    detectedCompany = 'KATOUBENIYA_IKEBUKURO_MISAWA';
     confidence = 0.7;
     reasoning = '加藤ベニヤキーワードを検出';
   } else if (text.includes('ミサワホーム')) {
     foundKeywords.push('ミサワホーム');
-    detectedCompany = 'KATOUBENIYA_MISAWA';
+    detectedCompany = 'KATOUBENIYA_IKEBUKURO_MISAWA';
     confidence = 0.6;
     reasoning = 'ミサワホームキーワードを検出';
   } else {
