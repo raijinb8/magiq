@@ -61,7 +61,7 @@ describe('CompanyAutoDetectToggle', () => {
   describe('判定結果の表示', () => {
     it('成功した判定結果が正しく表示される', () => {
       const detectionResult: CompanyDetectionResult = {
-        detectedCompanyId: 'NOHARA_G',
+        detectedCompanyId: 'NOHARA_G_MISAWA',
         confidence: 0.95,
         method: 'ocr_gemini',
         details: {
@@ -79,7 +79,7 @@ describe('CompanyAutoDetectToggle', () => {
       );
 
       expect(screen.getByText('判定結果:')).toBeInTheDocument();
-      expect(screen.getByText('NOHARA_G')).toBeInTheDocument();
+      expect(screen.getByText('NOHARA_G_MISAWA')).toBeInTheDocument();
       expect(screen.getByText('高信頼度 95%')).toBeInTheDocument();
       expect(
         screen.getByText('検出キーワード: 野原グループ株式会社')
@@ -116,7 +116,7 @@ describe('CompanyAutoDetectToggle', () => {
 
     it('中信頼度の判定結果が正しく表示される', () => {
       const detectionResult: CompanyDetectionResult = {
-        detectedCompanyId: 'KATOUBENIYA_MISAWA',
+        detectedCompanyId: 'KATOUBENIYA_IKEBUKURO_MISAWA',
         confidence: 0.75,
         method: 'ocr_gemini',
         details: {
@@ -133,7 +133,7 @@ describe('CompanyAutoDetectToggle', () => {
         />
       );
 
-      expect(screen.getByText('KATOUBENIYA_MISAWA')).toBeInTheDocument();
+      expect(screen.getByText('KATOUBENIYA_IKEBUKURO_MISAWA')).toBeInTheDocument();
       expect(screen.getByText('中信頼度 75%')).toBeInTheDocument();
       expect(
         screen.getByText('検出キーワード: 加藤ベニヤ')
@@ -142,7 +142,7 @@ describe('CompanyAutoDetectToggle', () => {
 
     it('低信頼度の判定結果が正しく表示される', () => {
       const detectionResult: CompanyDetectionResult = {
-        detectedCompanyId: 'NOHARA_G',
+        detectedCompanyId: 'NOHARA_G_MISAWA',
         confidence: 0.45,
         method: 'rule_based',
         details: {
@@ -159,7 +159,7 @@ describe('CompanyAutoDetectToggle', () => {
         />
       );
 
-      expect(screen.getByText('NOHARA_G')).toBeInTheDocument();
+      expect(screen.getByText('NOHARA_G_MISAWA')).toBeInTheDocument();
       expect(screen.getByText('低信頼度 45%')).toBeInTheDocument();
     });
   });
@@ -232,7 +232,7 @@ describe('CompanyAutoDetectToggle', () => {
 
       testCases.forEach(({ confidence, expectedText }) => {
         const detectionResult: CompanyDetectionResult = {
-          detectedCompanyId: 'NOHARA_G',
+          detectedCompanyId: 'NOHARA_G_MISAWA',
           confidence,
           method: 'ocr_gemini',
           details: {},
@@ -255,7 +255,7 @@ describe('CompanyAutoDetectToggle', () => {
   describe('条件表示', () => {
     it('自動判定が無効の場合は判定結果が表示されない', () => {
       const detectionResult: CompanyDetectionResult = {
-        detectedCompanyId: 'NOHARA_G',
+        detectedCompanyId: 'NOHARA_G_MISAWA',
         confidence: 0.95,
         method: 'ocr_gemini',
         details: {},
@@ -270,7 +270,7 @@ describe('CompanyAutoDetectToggle', () => {
       );
 
       expect(screen.queryByText('判定結果:')).not.toBeInTheDocument();
-      expect(screen.queryByText('NOHARA_G')).not.toBeInTheDocument();
+      expect(screen.queryByText('NOHARA_G_MISAWA')).not.toBeInTheDocument();
     });
 
     it('判定結果がない場合は結果セクションが表示されない', () => {
@@ -286,7 +286,7 @@ describe('CompanyAutoDetectToggle', () => {
 
     it('キーワードがない場合はキーワード行が表示されない', () => {
       const detectionResult: CompanyDetectionResult = {
-        detectedCompanyId: 'NOHARA_G',
+        detectedCompanyId: 'NOHARA_G_MISAWA',
         confidence: 0.95,
         method: 'ocr_gemini',
         details: {
@@ -307,7 +307,7 @@ describe('CompanyAutoDetectToggle', () => {
 
     it('理由がない場合は理由行が表示されない', () => {
       const detectionResult: CompanyDetectionResult = {
-        detectedCompanyId: 'NOHARA_G',
+        detectedCompanyId: 'NOHARA_G_MISAWA',
         confidence: 0.95,
         method: 'ocr_gemini',
         details: {

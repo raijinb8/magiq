@@ -90,12 +90,12 @@ describe('usePdfProcessor Hook', () => {
     it('自動判定が有効な場合は会社未選択でも処理が継続される', async () => {
       const mockResponse: PdfProcessSuccessResponse = {
         generatedText: 'テスト手配書',
-        identifiedCompany: 'NOHARA_G',
+        identifiedCompany: 'NOHARA_G_MISAWA',
         originalFileName: 'test.pdf',
         promptUsedIdentifier: 'test-prompt',
         dbRecordId: 'test-uuid',
         detectionResult: {
-          detectedCompanyId: 'NOHARA_G',
+          detectedCompanyId: 'NOHARA_G_MISAWA',
           confidence: 0.95,
           method: 'ocr_gemini',
           details: {
@@ -153,14 +153,14 @@ describe('usePdfProcessor Hook', () => {
     it('ocrOnly=trueの場合、適切なパラメーターでAPIを呼び出す', async () => {
       const mockOcrResponse: PdfProcessSuccessResponse = {
         generatedText: '',
-        identifiedCompany: 'NOHARA_G',
+        identifiedCompany: 'NOHARA_G_MISAWA',
         originalFileName: 'test.pdf',
         promptUsedIdentifier: 'ocr-prompt',
         dbRecordId: 'test-uuid',
         ocrOnly: true,
         fileName: 'test.pdf',
         detectionResult: {
-          detectedCompanyId: 'NOHARA_G',
+          detectedCompanyId: 'NOHARA_G_MISAWA',
           confidence: 0.95,
           method: 'ocr_gemini',
           details: {
@@ -213,14 +213,14 @@ describe('usePdfProcessor Hook', () => {
     it('OCR処理の結果が適切に処理される', async () => {
       const mockOcrResponse: PdfProcessSuccessResponse = {
         generatedText: '',
-        identifiedCompany: 'KATOUBENIYA_MISAWA',
+        identifiedCompany: 'KATOUBENIYA_IKEBUKURO_MISAWA',
         originalFileName: 'test.pdf',
         promptUsedIdentifier: 'ocr-prompt',
         dbRecordId: 'test-uuid',
         ocrOnly: true,
         fileName: 'test.pdf',
         detectionResult: {
-          detectedCompanyId: 'KATOUBENIYA_MISAWA',
+          detectedCompanyId: 'KATOUBENIYA_IKEBUKURO_MISAWA',
           confidence: 0.87,
           method: 'ocr_gemini',
           details: {
@@ -272,7 +272,7 @@ describe('usePdfProcessor Hook', () => {
       await act(async () => {
         await result.current.processFile(
           mockFile,
-          'NOHARA_G',
+          'NOHARA_G_MISAWA',
           '野原G住環境',
           false,
           false
@@ -301,7 +301,7 @@ describe('usePdfProcessor Hook', () => {
       await act(async () => {
         await result.current.processFile(
           mockFile,
-          'NOHARA_G',
+          'NOHARA_G_MISAWA',
           '野原G住環境',
           false,
           false
@@ -371,7 +371,7 @@ describe('usePdfProcessor Hook', () => {
           });
           return HttpResponse.json({
             generatedText: 'テスト',
-            identifiedCompany: 'NOHARA_G',
+            identifiedCompany: 'NOHARA_G_MISAWA',
             originalFileName: 'test.pdf',
             promptUsedIdentifier: 'test',
             dbRecordId: 'test',
@@ -389,8 +389,8 @@ describe('usePdfProcessor Hook', () => {
       await act(async () => {
         processPromise = result.current.processFile(
           mockFile,
-          'NOHARA_G',
-          '野原G住環境',
+          'NOHARA_G_MISAWA',
+          '野原G住環境_ミサワホーム',
           false,
           false
         );

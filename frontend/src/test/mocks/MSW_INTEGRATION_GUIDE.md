@@ -105,7 +105,7 @@ describe('認証必須API', () => {
       'file',
       new File(['test'], 'test.pdf', { type: 'application/pdf' })
     );
-    formData.append('companyId', 'NOHARA_G');
+    formData.append('companyId', 'NOHARA_G_MISAWA');
 
     const response = await fetch('/functions/v1/process-pdf-single', {
       method: 'POST',
@@ -161,7 +161,7 @@ describe('カスタムデータテスト', () => {
       role: 'manager',
       user_metadata: {
         password: 'custom123',
-        company: 'NOHARA_G',
+        company: 'NOHARA_G_MISAWA',
       },
     });
 
@@ -325,7 +325,7 @@ describe('リクエストボディのキャプチャ', () => {
     });
     const formData = new FormData();
     formData.append('file', testFile);
-    formData.append('companyId', 'NOHARA_G');
+    formData.append('companyId', 'NOHARA_G_MISAWA');
 
     await fetch('/functions/v1/process-pdf-single', {
       method: 'POST',
@@ -333,7 +333,7 @@ describe('リクエストボディのキャプチャ', () => {
     });
 
     expect(capturedFile?.name).toBe('test.pdf');
-    expect(capturedCompanyId).toBe('NOHARA_G');
+    expect(capturedCompanyId).toBe('NOHARA_G_MISAWA');
   });
 });
 ```

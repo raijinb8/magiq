@@ -2,8 +2,7 @@
 // フロントエンドから送られてくる会社ID（例: NOHARA_G_）と、
 // 実際に呼び出すべきプロンプト関数（またはそのファイルパス）を
 // 対応付ける「マッピング情報」
-import { NOHARA_G_PROMPT as NOHARA_G_PROMPT_FUNC } from "./prompts/noharaG.ts";
-import { KATOUBENIYA_MISAWA_PROMPT as KATOUBENIYA_MISAWA_PROMPT_FUNC } from "./prompts/katouBeniyaIkebukuro/misawa.ts";
+import { KATOUBENIYA_IKEBUKURO_MISAWA_PROMPT as KATOUBENIYA_IKEBUKURO_MISAWA_PROMPT_FUNC } from "./prompts/katouBeniyaIkebukuro/misawa.ts";
 
 // 親会社単体（27社）のインポート
 import { SONOTA_PROMPT as SONOTA_PROMPT_FUNC } from "./prompts/sonota.ts";
@@ -89,16 +88,9 @@ interface PromptRegistryEntry {
 // フロントエンドから送られてくる companyId (またはそれを処理して得られるキー) とプロンプトの対応表
 export const PROMPT_REGISTRY: Record<string, PromptRegistryEntry | undefined> =
   {
-    NOHARA_G: {
-      // このキーはフロントエンドと合わせるか、フロントからの情報で生成
-      filePathForLogging: "./prompts/noharaG.ts", // 例
-      promptFunction: NOHARA_G_PROMPT_FUNC,
-      companyName: "野原G住環境",
-      version: "V20250526",
-    },
-    KATOUBENIYA_MISAWA: {
+    KATOUBENIYA_IKEBUKURO_MISAWA: {
       filePathForLogging: "./prompts/katouBeniyaIkebukuro/misawa.ts",
-      promptFunction: KATOUBENIYA_MISAWA_PROMPT_FUNC,
+      promptFunction: KATOUBENIYA_IKEBUKURO_MISAWA_PROMPT_FUNC,
       companyName: "加藤ベニヤ池袋_ミサワホーム",
       version: "V20250526",
     },
@@ -393,7 +385,7 @@ export const PROMPT_REGISTRY: Record<string, PromptRegistryEntry | undefined> =
       filePathForLogging: "./prompts/noharaG/misawa.ts",
       promptFunction: NOHARA_G_MISAWA_PROMPT_FUNC,
       companyName: "野原G住環境_ミサワホーム",
-      version: "V20250610",
+      version: "V20250526", // 旧NOHARA_Gから移行
     },
     NOHARA_G_MELDIA: {
       filePathForLogging: "./prompts/noharaG/meldia.ts",

@@ -15,19 +15,19 @@ describe('会社自動判定機能', () => {
       const testCases = [
         {
           input: '野原グループ株式会社の作業指示書',
-          expected: 'NOHARA_G',
+          expected: 'NOHARA_G_MISAWA',
           confidence: 0.95,
           description: '野原グループ株式会社の直接記載',
         },
         {
           input: '発注元：野原グループ株式会社\n施工：加藤ベニヤ',
-          expected: 'NOHARA_G',
+          expected: 'NOHARA_G_MISAWA',
           confidence: 0.95,
           description: '複数会社名があっても野原グループ株式会社を優先',
         },
         {
           input: '加藤ベニヤ池袋 ミサワホーム 工事',
-          expected: 'KATOUBENIYA_MISAWA',
+          expected: 'KATOUBENIYA_IKEBUKURO_MISAWA',
           confidence: 0.85,
           description: '加藤ベニヤ + ミサワホームの組み合わせ',
         },
@@ -57,7 +57,7 @@ describe('会社自動判定機能', () => {
       const result = simulateOcrDetection(testText);
 
       // 野原グループ株式会社が最優先で判定される
-      expect(result.company_id).toBe('NOHARA_G');
+      expect(result.company_id).toBe('NOHARA_G_MISAWA');
       expect(result.confidence).toBeGreaterThanOrEqual(0.95);
       expect(result.found_keywords).toContain('野原グループ株式会社');
     });
@@ -78,17 +78,17 @@ describe('会社自動判定機能', () => {
       const testCases = [
         {
           text: '加藤ベニヤ ミサワホーム',
-          expectedCompany: 'KATOUBENIYA_MISAWA',
+          expectedCompany: 'KATOUBENIYA_IKEBUKURO_MISAWA',
           minConfidence: 0.8,
         },
         {
           text: '加藤ベニヤ',
-          expectedCompany: 'KATOUBENIYA_MISAWA',
+          expectedCompany: 'KATOUBENIYA_IKEBUKURO_MISAWA',
           minConfidence: 0.6,
         },
         {
           text: 'ミサワホーム',
-          expectedCompany: 'KATOUBENIYA_MISAWA',
+          expectedCompany: 'KATOUBENIYA_IKEBUKURO_MISAWA',
           minConfidence: 0.6,
         },
       ];
@@ -123,7 +123,7 @@ describe('会社自動判定機能', () => {
       `;
 
       const result = simulateOcrDetection(complexText);
-      expect(result.company_id).toBe('NOHARA_G');
+      expect(result.company_id).toBe('NOHARA_G_MISAWA');
       expect(result.found_keywords).toContain('野原グループ株式会社');
     });
   });
@@ -148,43 +148,43 @@ function simulateOcrDetection(text: string): {
   // 確定キーワード：野原グループ株式会社（最優先）
   if (text.includes('野原グループ株式会社')) {
     foundKeywords.push('野原グループ株式会社');
-    detectedCompany = 'NOHARA_G';
+    detectedCompany = 'NOHARA_G_MISAWA';
     confidence = 0.95;
     reasoning = '確定キーワード「野原グループ株式会社」を検出';
   }
   // 野原G関連キーワード
   else if (text.includes('野原G住環境')) {
     foundKeywords.push('野原G住環境');
-    detectedCompany = 'NOHARA_G';
+    detectedCompany = 'NOHARA_G_MISAWA';
     confidence = 0.85;
     reasoning = '野原G住環境キーワードを検出';
   } else if (text.includes('野原G')) {
     foundKeywords.push('野原G');
-    detectedCompany = 'NOHARA_G';
+    detectedCompany = 'NOHARA_G_MISAWA';
     confidence = 0.75;
     reasoning = '野原Gキーワードを検出';
   }
   // 加藤ベニヤ + ミサワホーム複合判定
   else if (text.includes('加藤ベニヤ') && text.includes('ミサワホーム')) {
     foundKeywords.push('加藤ベニヤ', 'ミサワホーム');
-    detectedCompany = 'KATOUBENIYA_MISAWA';
+    detectedCompany = 'KATOUBENIYA_IKEBUKURO_MISAWA';
     confidence = 0.85;
     reasoning = '加藤ベニヤとミサワホームの複合キーワードを検出';
   }
   // 個別キーワード
   else if (text.includes('加藤ベニヤ池袋')) {
     foundKeywords.push('加藤ベニヤ池袋');
-    detectedCompany = 'KATOUBENIYA_MISAWA';
+    detectedCompany = 'KATOUBENIYA_IKEBUKURO_MISAWA';
     confidence = 0.8;
     reasoning = '加藤ベニヤ池袋キーワードを検出';
   } else if (text.includes('加藤ベニヤ')) {
     foundKeywords.push('加藤ベニヤ');
-    detectedCompany = 'KATOUBENIYA_MISAWA';
+    detectedCompany = 'KATOUBENIYA_IKEBUKURO_MISAWA';
     confidence = 0.7;
     reasoning = '加藤ベニヤキーワードを検出';
   } else if (text.includes('ミサワホーム')) {
     foundKeywords.push('ミサワホーム');
-    detectedCompany = 'KATOUBENIYA_MISAWA';
+    detectedCompany = 'KATOUBENIYA_IKEBUKURO_MISAWA';
     confidence = 0.6;
     reasoning = 'ミサワホームキーワードを検出';
   } else {

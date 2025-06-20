@@ -22,7 +22,7 @@ describe('GeneratedTextPanel - 編集モード状態遷移', () => {
     isLoading: false,
     processingFile: null,
     pdfFileToDisplayForPlaceholder: null,
-    selectedCompanyIdForPlaceholder: 'NOHARA_G' as const,
+    selectedCompanyIdForPlaceholder: 'NOHARA_G_MISAWA' as const,
     processedCompanyInfo: {
       file: { name: 'test.pdf' } as File,
       companyLabel: '野原G住環境',

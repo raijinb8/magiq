@@ -13,8 +13,8 @@ import {
 
 describe("promptRegistry", () => {
   describe("PROMPT_REGISTRY", () => {
-    it("NOHARA_Gエントリが正しく設定されている", () => {
-      const entry = PROMPT_REGISTRY["NOHARA_G"];
+    it("NOHARA_G_MISAWAエントリが正しく設定されている", () => {
+      const entry = PROMPT_REGISTRY["NOHARA_G_MISAWA"];
       assertExists(entry);
       if (entry) {
         assertEquals(entry.companyName, "野原G住環境");
@@ -24,8 +24,8 @@ describe("promptRegistry", () => {
       }
     });
 
-    it("KATOUBENIYA_MISAWAエントリが正しく設定されている", () => {
-      const entry = PROMPT_REGISTRY["KATOUBENIYA_MISAWA"];
+    it("KATOUBENIYA_IKEBUKURO_MISAWAエントリが正しく設定されている", () => {
+      const entry = PROMPT_REGISTRY["KATOUBENIYA_IKEBUKURO_MISAWA"];
       assertExists(entry);
       if (entry) {
         assertEquals(entry.companyName, "加藤ベニヤ池袋_ミサワホーム");
@@ -56,7 +56,7 @@ describe("promptRegistry", () => {
 
   describe("getPrompt", () => {
     it("存在する会社IDでプロンプトエントリを取得できる", () => {
-      const entry = getPrompt("NOHARA_G");
+      const entry = getPrompt("NOHARA_G_MISAWA");
       assertExists(entry);
       assertEquals(entry?.companyName, "野原G住環境");
     });
@@ -72,16 +72,16 @@ describe("promptRegistry", () => {
     });
 
     it("大文字小文字を区別する", () => {
-      const entry1 = getPrompt("NOHARA_G");
-      const entry2 = getPrompt("nohara_g");
+      const entry1 = getPrompt("NOHARA_G_MISAWA");
+      const entry2 = getPrompt("nohara_g_misawa");
       assertExists(entry1);
       assertEquals(entry2, null);
     });
   });
 
   describe("PromptFunction", () => {
-    it("NOHARA_Gのプロンプト関数がファイル名を受け取り文字列を返す", () => {
-      const entry = getPrompt("NOHARA_G");
+    it("NOHARA_G_MISAWAのプロンプト関数がファイル名を受け取り文字列を返す", () => {
+      const entry = getPrompt("NOHARA_G_MISAWA");
       assertExists(entry);
       if (entry) {
         const result = entry.promptFunction("test.pdf");
@@ -90,8 +90,8 @@ describe("promptRegistry", () => {
       }
     });
 
-    it("KATOUBENIYA_MISAWAのプロンプト関数がファイル名を受け取り文字列を返す", () => {
-      const entry = getPrompt("KATOUBENIYA_MISAWA");
+    it("KATOUBENIYA_IKEBUKURO_MISAWAのプロンプト関数がファイル名を受け取り文字列を返す", () => {
+      const entry = getPrompt("KATOUBENIYA_IKEBUKURO_MISAWA");
       assertExists(entry);
       if (entry) {
         const result = entry.promptFunction("test.pdf");
@@ -101,7 +101,7 @@ describe("promptRegistry", () => {
     });
 
     it("プロンプト関数にファイル名が含まれる", () => {
-      const entry = getPrompt("NOHARA_G");
+      const entry = getPrompt("NOHARA_G_MISAWA");
       assertExists(entry);
       if (entry) {
         const fileName = "specific_test_file.pdf";
