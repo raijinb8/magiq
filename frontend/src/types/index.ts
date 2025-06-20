@@ -3,10 +3,8 @@
 
 // 会社関連の型定義
 export type CompanyOptionValue = 
-  // 既存実装済み（2社）
-  | 'NOHARA_G' 
+  // 既存実装済み（1社）
   | 'KATOUBENIYA_IKEBUKURO_MISAWA' 
-  | 'YAMADA_K' 
   | 'UNKNOWN_OR_NOT_SET' 
   | ''
   // 親会社単体（27社）
@@ -80,9 +78,8 @@ export interface CompanyOption {
 
 // 会社固有定数（テスト用）
 export const COMPANY_OPTIONS_CONST: readonly CompanyOption[] = [
-  { value: 'NOHARA_G', label: '野原G住環境' },
+  { value: 'NOHARA_G_MISAWA', label: '野原G住環境' },
   { value: 'KATOUBENIYA_IKEBUKURO_MISAWA', label: '加藤ベニヤ池袋_ミサワホーム' },
-  { value: 'YAMADA_K', label: '山田K建設 (準備中)' },
   { value: 'UNKNOWN_OR_NOT_SET', label: '会社を特定できませんでした' },
 ] as const;
 

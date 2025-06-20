@@ -64,14 +64,14 @@ describe('2段階処理 統合テスト', () => {
       // Stage 1: OCR判定のレスポンス
       const stage1Response: PdfProcessSuccessResponse = {
         generatedText: '',
-        identifiedCompany: 'NOHARA_G',
+        identifiedCompany: 'NOHARA_G_MISAWA',
         originalFileName: 'test-nohara.pdf',
         promptUsedIdentifier: 'ocr-prompt',
         dbRecordId: 'stage1-uuid',
         ocrOnly: true,
         fileName: 'test-nohara.pdf',
         detectionResult: {
-          detectedCompanyId: 'NOHARA_G',
+          detectedCompanyId: 'NOHARA_G_MISAWA',
           confidence: 0.95,
           method: 'ocr_gemini',
           details: {
@@ -85,7 +85,7 @@ describe('2段階処理 統合テスト', () => {
       // Stage 2: 手配書作成のレスポンス
       const stage2Response: PdfProcessSuccessResponse = {
         generatedText: '野原G住環境の手配書が生成されました',
-        identifiedCompany: 'NOHARA_G',
+        identifiedCompany: 'NOHARA_G_MISAWA',
         originalFileName: 'test-nohara.pdf',
         promptUsedIdentifier: 'nohara-prompt-v20250526',
         dbRecordId: 'stage2-uuid',
@@ -358,7 +358,7 @@ describe('2段階処理 統合テスト', () => {
           capturedRequest = request.clone();
           return HttpResponse.json({
             generatedText: '',
-            identifiedCompany: 'NOHARA_G',
+            identifiedCompany: 'NOHARA_G_MISAWA',
             originalFileName: 'test.pdf',
             promptUsedIdentifier: 'ocr',
             dbRecordId: 'test',
@@ -429,7 +429,7 @@ describe('2段階処理 統合テスト', () => {
           capturedRequest = request.clone();
           return HttpResponse.json({
             generatedText: 'テスト手配書',
-            identifiedCompany: 'NOHARA_G',
+            identifiedCompany: 'NOHARA_G_MISAWA',
             originalFileName: 'test.pdf',
             promptUsedIdentifier: 'nohara',
             dbRecordId: 'test',
@@ -446,7 +446,7 @@ describe('2段階処理 統合テスト', () => {
         const handleNormalTest = async () => {
           await processFile(
             mockFile,
-            'NOHARA_G',
+            'NOHARA_G_MISAWA',
             '野原G住環境',
             false, // enableAutoDetection = false
             false // ocrOnly = false
@@ -476,7 +476,7 @@ describe('2段階処理 統合テスト', () => {
       ) {
         const request = capturedRequest as Request;
         const formData = await request.formData();
-        expect(formData.get('companyId')).toBe('NOHARA_G');
+        expect(formData.get('companyId')).toBe('NOHARA_G_MISAWA');
         expect(formData.get('enableAutoDetection')).toBe('false');
         expect(formData.get('ocrOnly')).toBe('false');
       }
@@ -494,7 +494,7 @@ describe('2段階処理 統合テスト', () => {
           });
           return HttpResponse.json({
             generatedText: '',
-            identifiedCompany: 'NOHARA_G',
+            identifiedCompany: 'NOHARA_G_MISAWA',
             originalFileName: 'test.pdf',
             promptUsedIdentifier: 'test',
             dbRecordId: 'test',

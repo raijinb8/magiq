@@ -137,9 +137,7 @@ describe('基本ファクトリー関数', () => {
     });
 
     it('会社名に応じたテキストを生成する', () => {
-      const workOrder = createMockWorkOrder({
-        company_name: '野原G住環境',
-      });
+      const workOrder = createMockWorkOrderForCompany('NOHARA_G_MISAWA');
 
       expect(workOrder.generated_text).toContain('グリーンマンション');
     });
@@ -193,10 +191,10 @@ describe('複数データ生成', () => {
 
 describe('特殊パターンファクトリー', () => {
   it('特定の会社用のワークオーダーを作成できる', () => {
-    const workOrder = createMockWorkOrderForCompany('NOHARA_G');
+    const workOrder = createMockWorkOrderForCompany('NOHARA_G_MISAWA');
 
     expect(workOrder.company_name).toBe('野原G住環境');
-    expect(workOrder.prompt_identifier).toBe('NOHARA_G_V20250605');
+    expect(workOrder.prompt_identifier).toBe('NOHARA_G_MISAWA_V20250605');
     expect(workOrder.generated_text).toContain('グリーンマンション');
   });
 
@@ -336,7 +334,6 @@ describe('プリセット', () => {
 
     expect(preset.noharaG.company_name).toBe('野原G住環境');
     expect(preset.katoubeniya.company_name).toBe('加藤ベニヤ池袋_ミサワホーム');
-    expect(preset.yamadaK.company_name).toBe('山田K建設 (準備中)');
   });
 });
 

@@ -402,7 +402,7 @@ export function createMockPdfProcessingResponse(
   return {
     success: true,
     generatedText: generateSampleWorkOrderText('野原G住環境'),
-    promptIdentifier: 'NOHARA_G_V20250605',
+    promptIdentifier: 'NOHARA_G_MISAWA_V20250605',
     processingTime: randomHelpers.integer(1000, 8000),
     tokenUsage,
     dbRecordId: `work-order-${randomHelpers.string(8)}`,
@@ -537,8 +537,7 @@ export const testPresets = {
 
   // 企業別のワークオーダー
   companySpecificData: () => ({
-    noharaG: createMockWorkOrderForCompany('NOHARA_G'),
+    noharaG: createMockWorkOrderForCompany('NOHARA_G_MISAWA'),
     katoubeniya: createMockWorkOrderForCompany('KATOUBENIYA_IKEBUKURO_MISAWA'),
-    yamadaK: createMockWorkOrderForCompany('YAMADA_K'),
   }),
 };

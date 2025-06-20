@@ -53,7 +53,7 @@ const createTestUsersDatabase = () => [
     role: 'manager',
     user_metadata: {
       password: 'nohara123',
-      company: 'NOHARA_G',
+      company: 'NOHARA_G_MISAWA',
     },
   }),
   createMockUser({
@@ -599,7 +599,7 @@ export const edgeFunctionHandlers = [
 
       if (
         companyId &&
-        ['NOHARA_G', 'KATOUBENIYA_IKEBUKURO_MISAWA', 'YAMADA_K'].includes(companyId)
+        ['NOHARA_G_MISAWA', 'KATOUBENIYA_IKEBUKURO_MISAWA'].includes(companyId)
       ) {
         // 会社固有のレスポンス
         const workOrder = createMockWorkOrderForCompany(companyId);
@@ -638,7 +638,7 @@ let mockShifts: MockShift[] = [];
 // 初期データの生成
 const initializeMockDatabase = () => {
   mockWorkOrders = [
-    createMockWorkOrderForCompany('NOHARA_G', { id: 1 }),
+    createMockWorkOrderForCompany('NOHARA_G_MISAWA', { id: 1 }),
     createMockWorkOrderForCompany('KATOUBENIYA_IKEBUKURO_MISAWA', { id: 2 }),
     ...createMockWorkOrders(3, { status: 'completed' }),
   ];
