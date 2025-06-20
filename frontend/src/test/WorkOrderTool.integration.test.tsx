@@ -116,11 +116,11 @@ vi.mock('@/hooks/useDragAndDrop', () => ({
 vi.mock('@/constants/company', () => ({
   COMPANY_OPTIONS: [
     { value: 'NOHARA_G', label: '野原G住環境' },
-    { value: 'KATOUBENIYA_IKEBUKURO_MISAWA', label: '加藤ベニヤ池袋_ミサワホーム' },
+    { value: 'KATOUBENIYA_MISAWA', label: '加藤ベニヤ池袋_ミサワホーム' },
   ],
   ALL_COMPANY_OPTIONS: [
     { value: 'NOHARA_G', label: '野原G住環境' },
-    { value: 'KATOUBENIYA_IKEBUKURO_MISAWA', label: '加藤ベニヤ池袋_ミサワホーム' },
+    { value: 'KATOUBENIYA_MISAWA', label: '加藤ベニヤ池袋_ミサワホーム' },
     { value: 'UNKNOWN_OR_NOT_SET', label: '会社を特定できませんでした' },
   ],
 }));

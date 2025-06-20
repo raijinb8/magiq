@@ -140,7 +140,7 @@ export const GEMINI_MOCK_RESPONSES = {
   },
 
   // ミサワホーム用のレスポンス
-  KATOUBENIYA_IKEBUKURO_MISAWA: {
+  KATOUBENIYA_MISAWA: {
     text: `【取引先_発注元】ミサワホーム(株)
 
 【工事名】渋谷区神宮前５丁目新築工事

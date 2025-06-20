@@ -3,7 +3,7 @@
 // 実際に呼び出すべきプロンプト関数（またはそのファイルパス）を
 // 対応付ける「マッピング情報」
 import { NOHARA_G_PROMPT as NOHARA_G_PROMPT_FUNC } from "./prompts/noharaG.ts";
-import { KATOUBENIYA_IKEBUKURO_MISAWA_PROMPT as KATOUBENIYA_IKEBUKURO_MISAWA_PROMPT_FUNC } from "./prompts/katouBeniyaIkebukuro/misawa.ts";
+import { KATOUBENIYA_MISAWA_PROMPT as KATOUBENIYA_MISAWA_PROMPT_FUNC } from "./prompts/katouBeniyaIkebukuro/misawa.ts";
 
 // 親会社単体（27社）のインポート
 import { SONOTA_PROMPT as SONOTA_PROMPT_FUNC } from "./prompts/sonota.ts";
@@ -96,9 +96,9 @@ export const PROMPT_REGISTRY: Record<string, PromptRegistryEntry | undefined> =
       companyName: "野原G住環境",
       version: "V20250526",
     },
-    KATOUBENIYA_IKEBUKURO_MISAWA: {
+    KATOUBENIYA_MISAWA: {
       filePathForLogging: "./prompts/katouBeniyaIkebukuro/misawa.ts",
-      promptFunction: KATOUBENIYA_IKEBUKURO_MISAWA_PROMPT_FUNC,
+      promptFunction: KATOUBENIYA_MISAWA_PROMPT_FUNC,
       companyName: "加藤ベニヤ池袋_ミサワホーム",
       version: "V20250526",
     },

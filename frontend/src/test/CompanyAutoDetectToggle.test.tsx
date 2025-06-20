@@ -116,7 +116,7 @@ describe('CompanyAutoDetectToggle', () => {
 
     it('中信頼度の判定結果が正しく表示される', () => {
       const detectionResult: CompanyDetectionResult = {
-        detectedCompanyId: 'KATOUBENIYA_IKEBUKURO_MISAWA',
+        detectedCompanyId: 'KATOUBENIYA_MISAWA',
         confidence: 0.75,
         method: 'ocr_gemini',
         details: {
@@ -133,7 +133,7 @@ describe('CompanyAutoDetectToggle', () => {
         />
       );
 
-      expect(screen.getByText('KATOUBENIYA_IKEBUKURO_MISAWA')).toBeInTheDocument();
+      expect(screen.getByText('KATOUBENIYA_MISAWA')).toBeInTheDocument();
       expect(screen.getByText('中信頼度 75%')).toBeInTheDocument();
       expect(
         screen.getByText('検出キーワード: 加藤ベニヤ')

@@ -95,11 +95,11 @@ describe("Gemini API モック統合デモ", () => {
       assertEquals(response.usageMetadata?.promptTokenCount, 2500);
     });
 
-    it("KATOUBENIYA_IKEBUKURO_MISAWA用のレスポンス", async () => {
+    it("KATOUBENIYA_MISAWA用のレスポンス", async () => {
       mockGeminiAI = createMockGeminiAI();
 
       // プリセットレスポンスを使用
-      mockGeminiAI.setCustomResponse(GEMINI_MOCK_RESPONSES.KATOUBENIYA_IKEBUKURO_MISAWA);
+      mockGeminiAI.setCustomResponse(GEMINI_MOCK_RESPONSES.KATOUBENIYA_MISAWA);
 
       const response = await mockGeminiAI.models.generateContent({
         model: "gemini-2.5-flash-preview-04-17",

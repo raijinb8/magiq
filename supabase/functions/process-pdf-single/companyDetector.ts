@@ -109,21 +109,21 @@ export class CompanyDetector {
       // 加藤ベニヤ池袋_ミサワホーム
       {
         id: "4",
-        company_id: "KATOUBENIYA_IKEBUKURO_MISAWA",
+        company_id: "KATOUBENIYA_MISAWA",
         rule_type: "keyword",
         rule_value: "加藤ベニヤ",
         priority: 100,
       },
       {
         id: "5",
-        company_id: "KATOUBENIYA_IKEBUKURO_MISAWA",
+        company_id: "KATOUBENIYA_MISAWA",
         rule_type: "keyword",
         rule_value: "ミサワホーム",
         priority: 100,
       },
       {
         id: "6",
-        company_id: "KATOUBENIYA_IKEBUKURO_MISAWA",
+        company_id: "KATOUBENIYA_MISAWA",
         rule_type: "keyword",
         rule_value: "加藤ベニヤ池袋",
         priority: 95,
@@ -201,7 +201,7 @@ export class CompanyDetector {
 
 現在登録されている会社：
 1. NOHARA_G - 野原G住環境、野原グループ
-2. KATOUBENIYA_IKEBUKURO_MISAWA - 加藤ベニヤ、加藤ベニヤ池袋、ミサワホーム
+2. KATOUBENIYA_MISAWA - 加藤ベニヤ、加藤ベニヤ池袋、ミサワホーム
 
 判定基準：
 - 会社名、ロゴ、住所、電話番号
@@ -210,7 +210,7 @@ export class CompanyDetector {
 
 必ず以下のJSON形式で回答してください：
 {
-  "company_id": "NOHARA_G" または "KATOUBENIYA_IKEBUKURO_MISAWA" または null,
+  "company_id": "NOHARA_G" または "KATOUBENIYA_MISAWA" または null,
   "confidence": 0.0から1.0の数値,
   "reasoning": "判定理由の説明",
   "found_keywords": ["検出されたキーワード1", "キーワード2"]

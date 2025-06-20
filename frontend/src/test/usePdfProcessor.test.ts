@@ -213,14 +213,14 @@ describe('usePdfProcessor Hook', () => {
     it('OCR処理の結果が適切に処理される', async () => {
       const mockOcrResponse: PdfProcessSuccessResponse = {
         generatedText: '',
-        identifiedCompany: 'KATOUBENIYA_IKEBUKURO_MISAWA',
+        identifiedCompany: 'KATOUBENIYA_MISAWA',
         originalFileName: 'test.pdf',
         promptUsedIdentifier: 'ocr-prompt',
         dbRecordId: 'test-uuid',
         ocrOnly: true,
         fileName: 'test.pdf',
         detectionResult: {
-          detectedCompanyId: 'KATOUBENIYA_IKEBUKURO_MISAWA',
+          detectedCompanyId: 'KATOUBENIYA_MISAWA',
           confidence: 0.87,
           method: 'ocr_gemini',
           details: {

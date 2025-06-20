@@ -75,7 +75,7 @@ import { createMockWorkOrderForCompany } from './mocks/factories';
 const noharaWorkOrder = createMockWorkOrderForCompany('NOHARA_G');
 
 // 加藤ベニヤのワークオーダー
-const katouWorkOrder = createMockWorkOrderForCompany('KATOUBENIYA_IKEBUKURO_MISAWA');
+const katouWorkOrder = createMockWorkOrderForCompany('KATOUBENIYA_MISAWA');
 ```
 
 ### エラー状態データ
@@ -362,7 +362,7 @@ const testEmail = randomHelpers.email();
 const testString = randomHelpers.string(12);
 const randomCompany = randomHelpers.arrayElement([
   'NOHARA_G',
-  'KATOUBENIYA_IKEBUKURO_MISAWA',
+  'KATOUBENIYA_MISAWA',
 ]);
 ```
 

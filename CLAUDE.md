@@ -96,7 +96,7 @@ npm run ci           # CI相当チェック（lint + type-check + build + test�
    - トークン使用量と処理時間を追跡
 3. **会社固有プロンプト**: `companyId`に基づく異なるプロンプト
    - `NOHARA_G`: 野原G住環境
-   - `KATOUBENIYA_IKEBUKURO_MISAWA`: 加藤ベニヤ池袋_ミサワホーム
+   - `KATOUBENIYA_MISAWA`: 加藤ベニヤ池袋_ミサワホーム
    - プロンプトは厳密なフォーマット（全角/半角）を強制
 4. **データベース保存**: 結果は `work_orders` テーブルに保存
 5. **結果表示**: 抽出されたテキストは `GeneratedTextPanel` でレビュー/編集用に表示

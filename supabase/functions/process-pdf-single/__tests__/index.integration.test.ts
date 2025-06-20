@@ -73,8 +73,8 @@ describe("process-pdf-single Edge Function with Gemini Mock", () => {
       assertEquals(response.usageMetadata?.promptTokenCount, 2500);
     });
 
-    it("KATOUBENIYA_IKEBUKURO_MISAWA用のプロンプトで正しいレスポンスが返される", async () => {
-      mockGeminiAI.setCustomResponse(GEMINI_MOCK_RESPONSES.KATOUBENIYA_IKEBUKURO_MISAWA);
+    it("KATOUBENIYA_MISAWA用のプロンプトで正しいレスポンスが返される", async () => {
+      mockGeminiAI.setCustomResponse(GEMINI_MOCK_RESPONSES.KATOUBENIYA_MISAWA);
 
       const response = await mockGeminiAI.models.generateContent({
         model: "gemini-2.5-flash-preview-04-17",

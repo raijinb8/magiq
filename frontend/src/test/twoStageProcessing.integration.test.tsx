@@ -159,14 +159,14 @@ describe('2段階処理 統合テスト', () => {
     it('加藤ベニヤ_ミサワホームの2段階処理が正常に動作する', async () => {
       const stage1Response: PdfProcessSuccessResponse = {
         generatedText: '',
-        identifiedCompany: 'KATOUBENIYA_IKEBUKURO_MISAWA',
+        identifiedCompany: 'KATOUBENIYA_MISAWA',
         originalFileName: 'test-katou.pdf',
         promptUsedIdentifier: 'ocr-prompt',
         dbRecordId: 'stage1-uuid',
         ocrOnly: true,
         fileName: 'test-katou.pdf',
         detectionResult: {
-          detectedCompanyId: 'KATOUBENIYA_IKEBUKURO_MISAWA',
+          detectedCompanyId: 'KATOUBENIYA_MISAWA',
           confidence: 0.87,
           method: 'ocr_gemini',
           details: {
