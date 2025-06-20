@@ -244,7 +244,7 @@ export const workOrderFactory = {
   create: (overrides?: Partial<WorkOrder>): WorkOrder => ({
     id: 1,
     file_name: 'test.pdf',
-    company_name: 'NOHARA_G',
+    company_name: 'NOHARA_G_MISAWA',
     status: 'pending',
     uploaded_at: new Date().toISOString(),
     ...overrides,

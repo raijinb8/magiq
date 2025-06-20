@@ -140,7 +140,7 @@ describe("process-pdf-single Edge Function", () => {
 
   it("PDFファイルが提供されていない場合は400エラーを返す", async () => {
     const formData = new FormData();
-    formData.append("companyId", "NOHARA_G");
+    formData.append("companyId", "NOHARA_G_MISAWA");
 
     const request = new Request("http://localhost:8000", {
       method: "POST",
@@ -176,7 +176,7 @@ describe("process-pdf-single Edge Function", () => {
     });
 
     const formData = new FormData();
-    formData.append("companyId", "NOHARA_G");
+    formData.append("companyId", "NOHARA_G_MISAWA");
     formData.append(
       "pdfFile",
       new File(["test pdf content"], "test.pdf", { type: "application/pdf" }),
@@ -189,11 +189,11 @@ describe("process-pdf-single Edge Function", () => {
 
     // テスト用のモックレスポンス（成功ケース）
     const responseData = {
-      message: "Successfully generated text for test.pdf (Company: NOHARA_G).",
+      message: "Successfully generated text for test.pdf (Company: NOHARA_G_MISAWA).",
       generatedText: "テスト生成されたテキスト",
       originalFileName: "test.pdf",
-      promptUsedIdentifier: "NOHARA_G_V20250526",
-      identifiedCompany: "NOHARA_G",
+      promptUsedIdentifier: "NOHARA_G_MISAWA_V20250526",
+      identifiedCompany: "NOHARA_G_MISAWA",
       usageMetadata: {
         promptTokenCount: 100,
         candidatesTokenCount: 50,
@@ -213,7 +213,7 @@ describe("process-pdf-single Edge Function", () => {
     assertEquals(response.status, 200);
     const body = await response.json();
     assertEquals(body.generatedText, "テスト生成されたテキスト");
-    assertEquals(body.identifiedCompany, "NOHARA_G");
+    assertEquals(body.identifiedCompany, "NOHARA_G_MISAWA");
     assertExists(body.dbRecordId);
   });
 
@@ -222,7 +222,7 @@ describe("process-pdf-single Edge Function", () => {
     Deno.env.delete("GEMINI_API_KEY");
 
     const formData = new FormData();
-    formData.append("companyId", "NOHARA_G");
+    formData.append("companyId", "NOHARA_G_MISAWA");
     formData.append(
       "pdfFile",
       new File(["test pdf content"], "test.pdf", { type: "application/pdf" }),

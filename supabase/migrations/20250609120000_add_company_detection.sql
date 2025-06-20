@@ -54,11 +54,11 @@ CREATE INDEX IF NOT EXISTS idx_detection_rules_type ON public.company_detection_
 
 -- 4. 初期判定ルールの挿入
 INSERT INTO public.company_detection_rules (company_id, rule_type, rule_value, priority, description) VALUES
--- 野原G住環境のルール
-('NOHARA_G', 'keyword', '野原G住環境', 100, '会社名の完全一致'),
-('NOHARA_G', 'keyword', '野原G', 90, '会社名の部分一致'),
-('NOHARA_G', 'keyword', '野原グループ', 80, '会社グループ名'),
-('NOHARA_G', 'pattern', '野原.*住環境', 70, '会社名のパターンマッチ'),
+-- 野原G住環境_ミサワホームのルール
+('NOHARA_G_MISAWA', 'keyword', '野原G住環境', 100, '会社名の完全一致'),
+('NOHARA_G_MISAWA', 'keyword', '野原G', 90, '会社名の部分一致'),
+('NOHARA_G_MISAWA', 'keyword', '野原グループ', 80, '会社グループ名'),
+('NOHARA_G_MISAWA', 'pattern', '野原.*住環境', 70, '会社名のパターンマッチ'),
 
 -- 加藤ベニヤ池袋_ミサワホームのルール
 ('KATOUBENIYA_IKEBUKURO_MISAWA', 'keyword', '加藤ベニヤ', 100, '会社名の部分一致'),

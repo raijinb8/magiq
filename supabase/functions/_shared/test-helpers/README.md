@@ -57,7 +57,7 @@ try {
 mockGeminiAI.setConditionalResponse(
   (request) => {
     const requestStr = JSON.stringify(request)
-    return requestStr.includes('NOHARA_G')
+    return requestStr.includes('NOHARA_G_MISAWA')
   },
   { text: '野原G専用のレスポンス', usageMetadata: { totalTokenCount: 1000 } },
 )
@@ -71,7 +71,7 @@ mockGeminiAI.setConditionalResponse(
 import { GEMINI_MOCK_RESPONSES } from '../test-helpers.ts'
 
 // 野原G用のレスポンス
-mockGeminiAI.setCustomResponse(GEMINI_MOCK_RESPONSES.NOHARA_G)
+mockGeminiAI.setCustomResponse(GEMINI_MOCK_RESPONSES.NOHARA_G_MISAWA)
 
 // ミサワホーム用のレスポンス
 mockGeminiAI.setCustomResponse(GEMINI_MOCK_RESPONSES.KATOUBENIYA_IKEBUKURO_MISAWA)

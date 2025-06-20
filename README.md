@@ -271,7 +271,7 @@ interface ProcessPdfResponse {
 企業別の設定は `frontend/public/config/active.json` で管理:
 ```json
 {
-  "companyId": "NOHARA_G",
+  "companyId": "NOHARA_G_MISAWA",
   "theme": {
     "primaryColor": "#3B82F6",
     "logoUrl": "/logos/nohara-g.png"

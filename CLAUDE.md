@@ -95,7 +95,7 @@ npm run ci           # CI相当チェック（lint + type-check + build + test�
    - `gemini-2.5-flash-preview-04-17` モデルを使用
    - トークン使用量と処理時間を追跡
 3. **会社固有プロンプト**: `companyId`に基づく異なるプロンプト
-   - `NOHARA_G`: 野原G住環境
+   - `NOHARA_G_MISAWA`: 野原G住環境_ミサワホーム
    - `KATOUBENIYA_IKEBUKURO_MISAWA`: 加藤ベニヤ池袋_ミサワホーム
    - プロンプトは厳密なフォーマット（全角/半角）を強制
 4. **データベース保存**: 結果は `work_orders` テーブルに保存

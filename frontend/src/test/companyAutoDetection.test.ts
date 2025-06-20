@@ -15,13 +15,13 @@ describe('会社自動判定機能', () => {
       const testCases = [
         {
           input: '野原グループ株式会社の作業指示書',
-          expected: 'NOHARA_G',
+          expected: 'NOHARA_G_MISAWA',
           confidence: 0.95,
           description: '野原グループ株式会社の直接記載',
         },
         {
           input: '発注元：野原グループ株式会社\n施工：加藤ベニヤ',
-          expected: 'NOHARA_G',
+          expected: 'NOHARA_G_MISAWA',
           confidence: 0.95,
           description: '複数会社名があっても野原グループ株式会社を優先',
         },
@@ -57,7 +57,7 @@ describe('会社自動判定機能', () => {
       const result = simulateOcrDetection(testText);
 
       // 野原グループ株式会社が最優先で判定される
-      expect(result.company_id).toBe('NOHARA_G');
+      expect(result.company_id).toBe('NOHARA_G_MISAWA');
       expect(result.confidence).toBeGreaterThanOrEqual(0.95);
       expect(result.found_keywords).toContain('野原グループ株式会社');
     });
@@ -123,7 +123,7 @@ describe('会社自動判定機能', () => {
       `;
 
       const result = simulateOcrDetection(complexText);
-      expect(result.company_id).toBe('NOHARA_G');
+      expect(result.company_id).toBe('NOHARA_G_MISAWA');
       expect(result.found_keywords).toContain('野原グループ株式会社');
     });
   });
@@ -148,19 +148,19 @@ function simulateOcrDetection(text: string): {
   // 確定キーワード：野原グループ株式会社（最優先）
   if (text.includes('野原グループ株式会社')) {
     foundKeywords.push('野原グループ株式会社');
-    detectedCompany = 'NOHARA_G';
+    detectedCompany = 'NOHARA_G_MISAWA';
     confidence = 0.95;
     reasoning = '確定キーワード「野原グループ株式会社」を検出';
   }
   // 野原G関連キーワード
   else if (text.includes('野原G住環境')) {
     foundKeywords.push('野原G住環境');
-    detectedCompany = 'NOHARA_G';
+    detectedCompany = 'NOHARA_G_MISAWA';
     confidence = 0.85;
     reasoning = '野原G住環境キーワードを検出';
   } else if (text.includes('野原G')) {
     foundKeywords.push('野原G');
-    detectedCompany = 'NOHARA_G';
+    detectedCompany = 'NOHARA_G_MISAWA';
     confidence = 0.75;
     reasoning = '野原Gキーワードを検出';
   }

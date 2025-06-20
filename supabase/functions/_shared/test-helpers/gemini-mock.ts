@@ -116,8 +116,8 @@ export function createMockGeminiAI(apiKey: string = 'test-api-key'): MockGoogleG
  * よく使うモックレスポンスのプリセット
  */
 export const GEMINI_MOCK_RESPONSES = {
-  // 野原G用のレスポンス
-  NOHARA_G: {
+  // 野原G住環境_ミサワホーム用のレスポンス
+  NOHARA_G_MISAWA: {
     text: `【取引先_発注元】野原産業(株)東京ブロック
 
 【工事名】(仮称)六本木一丁目計画
@@ -178,12 +178,12 @@ export function createCompanySpecificMock(): MockGoogleGenAI {
     (request) => {
       // リクエストの内容から会社IDを推測（実際の実装に合わせて調整）
       const requestText = JSON.stringify(request)
-      if (requestText.includes('NOHARA_G')) {
+      if (requestText.includes('NOHARA_G_MISAWA')) {
         return true
       }
       return false
     },
-    GEMINI_MOCK_RESPONSES.NOHARA_G,
+    GEMINI_MOCK_RESPONSES.NOHARA_G_MISAWA,
   )
 
   return mock

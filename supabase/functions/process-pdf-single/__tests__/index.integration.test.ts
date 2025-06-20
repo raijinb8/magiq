@@ -61,8 +61,8 @@ describe("process-pdf-single Edge Function with Gemini Mock", () => {
       assertEquals(response.usageMetadata?.totalTokenCount, 1200);
     });
 
-    it("NOHARA_G用のプロンプトで正しいレスポンスが返される", async () => {
-      mockGeminiAI.setCustomResponse(GEMINI_MOCK_RESPONSES.NOHARA_G);
+    it("NOHARA_G_MISAWA用のプロンプトで正しいレスポンスが返される", async () => {
+      mockGeminiAI.setCustomResponse(GEMINI_MOCK_RESPONSES.NOHARA_G_MISAWA);
 
       const response = await mockGeminiAI.models.generateContent({
         model: "gemini-2.5-flash-preview-04-17",
@@ -240,11 +240,11 @@ describe("process-pdf-single Edge Function with Gemini Mock", () => {
       // シミュレーションとして、期待される動作を確認
       const expectedResponse = {
         message:
-          "Successfully generated text for test.pdf (Company: NOHARA_G).",
+          "Successfully generated text for test.pdf (Company: NOHARA_G_MISAWA).",
         generatedText: "統合テスト用の生成テキスト",
         originalFileName: "test.pdf",
-        promptUsedIdentifier: "NOHARA_G_V20250526",
-        identifiedCompany: "NOHARA_G",
+        promptUsedIdentifier: "NOHARA_G_MISAWA_V20250526",
+        identifiedCompany: "NOHARA_G_MISAWA",
         usageMetadata: {
           promptTokenCount: 1500,
           candidatesTokenCount: 250,
@@ -255,7 +255,7 @@ describe("process-pdf-single Edge Function with Gemini Mock", () => {
 
       // レスポンスの検証
       assertExists(expectedResponse.generatedText);
-      assertEquals(expectedResponse.identifiedCompany, "NOHARA_G");
+      assertEquals(expectedResponse.identifiedCompany, "NOHARA_G_MISAWA");
       assertEquals(expectedResponse.usageMetadata.totalTokenCount, 1750);
     });
   });

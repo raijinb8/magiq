@@ -72,7 +72,7 @@ const weeklyShifts = createMockShifts(7, {
 import { createMockWorkOrderForCompany } from './mocks/factories';
 
 // 野原G住環境のワークオーダー
-const noharaWorkOrder = createMockWorkOrderForCompany('NOHARA_G');
+const noharaWorkOrder = createMockWorkOrderForCompany('NOHARA_G_MISAWA');
 
 // 加藤ベニヤのワークオーダー
 const katouWorkOrder = createMockWorkOrderForCompany('KATOUBENIYA_IKEBUKURO_MISAWA');
@@ -361,7 +361,7 @@ import { randomHelpers } from './mocks/factories';
 const testEmail = randomHelpers.email();
 const testString = randomHelpers.string(12);
 const randomCompany = randomHelpers.arrayElement([
-  'NOHARA_G',
+  'NOHARA_G_MISAWA',
   'KATOUBENIYA_IKEBUKURO_MISAWA',
 ]);
 ```

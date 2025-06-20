@@ -83,24 +83,24 @@ export class CompanyDetector {
    */
   private getDefaultRules(): DetectionRule[] {
     return [
-      // 野原G住環境
+      // 野原G住環境_ミサワホーム
       {
         id: "1",
-        company_id: "NOHARA_G",
+        company_id: "NOHARA_G_MISAWA",
         rule_type: "keyword",
         rule_value: "野原G住環境",
         priority: 100,
       },
       {
         id: "2",
-        company_id: "NOHARA_G",
+        company_id: "NOHARA_G_MISAWA",
         rule_type: "keyword",
         rule_value: "野原G",
         priority: 90,
       },
       {
         id: "3",
-        company_id: "NOHARA_G",
+        company_id: "NOHARA_G_MISAWA",
         rule_type: "keyword",
         rule_value: "野原グループ",
         priority: 80,
@@ -200,7 +200,7 @@ export class CompanyDetector {
 以下のPDFファイルから、発注元の会社を判定してください。
 
 現在登録されている会社：
-1. NOHARA_G - 野原G住環境、野原グループ
+1. NOHARA_G_MISAWA - 野原G住環境、野原グループ、ミサワホーム
 2. KATOUBENIYA_IKEBUKURO_MISAWA - 加藤ベニヤ、加藤ベニヤ池袋、ミサワホーム
 
 判定基準：
@@ -210,7 +210,7 @@ export class CompanyDetector {
 
 必ず以下のJSON形式で回答してください：
 {
-  "company_id": "NOHARA_G" または "KATOUBENIYA_IKEBUKURO_MISAWA" または null,
+  "company_id": "NOHARA_G_MISAWA" または "KATOUBENIYA_IKEBUKURO_MISAWA" または null,
   "confidence": 0.0から1.0の数値,
   "reasoning": "判定理由の説明",
   "found_keywords": ["検出されたキーワード1", "キーワード2"]

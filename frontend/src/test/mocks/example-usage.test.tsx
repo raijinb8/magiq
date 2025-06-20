@@ -139,7 +139,7 @@ describe('MSW使用例', () => {
       new Blob(['PDF content'], { type: 'application/pdf' }),
       'test.pdf'
     );
-    formData.append('companyId', 'NOHARA_G');
+    formData.append('companyId', 'NOHARA_G_MISAWA');
 
     const response = await fetch(
       'https://example.supabase.co/functions/v1/process-pdf-single',
@@ -152,7 +152,7 @@ describe('MSW使用例', () => {
     const data = await response.json();
 
     expect(data.success).toBe(true);
-    expect(data.promptIdentifier).toBe('NOHARA_G_V20250526');
+    expect(data.promptIdentifier).toBe('NOHARA_G_MISAWA_V20250526');
     expect(data.generatedText).toContain('物件名：テストマンション');
   });
 
@@ -180,7 +180,7 @@ describe('MSW使用例', () => {
     });
     const formData = new FormData();
     formData.append('file', testFile);
-    formData.append('companyId', 'NOHARA_G');
+    formData.append('companyId', 'NOHARA_G_MISAWA');
 
     await fetch('https://example.supabase.co/functions/v1/process-pdf-single', {
       method: 'POST',
@@ -188,7 +188,7 @@ describe('MSW使用例', () => {
     });
 
     expect((capturedFile as File)?.name).toBe('test.pdf');
-    expect(capturedCompanyId).toBe('NOHARA_G');
+    expect(capturedCompanyId).toBe('NOHARA_G_MISAWA');
   });
 
   it('遅延レスポンスとタイムアウトの例', async () => {

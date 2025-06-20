@@ -92,7 +92,7 @@ describe('MSW統合テスト', () => {
 
       const formData = new FormData();
       formData.append('file', pdfFile);
-      formData.append('companyId', 'NOHARA_G');
+      formData.append('companyId', 'NOHARA_G_MISAWA');
 
       // When: PDF処理APIを呼び出し
       const response = await fetch('/functions/v1/process-pdf-single', {
@@ -108,8 +108,8 @@ describe('MSW統合テスト', () => {
 
       const result = await response.json();
       expect(result.success).toBe(true);
-      expect(result.generatedText).toContain('グリーンマンション'); // NOHARA_G固有のテキスト
-      expect(result.promptIdentifier).toBe('NOHARA_G_V20250605');
+      expect(result.generatedText).toContain('グリーンマンション'); // NOHARA_G_MISAWA固有のテキスト
+      expect(result.promptIdentifier).toBe('NOHARA_G_MISAWA_V20250605');
     });
 
     it('未認証ユーザーはPDF処理ができない', async () => {
@@ -119,7 +119,7 @@ describe('MSW統合テスト', () => {
 
       const formData = new FormData();
       formData.append('file', pdfFile);
-      formData.append('companyId', 'NOHARA_G');
+      formData.append('companyId', 'NOHARA_G_MISAWA');
 
       const response = await fetch('/functions/v1/process-pdf-single', {
         method: 'POST',
@@ -138,7 +138,7 @@ describe('MSW統合テスト', () => {
 
       const formData = new FormData();
       formData.append('file', textFile);
-      formData.append('companyId', 'NOHARA_G');
+      formData.append('companyId', 'NOHARA_G_MISAWA');
 
       const response = await fetch('/functions/v1/process-pdf-single', {
         method: 'POST',
@@ -418,7 +418,7 @@ describe('MSW統合テスト', () => {
           type: 'application/pdf',
         })
       );
-      formData.append('companyId', 'NOHARA_G');
+      formData.append('companyId', 'NOHARA_G_MISAWA');
 
       const response = await fetch('/functions/v1/process-pdf-single', {
         method: 'POST',
